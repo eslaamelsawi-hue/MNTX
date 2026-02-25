@@ -33,9 +33,15 @@ interface GoldPriceData {
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
+function toEN(v: number | string): string {
+  return String(v).replace(/[\u0660-\u0669]/g, (d) =>
+    String("\u0660\u0661\u0662\u0663\u0664\u0665\u0666\u0667\u0668\u0669".indexOf(d))
+  )
+}
+
 function formatEGP(price: number | null): string {
   if (price === null) return "--"
-  return price.toLocaleString("ar-EG", {
+  return price.toLocaleString("en-US", {
     minimumFractionDigits: 2,
     maximumFractionDigits: 2,
   })
@@ -79,7 +85,7 @@ export function GoldPage() {
   useEffect(() => {
     if (data?.lastUpdated) {
       setLastRefresh(
-        new Date(data.lastUpdated).toLocaleTimeString([], {
+        new Date(data.lastUpdated).toLocaleTimeString("en-US", {
           hour: "2-digit",
           minute: "2-digit",
         })
@@ -140,7 +146,7 @@ export function GoldPage() {
             <div className="text-center">
               <p className="text-xs text-muted-foreground">{t("exchangeRate")}</p>
               <p className="mt-1 font-bold text-foreground">
-                {data.usdToEgp ? `1 USD = ${data.usdToEgp.toFixed(2)} EGP` : "--"}
+                {data.usdToEgp ? `1 USD = ${toEN(data.usdToEgp.toFixed(2))} EGP` : "--"}
               </p>
             </div>
             <div className="hidden h-8 w-px bg-border sm:block" />
@@ -148,7 +154,7 @@ export function GoldPage() {
               <p className="text-xs text-muted-foreground">{t("change24h")}</p>
               <p className={`mt-1 font-bold flex items-center justify-center gap-1 ${isPositive ? "text-emerald-400" : "text-red-400"}`}>
                 {isPositive ? <ArrowUpRight className="h-4 w-4" /> : <ArrowDownRight className="h-4 w-4" />}
-                {data.change24h !== null ? `${Math.abs(data.change24h).toFixed(2)}%` : "--"}
+                {data.change24h !== null ? `${toEN(Math.abs(data.change24h).toFixed(2))}%` : "--"}
               </p>
             </div>
             <div className="hidden h-8 w-px bg-border sm:block" />
@@ -183,7 +189,7 @@ export function GoldPage() {
                   {data.change24h !== null && (
                     <div className={`flex items-center gap-1 text-sm ${isPositive ? "text-emerald-400" : "text-red-400"}`}>
                       {isPositive ? <TrendingUp className="h-4 w-4" /> : <TrendingDown className="h-4 w-4" />}
-                      {isPositive ? "+" : ""}{data.change24h.toFixed(2)}% {t("today")}
+                      {isPositive ? "+" : ""}{toEN(data.change24h.toFixed(2))}% {t("today")}
                     </div>
                   )}
                 </div>
@@ -336,12 +342,6 @@ export function GoldPage() {
             </div>
           </div>
 
-          <div className="mt-8 text-center">
-            <p className="mb-4 text-muted-foreground">{t("ctaText")}</p>
-            <Button size="lg" asChild>
-              <a href="/booking">{t("ctaButton")}</a>
-            </Button>
-          </div>
         </>
       )}
     </div>
