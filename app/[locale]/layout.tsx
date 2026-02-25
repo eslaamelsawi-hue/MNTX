@@ -1,4 +1,4 @@
-﻿import React from "react"
+import React from "react"
 import type { Metadata } from 'next'
 import { Inter, Alexandria } from 'next/font/google'
 import { NextIntlClientProvider } from 'next-intl';
@@ -42,7 +42,7 @@ export default async function RootLayout({
 
   return (
     <html lang={locale} dir={direction} suppressHydrationWarning>
-      <body className={${fontClass} antialiased}>
+      <body className={`${fontClass} antialiased`}>
         <ThemeProvider
           attribute="class"
           defaultTheme="dark"

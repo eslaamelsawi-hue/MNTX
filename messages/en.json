@@ -3,7 +3,8 @@
     "brand": "Mentix Trading",
     "joinDiscord": "Join Discord",
     "booking": "Book Session",
-    "crypto": "Crypto Insights"
+    "crypto": "Crypto Insights",
+    "gold": "Gold Prices"
   },
   "hero": {
     "badge": "Limited Spots Available",
@@ -27,12 +28,30 @@
     "titleHighlight": "Master",
     "description": "Master momentum trading with clarity. Mentix Trading teaches a structured, repeatable process using POI (OB & FVG, supply & demand), market structure, and liquidity to build precision, confidence, and consistency in every trade.",
     "modules": [
-      { "title": "Market Mechanics", "description": "Understand how markets truly move through order flow and volume analysis." },
-      { "title": "Consistency Profitable", "description": "Learn how to be a consistent profitable trader — long term profitable." },
-      { "title": "PropFirm & Funded Acc", "description": "Master how to pass a propfirm challenge with a professional strategy & risk management." },
-      { "title": "POI Identification", "description": "Identify high-probability Points of Interest using OB, FVG, and supply & demand zones." },
-      { "title": "Risk Management", "description": "Develop a professional risk framework to protect and grow your capital." },
-      { "title": "Trade Execution", "description": "Build a repeatable execution plan with clear rules and journaling practices." }
+      {
+        "title": "Market Mechanics",
+        "description": "Understand how markets truly move through order flow and volume analysis."
+      },
+      {
+        "title": "Consistency Profitable",
+        "description": "Learn how to be a consistent profitable trader — long term profitable."
+      },
+      {
+        "title": "PropFirm & Funded Acc",
+        "description": "Master how to pass a propfirm challenge with a professional strategy & risk management."
+      },
+      {
+        "title": "POI Identification",
+        "description": "Identify high-probability Points of Interest using OB, FVG, and supply & demand zones."
+      },
+      {
+        "title": "Risk Management",
+        "description": "Develop a professional risk framework to protect and grow your capital."
+      },
+      {
+        "title": "Trade Execution",
+        "description": "Build a repeatable execution plan with clear rules and journaling practices."
+      }
     ]
   },
   "whatsIncluded": {
@@ -40,10 +59,22 @@
     "titleHighlight": "Included",
     "description": "Everything you need to become a consistently profitable trader.",
     "items": [
-      { "title": "60+ Video Lessons", "description": "In-depth recorded lessons covering every aspect of POI (OB & FVG, supply & demand), market structure, and liquidity trading." },
-      { "title": "Private Community", "description": "Join an exclusive Discord & Telegram community of serious traders for daily discussion." },
-      { "title": "Trading Playbook", "description": "A complete playbook with setups, checklists, and journaling templates." },
-      { "title": "1-on-1 Live Sessions", "description": "Weekly 1-on-1 live sessions where you can ask questions and get real-time feedback." }
+      {
+        "title": "60+ Video Lessons",
+        "description": "In-depth recorded lessons covering every aspect of POI (OB & FVG, supply & demand), market structure, and liquidity trading."
+      },
+      {
+        "title": "Private Community",
+        "description": "Join an exclusive Discord & Telegram community of serious traders for daily discussion."
+      },
+      {
+        "title": "Trading Playbook",
+        "description": "A complete playbook with setups, checklists, and journaling templates."
+      },
+      {
+        "title": "1-on-1 Live Sessions",
+        "description": "Weekly 1-on-1 live sessions where you can ask questions and get real-time feedback."
+      }
     ]
   },
   "pricing": {
@@ -146,10 +177,22 @@
     "whyTitleHighlight": "1-on-1 Coaching",
     "whyDescription": "Unlike group courses, our 1-on-1 coaching is tailored entirely to you. Your trading style, your weaknesses, your goals.",
     "whyItems": [
-      { "title": "Personalized Strategy", "description": "Get a trading strategy built specifically around your strengths, schedule, and risk tolerance." },
-      { "title": "Weekly Live Sessions", "description": "6 months of weekly 1-on-1 Zoom sessions with direct feedback on your trades and chart analysis." },
-      { "title": "Funded Account Strategy", "description": "A proven step-by-step strategy to pass prop firm challenges and manage funded accounts." },
-      { "title": "Lifetime Access", "description": "Full access to 50+ video lessons, trading playbook, templates, and private Discord & Telegram communities forever." }
+      {
+        "title": "Personalized Strategy",
+        "description": "Get a trading strategy built specifically around your strengths, schedule, and risk tolerance."
+      },
+      {
+        "title": "Weekly Live Sessions",
+        "description": "6 months of weekly 1-on-1 Zoom sessions with direct feedback on your trades and chart analysis."
+      },
+      {
+        "title": "Funded Account Strategy",
+        "description": "A proven step-by-step strategy to pass prop firm challenges and manage funded accounts."
+      },
+      {
+        "title": "Lifetime Access",
+        "description": "Full access to 50+ video lessons, trading playbook, templates, and private Discord & Telegram communities forever."
+      }
     ],
     "pricingTitle": "Invest in Your",
     "pricingTitleHighlight": "Trading Future"
@@ -174,6 +217,40 @@
     "vodafoneCash": "Vodafone Cash",
     "copy": "Copy",
     "copied": "Copied"
+  },
+  "gold": {
+    "badge": "Egyptian Gold Prices",
+    "title": "Gold Analysis &",
+    "titleHighlight": "Price Recap",
+    "description": "Live Egyptian gold prices updated every 5 minutes. Track ounce, gram prices for 24K, 21K, and 18K gold with real-time USD/EGP exchange rates.",
+    "lastUpdated": "Last updated",
+    "ounceUSD": "Gold Ounce (USD)",
+    "exchangeRate": "Exchange Rate",
+    "change24h": "24h Change",
+    "refresh": "Refresh",
+    "ouncePrice": "Gold Ounce",
+    "inEGP": "Price in EGP",
+    "inUSD": "Price in USD",
+    "today": "today",
+    "gram24Title": "24 Karat Gold",
+    "gram21Title": "21 Karat Gold",
+    "gram18Title": "18 Karat Gold",
+    "perGram": "per gram",
+    "purity": "Purity Level",
+    "comparisonTitle": "Price Comparison Table",
+    "tableType": "Type",
+    "tablePurity": "Purity",
+    "tablePriceEGP": "Price (EGP)",
+    "ounceLabel": "Troy Ounce",
+    "gram24Label": "Gram 24K",
+    "gram21Label": "Gram 21K",
+    "gram18Label": "Gram 18K",
+    "disclaimerTitle": "Important Disclaimer",
+    "disclaimerText": "Prices shown are indicative and sourced from international markets with USD/EGP conversion. Actual local prices may vary based on dealer premiums, taxes, and market conditions. This is not financial advice.",
+    "ctaText": "Want expert guidance on gold investments?",
+    "ctaButton": "Book a Consultation",
+    "errorTitle": "Unable to load gold prices",
+    "errorDescription": "Please check your connection and try again.",
+    "retry": "Try Again"
   }
 }
-
