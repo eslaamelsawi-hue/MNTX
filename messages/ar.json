@@ -252,5 +252,24 @@
     "errorTitle": "تعذر تحميل أسعار الذهب",
     "errorDescription": "يرجى التحقق من اتصالك والمحاولة مرة أخرى.",
     "retry": "حاول مرة أخرى"
+  },
+  "ingotCalc": {
+    "title": "حاسبة سبائك الذهب",
+    "subtitle": "احسب سعر سبائك الذهب حسب العيار والوزن",
+    "selectKerat": "اختر العيار",
+    "pure": "(نقي)",
+    "selectWeight": "اختر الوزن",
+    "customWeightPlaceholder": "وزن مخصص",
+    "gold": "ذهب",
+    "pricePerGram": "سعر الجرام",
+    "pricePerGramUSD": "سعر الجرام (دولار)",
+    "totalPriceEGP": "السعر الإجمالي (جنيه)",
+    "totalPriceUSD": "السعر الإجمالي (دولار)",
+    "kerat": "العيار",
+    "priceEGP": "السعر (جنيه)",
+    "priceUSD": "السعر (دولار)",
+    "onePound": "جنيه (8ج)",
+    "halfPound": "نص جنيه (4ج)",
+    "quarterPound": "ربع جنيه (2ج)"
   }
 }

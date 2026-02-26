@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect } from "react"
+import { useState, useEffect, useMemo } from "react"
 import useSWR from "swr"
 import {
   TrendingUp,
@@ -13,11 +13,14 @@ import {
   Scale,
   DollarSign,
   Info,
+  Calculator,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { useTranslations } from "next-intl"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
 
 interface GoldPriceData {
   ounceUSD: number | null
@@ -71,6 +74,7 @@ function GoldCardSkeleton() {
 
 export function GoldPage() {
   const t = useTranslations("gold")
+  const tc = useTranslations("ingotCalc")
   const { data, error, isLoading, mutate } = useSWR<GoldPriceData>(
     "/api/gold",
     fetcher,
@@ -94,6 +98,39 @@ export function GoldPage() {
   }, [data?.lastUpdated])
 
   const isPositive = (data?.change24h ?? 0) >= 0
+
+  // Ingot Calculator State
+  const [selectedKerat, setSelectedKerat] = useState(24)
+  const [selectedWeight, setSelectedWeight] = useState(1)
+  const [customWeight, setCustomWeight] = useState("")
+
+  const standardWeights = [
+    { grams: 2, label: tc("quarterPound"), isPound: true },
+    { grams: 4, label: tc("halfPound"), isPound: true },
+    { grams: 8, label: tc("onePound"), isPound: true },
+    { grams: 1, label: "1g", isPound: false },
+    { grams: 2.5, label: "2.5g", isPound: false },
+    { grams: 5, label: "5g", isPound: false },
+    { grams: 10, label: "10g", isPound: false },
+    { grams: 20, label: "20g", isPound: false },
+    { grams: 31.1035, label: "1 oz", isPound: false },
+    { grams: 50, label: "50g", isPound: false },
+    { grams: 100, label: "100g", isPound: false },
+    { grams: 500, label: "500g", isPound: false },
+  ]
+
+  const activeWeight = customWeight ? parseFloat(customWeight) || 0 : selectedWeight
+
+  const calcResults = useMemo(() => {
+    if (!data) return null
+    const priceMap: Record<number, number | null> = { 24: data.gram24, 21: data.gram21, 18: data.gram18 }
+    const pricePerGram = priceMap[selectedKerat] ?? 0
+    const totalEGP = pricePerGram * activeWeight
+    const totalUSD = (data.usdToEgp ?? 0) > 0 ? totalEGP / data.usdToEgp! : 0
+    const pricePerGramUSD = (data.usdToEgp ?? 0) > 0 ? pricePerGram / data.usdToEgp! : 0
+    return { pricePerGram, pricePerGramUSD, totalEGP, totalUSD }
+  }, [data, selectedKerat, activeWeight])
+
 
   return (
     <div className="mx-auto max-w-6xl px-4 py-12">
@@ -163,6 +200,98 @@ export function GoldPage() {
               {t("refresh")}
             </Button>
           </div>
+
+          {/* ========== Ingot Calculator ========== */}
+          <Card className="mb-8 border-yellow-500/20 bg-gradient-to-br from-yellow-500/5 to-amber-600/5">
+            <CardHeader>
+              <div className="flex items-center gap-3">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-yellow-500/10">
+                  <Calculator className="h-6 w-6 text-yellow-500" />
+                </div>
+                <div>
+                  <CardTitle className="text-lg">{tc("title")}</CardTitle>
+                  <p className="text-sm text-muted-foreground">{tc("subtitle")}</p>
+                </div>
+              </div>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              {/* Kerat Selection */}
+              <div>
+                <Label className="mb-2 block text-sm font-medium">{tc("selectKerat")}</Label>
+                <div className="flex flex-wrap gap-2">
+                  {([24, 21, 18]).map((k) => (
+                    <Button
+                      key={k}
+                      variant={selectedKerat === k ? "default" : "outline"}
+                      className={selectedKerat === k ? "bg-yellow-500 text-black hover:bg-yellow-600" : "border-yellow-500/30 hover:bg-yellow-500/10"}
+                      onClick={() => setSelectedKerat(k)}
+                    >
+                      {k}K {k === 24 ? tc("pure") : ""}
+                    </Button>
+                  ))}
+                </div>
+              </div>
+
+              {/* Weight Selection */}
+              <div>
+                <Label className="mb-2 block text-sm font-medium">{tc("selectWeight")}</Label>
+                <div className="flex flex-wrap gap-2">
+                  {standardWeights.map((w) => (
+                    <Button
+                      key={w.label}
+                      size="sm"
+                      variant={selectedWeight === w.grams && !customWeight ? "default" : "outline"}
+                      className={selectedWeight === w.grams && !customWeight
+                        ? w.isPound ? "bg-amber-600 text-white hover:bg-amber-700" : "bg-yellow-500 text-black hover:bg-yellow-600"
+                        : "border-yellow-500/30 hover:bg-yellow-500/10"}
+                      onClick={() => { setSelectedWeight(w.grams); setCustomWeight(""); if (w.isPound) setSelectedKerat(21); }}
+                    >
+                      {w.label}
+                    </Button>
+                  ))}
+                </div>
+                <div className="mt-3 flex items-center gap-2">
+                  <Input
+                    type="number"
+                    min="0.1"
+                    step="0.1"
+                    placeholder={tc("customWeightPlaceholder")}
+                    value={customWeight}
+                    onChange={(e) => setCustomWeight(e.target.value)}
+                    className="max-w-[200px] border-yellow-500/30 focus-visible:ring-yellow-500/50"
+                  />
+                  <span className="text-sm text-muted-foreground">g</span>
+                </div>
+              </div>
+
+              {/* Results */}
+              {calcResults && (
+                <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-4 space-y-3">
+                  <div className="grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground">{tc("pricePerGram")}</p>
+                      <p className="text-lg font-bold text-foreground">{formatEGP(calcResults.pricePerGram)} EGP</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">{tc("pricePerGramUSD")}</p>
+                      <p className="text-lg font-bold text-foreground">{formatUSD(calcResults.pricePerGramUSD)}</p>
+                    </div>
+                  </div>
+                  <div className="border-t border-yellow-500/20 pt-3 grid grid-cols-2 gap-4">
+                    <div>
+                      <p className="text-xs text-muted-foreground">{tc("totalPriceEGP")} ({activeWeight}g)</p>
+                      <p className="text-2xl font-bold text-yellow-500">{formatEGP(calcResults.totalEGP)} EGP</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-muted-foreground">{tc("totalPriceUSD")}</p>
+                      <p className="text-xl font-bold text-foreground">{formatUSD(calcResults.totalUSD)}</p>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+            </CardContent>
+          </Card>
 
           <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 mb-8">
             <Card className="border-yellow-500/20 bg-gradient-to-br from-yellow-500/5 to-yellow-600/10 transition-all duration-200 hover:border-yellow-500/40 sm:col-span-2 lg:col-span-1">
