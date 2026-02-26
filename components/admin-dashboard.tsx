@@ -28,6 +28,8 @@ import {
   Edit,
   Eye,
   EyeOff,
+  ImageIcon,
+  Tag,
 } from "lucide-react"
 
 type Slot = {
@@ -62,6 +64,10 @@ type GoldArticle = {
   title_ar: string
   content_en: string
   content_ar: string
+  summary_en: string
+  summary_ar: string
+  image_url: string
+  tags: string[]
   published: boolean
   created_at: string
   updated_at: string
@@ -85,6 +91,10 @@ export function AdminDashboard() {
     title_ar: "",
     content_en: "",
     content_ar: "",
+    summary_en: "",
+    summary_ar: "",
+    image_url: "",
+    tags: "" as string,
     published: true,
   })
 
@@ -303,7 +313,7 @@ export function AdminDashboard() {
 
   const resetArticleForm = () => {
     setEditingArticle(null)
-    setArticleForm({ title_en: "", title_ar: "", content_en: "", content_ar: "", published: true })
+    setArticleForm({ title_en: "", title_ar: "", content_en: "", content_ar: "", summary_en: "", summary_ar: "", image_url: "", tags: "", published: true })
     setArticleDialogOpen(false)
   }
 
@@ -314,24 +324,32 @@ export function AdminDashboard() {
       title_ar: article.title_ar,
       content_en: article.content_en,
       content_ar: article.content_ar,
+      summary_en: article.summary_en || "",
+      summary_ar: article.summary_ar || "",
+      image_url: article.image_url || "",
+      tags: (article.tags || []).join(", "),
       published: article.published,
     })
     setArticleDialogOpen(true)
   }
 
   const handleSaveArticle = async () => {
+    const payload = {
+      ...articleForm,
+      tags: articleForm.tags.split(",").map((t: string) => t.trim()).filter(Boolean),
+    }
     try {
       if (editingArticle) {
         await fetch("/api/admin/articles", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: editingArticle.id, ...articleForm }),
+          body: JSON.stringify({ id: editingArticle.id, ...payload }),
         })
       } else {
         await fetch("/api/admin/articles", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(articleForm),
+          body: JSON.stringify(payload),
         })
       }
       resetArticleForm()
@@ -827,23 +845,80 @@ export function AdminDashboard() {
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
+                      {/* Image URL */}
                       <div className="space-y-2">
-                        <Label>Title (English) *</Label>
+                        <Label className="flex items-center gap-1.5"><ImageIcon className="h-3.5 w-3.5" /> Cover Image URL</Label>
                         <Input
-                          value={articleForm.title_en}
-                          onChange={(e) => setArticleForm(f => ({ ...f, title_en: e.target.value }))}
-                          placeholder="Gold market analysis..."
+                          value={articleForm.image_url}
+                          onChange={(e) => setArticleForm(f => ({ ...f, image_url: e.target.value }))}
+                          placeholder="https://example.com/image.jpg"
+                          type="url"
                         />
+                        {articleForm.image_url && (
+                          <div className="relative w-full h-32 rounded-lg overflow-hidden border border-border">
+                            <img src={articleForm.image_url} alt="Preview" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                          </div>
+                        )}
                       </div>
+                      {/* Titles */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Title (English) *</Label>
+                          <Input
+                            value={articleForm.title_en}
+                            onChange={(e) => setArticleForm(f => ({ ...f, title_en: e.target.value }))}
+                            placeholder="Gold market analysis..."
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Title (Arabic)</Label>
+                          <Input
+                            value={articleForm.title_ar}
+                            onChange={(e) => setArticleForm(f => ({ ...f, title_ar: e.target.value }))}
+                            placeholder="تحليل سوق الذهب..."
+                            dir="rtl"
+                          />
+                        </div>
+                      </div>
+                      {/* Summaries */}
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="space-y-2">
+                          <Label>Summary (English)</Label>
+                          <Textarea
+                            value={articleForm.summary_en}
+                            onChange={(e) => setArticleForm(f => ({ ...f, summary_en: e.target.value }))}
+                            placeholder="Brief summary shown on card..."
+                            rows={2}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>Summary (Arabic)</Label>
+                          <Textarea
+                            value={articleForm.summary_ar}
+                            onChange={(e) => setArticleForm(f => ({ ...f, summary_ar: e.target.value }))}
+                            placeholder="ملخص قصير يظهر على البطاقة..."
+                            rows={2}
+                            dir="rtl"
+                          />
+                        </div>
+                      </div>
+                      {/* Tags */}
                       <div className="space-y-2">
-                        <Label>Title (Arabic)</Label>
+                        <Label className="flex items-center gap-1.5"><Tag className="h-3.5 w-3.5" /> Tags (comma separated)</Label>
                         <Input
-                          value={articleForm.title_ar}
-                          onChange={(e) => setArticleForm(f => ({ ...f, title_ar: e.target.value }))}
-                          placeholder="تحليل سوق الذهب..."
-                          dir="rtl"
+                          value={articleForm.tags}
+                          onChange={(e) => setArticleForm(f => ({ ...f, tags: e.target.value }))}
+                          placeholder="Gold, Analysis, Market Update"
                         />
+                        {articleForm.tags && (
+                          <div className="flex flex-wrap gap-1">
+                            {articleForm.tags.split(",").map((t: string) => t.trim()).filter(Boolean).map((tag: string) => (
+                              <Badge key={tag} variant="outline" className="text-xs">{tag}</Badge>
+                            ))}
+                          </div>
+                        )}
                       </div>
+                      {/* Content */}
                       <div className="space-y-2">
                         <Label>Content (English) *</Label>
                         <Textarea
@@ -863,6 +938,7 @@ export function AdminDashboard() {
                           dir="rtl"
                         />
                       </div>
+                      {/* Published + Submit */}
                       <div className="flex items-center gap-2">
                         <input
                           type="checkbox"
@@ -874,7 +950,7 @@ export function AdminDashboard() {
                         <Label htmlFor="article-published">Published</Label>
                       </div>
                       <Button
-                        className="w-full"
+                        className="w-full bg-yellow-500 hover:bg-yellow-600 text-black"
                         disabled={!articleForm.title_en.trim() || !articleForm.content_en.trim()}
                         onClick={handleSaveArticle}
                       >
@@ -901,13 +977,25 @@ export function AdminDashboard() {
             ) : (
               <div className="space-y-4">
                 {articles.map((article) => (
-                  <Card key={article.id} className="border-border bg-card">
+                  <Card key={article.id} className="border-border bg-card overflow-hidden">
+                    {article.image_url && (
+                      <div className="relative w-full h-32 overflow-hidden">
+                        <img src={article.image_url} alt={article.title_en} className="w-full h-full object-cover" />
+                      </div>
+                    )}
                     <CardHeader className="pb-2">
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
                           <CardTitle className="text-base">{article.title_en}</CardTitle>
                           {article.title_ar && (
                             <p className="text-sm text-muted-foreground mt-1" dir="rtl">{article.title_ar}</p>
+                          )}
+                          {article.tags && article.tags.length > 0 && (
+                            <div className="flex flex-wrap gap-1 mt-2">
+                              {article.tags.map((tag: string) => (
+                                <Badge key={tag} variant="outline" className="text-[10px] px-1.5 py-0">{tag}</Badge>
+                              ))}
+                            </div>
                           )}
                         </div>
                         <div className="flex items-center gap-1 ml-4">
@@ -921,7 +1009,7 @@ export function AdminDashboard() {
                       </div>
                     </CardHeader>
                     <CardContent>
-                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{article.content_en}</p>
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{article.summary_en || article.content_en}</p>
                       <div className="flex items-center justify-between">
                         <p className="text-xs text-muted-foreground">
                           {new Date(article.created_at).toLocaleDateString("en-US", {

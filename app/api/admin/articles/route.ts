@@ -21,7 +21,7 @@ export async function GET() {
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const body = await request.json();
-  const { title_en, title_ar, content_en, content_ar, published } = body;
+  const { title_en, title_ar, content_en, content_ar, summary_en, summary_ar, image_url, tags, published } = body;
 
   if (!title_en || !content_en) {
     return NextResponse.json(
@@ -37,6 +37,10 @@ export async function POST(request: NextRequest) {
       title_ar: title_ar || "",
       content_en: content_en || "",
       content_ar: content_ar || "",
+      summary_en: summary_en || "",
+      summary_ar: summary_ar || "",
+      image_url: image_url || "",
+      tags: tags || [],
       published: published ?? true,
     })
     .select()
@@ -53,18 +57,17 @@ export async function POST(request: NextRequest) {
 export async function PATCH(request: NextRequest) {
   const supabase = await createClient();
   const body = await request.json();
-  const { id, title_en, title_ar, content_en, content_ar, published } = body;
+  const { id, ...fields } = body;
 
   if (!id) {
     return NextResponse.json({ error: "Article ID is required" }, { status: 400 });
   }
 
+  const allowed = ["title_en", "title_ar", "content_en", "content_ar", "summary_en", "summary_ar", "image_url", "tags", "published"];
   const updateData: Record<string, unknown> = {};
-  if (title_en !== undefined) updateData.title_en = title_en;
-  if (title_ar !== undefined) updateData.title_ar = title_ar;
-  if (content_en !== undefined) updateData.content_en = content_en;
-  if (content_ar !== undefined) updateData.content_ar = content_ar;
-  if (published !== undefined) updateData.published = published;
+  for (const key of allowed) {
+    if (fields[key] !== undefined) updateData[key] = fields[key];
+  }
 
   const { data, error } = await supabase
     .from("gold_articles")

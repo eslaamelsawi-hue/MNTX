@@ -17,6 +17,7 @@ import {
   FileText,
   Calendar,
 } from "lucide-react"
+import Image from "next/image"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -42,6 +43,10 @@ interface GoldArticle {
   title_ar: string
   content_en: string
   content_ar: string
+  summary_en: string
+  summary_ar: string
+  image_url: string
+  tags: string[]
   published: boolean
   created_at: string
   updated_at: string
@@ -222,6 +227,87 @@ export function GoldPage() {
               {t("refresh")}
             </Button>
           </div>
+
+          {/* ========== Gold Analysis Articles ========== */}
+          {articles.length > 0 && (
+            <div className="mb-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-yellow-500/10">
+                  <FileText className="h-6 w-6 text-yellow-500" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-foreground">{t("articlesTitle")}</h2>
+                  <p className="text-sm text-muted-foreground">{t("articlesSubtitle")}</p>
+                </div>
+              </div>
+              <div className="grid gap-6 md:grid-cols-2">
+                {articles.map((article) => {
+                  const title = locale === "ar" ? (article.title_ar || article.title_en) : article.title_en
+                  const content = locale === "ar" ? (article.content_ar || article.content_en) : article.content_en
+                  const summary = locale === "ar" ? (article.summary_ar || article.summary_en) : article.summary_en
+                  const isExpanded = expandedArticle === article.id
+                  return (
+                    <Card
+                      key={article.id}
+                      className="border-yellow-500/20 bg-card overflow-hidden transition-all duration-200 hover:border-yellow-500/40 hover:shadow-lg hover:shadow-yellow-500/5 group"
+                    >
+                      {article.image_url && (
+                        <div className="relative w-full h-48 overflow-hidden">
+                          <Image
+                            src={article.image_url}
+                            alt={title}
+                            fill
+                            className="object-cover transition-transform duration-300 group-hover:scale-105"
+                            sizes="(max-width: 768px) 100vw, 50vw"
+                          />
+                          <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
+                        </div>
+                      )}
+                      <CardHeader className={article.image_url ? "pb-2 pt-4" : "pb-2"}>
+                        <div className="flex items-start justify-between gap-2">
+                          <CardTitle className="text-lg font-bold text-foreground leading-tight">{title}</CardTitle>
+                          <div className="flex items-center gap-1.5 text-xs text-muted-foreground whitespace-nowrap shrink-0">
+                            <Calendar className="h-3.5 w-3.5" />
+                            {new Date(article.created_at).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </div>
+                        </div>
+                        {article.tags && article.tags.length > 0 && (
+                          <div className="flex flex-wrap gap-1.5 mt-2">
+                            {article.tags.map((tag: string) => (
+                              <Badge key={tag} variant="outline" className="text-[10px] px-2 py-0.5 border-yellow-500/30 text-yellow-500 bg-yellow-500/5">
+                                {tag}
+                              </Badge>
+                            ))}
+                          </div>
+                        )}
+                      </CardHeader>
+                      <CardContent>
+                        {!isExpanded && summary ? (
+                          <p className="text-sm text-muted-foreground leading-relaxed">{summary}</p>
+                        ) : (
+                          <div className={`text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap ${
+                            isExpanded ? "" : "line-clamp-3"
+                          }`}>
+                            {content}
+                          </div>
+                        )}
+                        <button
+                          className="mt-3 text-xs font-semibold text-yellow-500 hover:text-yellow-400 transition-colors"
+                          onClick={() => setExpandedArticle(isExpanded ? null : article.id)}
+                        >
+                          {isExpanded ? t("readLess") : t("readMore")} →
+                        </button>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           {/* ========== Ingot Calculator ========== */}
           <Card className="mb-8 border-yellow-500/20 bg-gradient-to-br from-yellow-500/5 to-amber-600/5">
@@ -483,64 +569,7 @@ export function GoldPage() {
             </CardContent>
           </Card>
 
-          {/* ========== Gold Analysis Articles ========== */}
-          {articles.length > 0 && (
-            <div className="mb-8">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-yellow-500/10">
-                  <FileText className="h-6 w-6 text-yellow-500" />
-                </div>
-                <div>
-                  <h2 className="text-xl font-bold text-foreground">{t("articlesTitle")}</h2>
-                  <p className="text-sm text-muted-foreground">{t("articlesSubtitle")}</p>
-                </div>
-              </div>
-              <div className="space-y-4">
-                {articles.map((article) => {
-                  const title = locale === "ar" ? (article.title_ar || article.title_en) : article.title_en
-                  const content = locale === "ar" ? (article.content_ar || article.content_en) : article.content_en
-                  const isExpanded = expandedArticle === article.id
-                  return (
-                    <Card
-                      key={article.id}
-                      className="border-yellow-500/20 bg-card transition-all duration-200 hover:border-yellow-500/40 cursor-pointer"
-                      onClick={() => setExpandedArticle(isExpanded ? null : article.id)}
-                    >
-                      <CardHeader className="pb-2">
-                        <div className="flex items-center justify-between">
-                          <CardTitle className="text-base font-semibold text-foreground">{title}</CardTitle>
-                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
-                            <Calendar className="h-3.5 w-3.5" />
-                            {new Date(article.created_at).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US", {
-                              year: "numeric",
-                              month: "short",
-                              day: "numeric",
-                            })}
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent>
-                        <div className={`text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap ${
-                          isExpanded ? "" : "line-clamp-3"
-                        }`}>
-                          {content}
-                        </div>
-                        <button
-                          className="mt-2 text-xs text-yellow-500 hover:text-yellow-400 font-medium"
-                          onClick={(e) => {
-                            e.stopPropagation()
-                            setExpandedArticle(isExpanded ? null : article.id)
-                          }}
-                        >
-                          {isExpanded ? t("readLess") : t("readMore")}
-                        </button>
-                      </CardContent>
-                    </Card>
-                  )
-                })}
-              </div>
-            </div>
-          )}
+
 
           <div className="rounded-xl border border-border bg-secondary/30 p-6">
             <div className="flex items-start gap-3">

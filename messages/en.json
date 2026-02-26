@@ -253,6 +253,7 @@
     "articlesSubtitle": "Latest market insights and analysis",
     "readMore": "Read more",
     "readLess": "Show less",
+    "noArticlesYet": "No analysis articles published yet.",
     "errorTitle": "Unable to load gold prices",
     "errorDescription": "Please check your connection and try again.",
     "retry": "Try Again"
