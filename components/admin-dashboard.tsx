@@ -30,6 +30,7 @@ import {
   EyeOff,
   ImageIcon,
   Tag,
+  Upload,
 } from "lucide-react"
 
 type Slot = {
@@ -97,6 +98,7 @@ export function AdminDashboard() {
     tags: "" as string,
     published: true,
   })
+  const [uploadingImage, setUploadingImage] = useState(false)
 
   // Helper function to format date in local timezone (not UTC)
   const formatDateLocal = (date: Date): string => {
@@ -842,20 +844,56 @@ export function AdminDashboard() {
                       </DialogDescription>
                     </DialogHeader>
                     <div className="space-y-4 py-4">
-                      {/* Image URL */}
+                      {/* Image Upload */}
                       <div className="space-y-2">
-                        <Label className="flex items-center gap-1.5"><ImageIcon className="h-3.5 w-3.5" /> Cover Image URL</Label>
-                        <Input
-                          value={articleForm.image_url}
-                          onChange={(e) => setArticleForm(f => ({ ...f, image_url: e.target.value }))}
-                          placeholder="https://example.com/image.jpg"
-                          type="url"
-                        />
+                        <Label className="flex items-center gap-1.5"><ImageIcon className="h-3.5 w-3.5" /> Cover Image</Label>
+                        <div className="flex gap-2">
+                          <Input
+                            type="file"
+                            accept="image/jpeg,image/png,image/webp,image/gif,image/avif"
+                            disabled={uploadingImage}
+                            onChange={async (e) => {
+                              const file = e.target.files?.[0]
+                              if (!file) return
+                              if (file.size > 5 * 1024 * 1024) { alert("Image must be under 5MB"); return }
+                              setUploadingImage(true)
+                              try {
+                                const fd = new FormData()
+                                fd.append("file", file)
+                                const res = await fetch("/api/admin/upload", { method: "POST", body: fd })
+                                const data = await res.json()
+                                if (!res.ok) { alert("Upload failed: " + (data.error ?? "Unknown error")); return }
+                                setArticleForm(f => ({ ...f, image_url: data.url }))
+                              } catch (err) {
+                                console.error("Upload error:", err)
+                                alert("Upload failed. Check console.")
+                              } finally {
+                                setUploadingImage(false)
+                              }
+                            }}
+                            className="flex-1"
+                          />
+                          {uploadingImage && <div className="flex items-center text-xs text-muted-foreground"><Upload className="h-4 w-4 animate-pulse mr-1" /> Uploading...</div>}
+                        </div>
                         {articleForm.image_url && (
                           <div className="relative w-full h-32 rounded-lg overflow-hidden border border-border">
                             <img src={articleForm.image_url} alt="Preview" className="w-full h-full object-cover" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                            <button
+                              type="button"
+                              onClick={() => setArticleForm(f => ({ ...f, image_url: "" }))}
+                              className="absolute top-2 right-2 bg-black/60 hover:bg-black/80 text-white rounded-full p-1 transition-colors"
+                            >
+                              <XCircle className="h-4 w-4" />
+                            </button>
                           </div>
                         )}
+                        <Input
+                          value={articleForm.image_url}
+                          onChange={(e) => setArticleForm(f => ({ ...f, image_url: e.target.value }))}
+                          placeholder="Or paste image URL..."
+                          type="url"
+                          className="text-xs"
+                        />
                       </div>
                       {/* Titles */}
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
