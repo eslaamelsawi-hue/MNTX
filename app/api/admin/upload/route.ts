@@ -1,8 +1,10 @@
-import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
 
+const BUCKET = "article-images";
+
 export async function POST(request: NextRequest) {
-  const supabase = await createClient();
+  const supabase = createAdminClient();
 
   try {
     const formData = await request.formData();
@@ -11,15 +13,26 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: "No file provided" }, { status: 400 });
     }
 
-    // Validate file type
     const allowedTypes = ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"];
     if (!allowedTypes.includes(file.type)) {
       return NextResponse.json({ error: "Invalid file type. Use JPG, PNG, WebP, GIF, or AVIF." }, { status: 400 });
     }
 
-    // Max 5MB
     if (file.size > 5 * 1024 * 1024) {
       return NextResponse.json({ error: "File too large. Max 5MB." }, { status: 400 });
+    }
+
+    // Ensure bucket exists
+    const { data: buckets } = await supabase.storage.listBuckets();
+    if (!buckets?.some((b) => b.id === BUCKET)) {
+      const { error: bErr } = await supabase.storage.createBucket(BUCKET, {
+        public: true,
+        allowedMimeTypes: ["image/jpeg", "image/png", "image/webp", "image/gif", "image/avif"],
+        fileSizeLimit: 5 * 1024 * 1024,
+      });
+      if (bErr && !bErr.message.includes("already exists")) {
+        return NextResponse.json({ error: "Storage setup failed: " + bErr.message }, { status: 500 });
+      }
     }
 
     const ext = file.name.split(".").pop() ?? "jpg";
@@ -29,7 +42,7 @@ export async function POST(request: NextRequest) {
     const buffer = Buffer.from(arrayBuffer);
 
     const { error: uploadError } = await supabase.storage
-      .from("article-images")
+      .from(BUCKET)
       .upload(fileName, buffer, {
         contentType: file.type,
         upsert: false,
@@ -41,12 +54,13 @@ export async function POST(request: NextRequest) {
     }
 
     const { data: urlData } = supabase.storage
-      .from("article-images")
+      .from(BUCKET)
       .getPublicUrl(fileName);
 
     return NextResponse.json({ url: urlData.publicUrl });
   } catch (e: unknown) {
+    const msg = e instanceof Error ? e.message : "Upload failed";
     console.error("Upload error:", e);
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 });
+    return NextResponse.json({ error: msg }, { status: 500 });
   }
 }
