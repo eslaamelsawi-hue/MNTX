@@ -11,7 +11,6 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
-import { Textarea } from "@/components/ui/textarea"
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -286,82 +285,6 @@ export function AdminDashboard() {
       setRescheduleSlotId("")
     } catch (e) {
       console.error("Failed to reschedule:", e)
-    }
-  }
-
-  // ========== Gold Articles functions ==========
-  const fetchArticles = async () => {
-    setLoadingArticles(true)
-    try {
-      const res = await fetch("/api/admin/articles")
-      const data = await res.json()
-      if (data.articles) setArticles(data.articles)
-    } catch (e) {
-      console.error("Failed to fetch articles:", e)
-    }
-    setLoadingArticles(false)
-  }
-
-  const resetArticleForm = () => {
-    setEditingArticle(null)
-    setArticleForm({ title_en: "", title_ar: "", content_en: "", content_ar: "", published: true })
-    setArticleDialogOpen(false)
-  }
-
-  const handleEditArticle = (article: GoldArticle) => {
-    setEditingArticle(article)
-    setArticleForm({
-      title_en: article.title_en,
-      title_ar: article.title_ar,
-      content_en: article.content_en,
-      content_ar: article.content_ar,
-      published: article.published,
-    })
-    setArticleDialogOpen(true)
-  }
-
-  const handleSaveArticle = async () => {
-    try {
-      if (editingArticle) {
-        await fetch("/api/admin/articles", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: editingArticle.id, ...articleForm }),
-        })
-      } else {
-        await fetch("/api/admin/articles", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(articleForm),
-        })
-      }
-      resetArticleForm()
-      fetchArticles()
-    } catch (e) {
-      console.error("Failed to save article:", e)
-    }
-  }
-
-  const handleDeleteArticle = async (id: string) => {
-    if (!confirm("Delete this article?")) return
-    try {
-      await fetch(`/api/admin/articles?id=${id}`, { method: "DELETE" })
-      fetchArticles()
-    } catch (e) {
-      console.error("Failed to delete article:", e)
-    }
-  }
-
-  const handleTogglePublished = async (article: GoldArticle) => {
-    try {
-      await fetch("/api/admin/articles", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id: article.id, published: !article.published }),
-      })
-      fetchArticles()
-    } catch (e) {
-      console.error("Failed to toggle published:", e)
     }
   }
 
