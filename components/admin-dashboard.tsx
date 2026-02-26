@@ -339,23 +339,20 @@ export function AdminDashboard() {
       tags: articleForm.tags.split(",").map((t: string) => t.trim()).filter(Boolean),
     }
     try {
-      if (editingArticle) {
-        await fetch("/api/admin/articles", {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ id: editingArticle.id, ...payload }),
-        })
-      } else {
-        await fetch("/api/admin/articles", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        })
+      const url = "/api/admin/articles"
+      const method = editingArticle ? "PATCH" : "POST"
+      const reqBody = editingArticle ? { id: editingArticle.id, ...payload } : payload
+      const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(reqBody) })
+      const data = await res.json()
+      if (!res.ok) {
+        alert("Failed to save article: " + (data.error ?? "Unknown error"))
+        return
       }
       resetArticleForm()
       fetchArticles()
     } catch (e) {
       console.error("Failed to save article:", e)
+      alert("Failed to save article. Check console for details.")
     }
   }
 
