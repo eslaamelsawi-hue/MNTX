@@ -14,11 +14,13 @@ import {
   DollarSign,
   Info,
   Calculator,
+  FileText,
+  Calendar,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import { useTranslations } from "next-intl"
+import { useTranslations, useLocale } from "next-intl"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 
@@ -32,6 +34,17 @@ interface GoldPriceData {
   lastUpdated: string
   change24h: number | null
   source: string
+}
+
+interface GoldArticle {
+  id: string
+  title_en: string
+  title_ar: string
+  content_en: string
+  content_ar: string
+  published: boolean
+  created_at: string
+  updated_at: string
 }
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
@@ -75,6 +88,15 @@ function GoldCardSkeleton() {
 export function GoldPage() {
   const t = useTranslations("gold")
   const tc = useTranslations("ingotCalc")
+  const locale = useLocale()
+
+  const { data: articlesData } = useSWR<{ articles: GoldArticle[] }>(
+    "/api/gold/articles",
+    fetcher,
+    { revalidateOnFocus: false }
+  )
+  const articles = articlesData?.articles ?? []
+  const [expandedArticle, setExpandedArticle] = useState<string | null>(null)
   const { data, error, isLoading, mutate } = useSWR<GoldPriceData>(
     "/api/gold",
     fetcher,
@@ -460,6 +482,65 @@ export function GoldPage() {
               </div>
             </CardContent>
           </Card>
+
+          {/* ========== Gold Analysis Articles ========== */}
+          {articles.length > 0 && (
+            <div className="mb-8">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-yellow-500/10">
+                  <FileText className="h-6 w-6 text-yellow-500" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold text-foreground">{t("articlesTitle")}</h2>
+                  <p className="text-sm text-muted-foreground">{t("articlesSubtitle")}</p>
+                </div>
+              </div>
+              <div className="space-y-4">
+                {articles.map((article) => {
+                  const title = locale === "ar" ? (article.title_ar || article.title_en) : article.title_en
+                  const content = locale === "ar" ? (article.content_ar || article.content_en) : article.content_en
+                  const isExpanded = expandedArticle === article.id
+                  return (
+                    <Card
+                      key={article.id}
+                      className="border-yellow-500/20 bg-card transition-all duration-200 hover:border-yellow-500/40 cursor-pointer"
+                      onClick={() => setExpandedArticle(isExpanded ? null : article.id)}
+                    >
+                      <CardHeader className="pb-2">
+                        <div className="flex items-center justify-between">
+                          <CardTitle className="text-base font-semibold text-foreground">{title}</CardTitle>
+                          <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                            <Calendar className="h-3.5 w-3.5" />
+                            {new Date(article.created_at).toLocaleDateString(locale === "ar" ? "ar-EG" : "en-US", {
+                              year: "numeric",
+                              month: "short",
+                              day: "numeric",
+                            })}
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent>
+                        <div className={`text-sm text-muted-foreground leading-relaxed whitespace-pre-wrap ${
+                          isExpanded ? "" : "line-clamp-3"
+                        }`}>
+                          {content}
+                        </div>
+                        <button
+                          className="mt-2 text-xs text-yellow-500 hover:text-yellow-400 font-medium"
+                          onClick={(e) => {
+                            e.stopPropagation()
+                            setExpandedArticle(isExpanded ? null : article.id)
+                          }}
+                        >
+                          {isExpanded ? t("readLess") : t("readMore")}
+                        </button>
+                      </CardContent>
+                    </Card>
+                  )
+                })}
+              </div>
+            </div>
+          )}
 
           <div className="rounded-xl border border-border bg-secondary/30 p-6">
             <div className="flex items-start gap-3">

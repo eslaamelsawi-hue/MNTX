@@ -10,6 +10,8 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Textarea } from "@/components/ui/textarea"
+import { Textarea } from "@/components/ui/textarea"
 import {
   Calendar as CalendarIcon,
   Clock,
@@ -23,6 +25,10 @@ import {
   CalendarDays,
   TrendingUp,
   LogOut,
+  FileText,
+  Edit,
+  Eye,
+  EyeOff,
 } from "lucide-react"
 
 type Slot = {
@@ -51,6 +57,17 @@ type Booking = {
   availability_slots: Slot
 }
 
+type GoldArticle = {
+  id: string
+  title_en: string
+  title_ar: string
+  content_en: string
+  content_ar: string
+  published: boolean
+  created_at: string
+  updated_at: string
+}
+
 export function AdminDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [slots, setSlots] = useState<Slot[]>([])
@@ -58,6 +75,19 @@ export function AdminDashboard() {
   const [loadingSlots, setLoadingSlots] = useState(true)
   const [rescheduleBookingId, setRescheduleBookingId] = useState<string | null>(null)
   const [rescheduleSlotId, setRescheduleSlotId] = useState<string>("")
+
+  // Gold articles state
+  const [articles, setArticles] = useState<GoldArticle[]>([])
+  const [loadingArticles, setLoadingArticles] = useState(true)
+  const [articleDialogOpen, setArticleDialogOpen] = useState(false)
+  const [editingArticle, setEditingArticle] = useState<GoldArticle | null>(null)
+  const [articleForm, setArticleForm] = useState({
+    title_en: "",
+    title_ar: "",
+    content_en: "",
+    content_ar: "",
+    published: true,
+  })
 
   // Helper function to format date in local timezone (not UTC)
   const formatDateLocal = (date: Date): string => {
@@ -109,6 +139,7 @@ export function AdminDashboard() {
   useEffect(() => {
     fetchBookings()
     fetchSlots()
+    fetchArticles()
   }, [fetchBookings, fetchSlots])
 
   const formatTime = (time: string) => {
@@ -258,6 +289,158 @@ export function AdminDashboard() {
     }
   }
 
+  // ========== Gold Articles functions ==========
+  const fetchArticles = async () => {
+    setLoadingArticles(true)
+    try {
+      const res = await fetch("/api/admin/articles")
+      const data = await res.json()
+      if (data.articles) setArticles(data.articles)
+    } catch (e) {
+      console.error("Failed to fetch articles:", e)
+    }
+    setLoadingArticles(false)
+  }
+
+  const resetArticleForm = () => {
+    setEditingArticle(null)
+    setArticleForm({ title_en: "", title_ar: "", content_en: "", content_ar: "", published: true })
+    setArticleDialogOpen(false)
+  }
+
+  const handleEditArticle = (article: GoldArticle) => {
+    setEditingArticle(article)
+    setArticleForm({
+      title_en: article.title_en,
+      title_ar: article.title_ar,
+      content_en: article.content_en,
+      content_ar: article.content_ar,
+      published: article.published,
+    })
+    setArticleDialogOpen(true)
+  }
+
+  const handleSaveArticle = async () => {
+    try {
+      if (editingArticle) {
+        await fetch("/api/admin/articles", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: editingArticle.id, ...articleForm }),
+        })
+      } else {
+        await fetch("/api/admin/articles", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(articleForm),
+        })
+      }
+      resetArticleForm()
+      fetchArticles()
+    } catch (e) {
+      console.error("Failed to save article:", e)
+    }
+  }
+
+  const handleDeleteArticle = async (id: string) => {
+    if (!confirm("Delete this article?")) return
+    try {
+      await fetch(`/api/admin/articles?id=${id}`, { method: "DELETE" })
+      fetchArticles()
+    } catch (e) {
+      console.error("Failed to delete article:", e)
+    }
+  }
+
+  const handleTogglePublished = async (article: GoldArticle) => {
+    try {
+      await fetch("/api/admin/articles", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: article.id, published: !article.published }),
+      })
+      fetchArticles()
+    } catch (e) {
+      console.error("Failed to toggle published:", e)
+    }
+  }
+
+  // ========== Gold Articles functions ==========
+  const fetchArticles = async () => {
+    setLoadingArticles(true)
+    try {
+      const res = await fetch("/api/admin/articles")
+      const data = await res.json()
+      if (data.articles) setArticles(data.articles)
+    } catch (e) {
+      console.error("Failed to fetch articles:", e)
+    }
+    setLoadingArticles(false)
+  }
+
+  const resetArticleForm = () => {
+    setEditingArticle(null)
+    setArticleForm({ title_en: "", title_ar: "", content_en: "", content_ar: "", published: true })
+    setArticleDialogOpen(false)
+  }
+
+  const handleEditArticle = (article: GoldArticle) => {
+    setEditingArticle(article)
+    setArticleForm({
+      title_en: article.title_en,
+      title_ar: article.title_ar,
+      content_en: article.content_en,
+      content_ar: article.content_ar,
+      published: article.published,
+    })
+    setArticleDialogOpen(true)
+  }
+
+  const handleSaveArticle = async () => {
+    try {
+      if (editingArticle) {
+        await fetch("/api/admin/articles", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ id: editingArticle.id, ...articleForm }),
+        })
+      } else {
+        await fetch("/api/admin/articles", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(articleForm),
+        })
+      }
+      resetArticleForm()
+      fetchArticles()
+    } catch (e) {
+      console.error("Failed to save article:", e)
+    }
+  }
+
+  const handleDeleteArticle = async (id: string) => {
+    if (!confirm("Delete this article?")) return
+    try {
+      await fetch(`/api/admin/articles?id=${id}`, { method: "DELETE" })
+      fetchArticles()
+    } catch (e) {
+      console.error("Failed to delete article:", e)
+    }
+  }
+
+  const handleTogglePublished = async (article: GoldArticle) => {
+    try {
+      await fetch("/api/admin/articles", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: article.id, published: !article.published }),
+      })
+      fetchArticles()
+    } catch (e) {
+      console.error("Failed to toggle published:", e)
+    }
+  }
+
   const statusColor = (status: string) => {
     switch (status) {
       case "confirmed": return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
@@ -332,6 +515,7 @@ export function AdminDashboard() {
           <TabsList className="bg-muted">
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="slots">Availability</TabsTrigger>
+            <TabsTrigger value="articles">Gold Articles</TabsTrigger>
           </TabsList>
 
           {/* Bookings Tab */}
@@ -692,6 +876,334 @@ export function AdminDashboard() {
                   </Table>
                 </div>
               </Card>
+            )}
+          </TabsContent>
+
+          {/* Gold Articles Tab */}
+          <TabsContent value="articles" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-foreground">Gold Analysis Articles</h2>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={fetchArticles}>
+                  <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+                </Button>
+                <Dialog open={articleDialogOpen} onOpenChange={(open) => {
+                  if (!open) { resetArticleForm() }
+                  setArticleDialogOpen(open)
+                }}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" onClick={() => { resetArticleForm(); setArticleDialogOpen(true) }}>
+                      <Plus className="mr-2 h-4 w-4" /> New Article
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-card border-border max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>{editingArticle ? "Edit Article" : "New Article"}</DialogTitle>
+                      <DialogDescription>
+                        {editingArticle ? "Update the article details below." : "Write your gold analysis article in English and Arabic."}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label>Title (English) *</Label>
+                        <Input
+                          value={articleForm.title_en}
+                          onChange={(e) => setArticleForm(f => ({ ...f, title_en: e.target.value }))}
+                          placeholder="Gold market analysis..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Title (Arabic)</Label>
+                        <Input
+                          value={articleForm.title_ar}
+                          onChange={(e) => setArticleForm(f => ({ ...f, title_ar: e.target.value }))}
+                          placeholder="تحليل سوق الذهب..."
+                          dir="rtl"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Content (English) *</Label>
+                        <Textarea
+                          value={articleForm.content_en}
+                          onChange={(e) => setArticleForm(f => ({ ...f, content_en: e.target.value }))}
+                          placeholder="Write your analysis here..."
+                          rows={8}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Content (Arabic)</Label>
+                        <Textarea
+                          value={articleForm.content_ar}
+                          onChange={(e) => setArticleForm(f => ({ ...f, content_ar: e.target.value }))}
+                          placeholder="اكتب تحليلك هنا..."
+                          rows={8}
+                          dir="rtl"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="article-published"
+                          checked={articleForm.published}
+                          onChange={(e) => setArticleForm(f => ({ ...f, published: e.target.checked }))}
+                          className="h-4 w-4 rounded border-border"
+                        />
+                        <Label htmlFor="article-published">Published</Label>
+                      </div>
+                      <Button
+                        className="w-full"
+                        disabled={!articleForm.title_en.trim() || !articleForm.content_en.trim()}
+                        onClick={handleSaveArticle}
+                      >
+                        {editingArticle ? "Update Article" : "Publish Article"}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+
+            {loadingArticles ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              </div>
+            ) : articles.length === 0 ? (
+              <Card className="border-border bg-card">
+                <CardContent className="py-12 text-center">
+                  <FileText className="mx-auto mb-3 h-10 w-10 text-muted-foreground opacity-50" />
+                  <p className="text-muted-foreground">No articles yet.</p>
+                  <p className="text-sm text-muted-foreground">Create your first gold analysis article above.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {articles.map((article) => (
+                  <Card key={article.id} className="border-border bg-card">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="text-base">{article.title_en}</CardTitle>
+                          {article.title_ar && (
+                            <p className="text-sm text-muted-foreground mt-1" dir="rtl">{article.title_ar}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 ml-4">
+                          <Badge variant="outline" className={article.published
+                            ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                            : "bg-zinc-500/20 text-zinc-400 border-zinc-500/30"
+                          }>
+                            {article.published ? "Published" : "Draft"}
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{article.content_en}</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(article.created_at).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-yellow-400 hover:text-yellow-300"
+                            onClick={() => handleTogglePublished(article)}
+                          >
+                            {article.published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-blue-400 hover:text-blue-300"
+                            onClick={() => handleEditArticle(article)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-400 hover:text-red-300"
+                            onClick={() => handleDeleteArticle(article.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
+            )}
+          </TabsContent>
+
+          {/* Gold Articles Tab */}
+          <TabsContent value="articles" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-foreground">Gold Analysis Articles</h2>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={fetchArticles}>
+                  <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+                </Button>
+                <Dialog open={articleDialogOpen} onOpenChange={(open) => {
+                  if (!open) { resetArticleForm() }
+                  setArticleDialogOpen(open)
+                }}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" onClick={() => { resetArticleForm(); setArticleDialogOpen(true) }}>
+                      <Plus className="mr-2 h-4 w-4" /> New Article
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-card border-border max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                      <DialogTitle>{editingArticle ? "Edit Article" : "New Article"}</DialogTitle>
+                      <DialogDescription>
+                        {editingArticle ? "Update the article details below." : "Write your gold analysis article in English and Arabic."}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label>Title (English) *</Label>
+                        <Input
+                          value={articleForm.title_en}
+                          onChange={(e) => setArticleForm(f => ({ ...f, title_en: e.target.value }))}
+                          placeholder="Gold market analysis..."
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Title (Arabic)</Label>
+                        <Input
+                          value={articleForm.title_ar}
+                          onChange={(e) => setArticleForm(f => ({ ...f, title_ar: e.target.value }))}
+                          placeholder="تحليل سوق الذهب..."
+                          dir="rtl"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Content (English) *</Label>
+                        <Textarea
+                          value={articleForm.content_en}
+                          onChange={(e) => setArticleForm(f => ({ ...f, content_en: e.target.value }))}
+                          placeholder="Write your analysis here..."
+                          rows={8}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Content (Arabic)</Label>
+                        <Textarea
+                          value={articleForm.content_ar}
+                          onChange={(e) => setArticleForm(f => ({ ...f, content_ar: e.target.value }))}
+                          placeholder="اكتب تحليلك هنا..."
+                          rows={8}
+                          dir="rtl"
+                        />
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <input
+                          type="checkbox"
+                          id="article-published"
+                          checked={articleForm.published}
+                          onChange={(e) => setArticleForm(f => ({ ...f, published: e.target.checked }))}
+                          className="h-4 w-4 rounded border-border"
+                        />
+                        <Label htmlFor="article-published">Published</Label>
+                      </div>
+                      <Button
+                        className="w-full"
+                        disabled={!articleForm.title_en.trim() || !articleForm.content_en.trim()}
+                        onClick={handleSaveArticle}
+                      >
+                        {editingArticle ? "Update Article" : "Publish Article"}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+
+            {loadingArticles ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              </div>
+            ) : articles.length === 0 ? (
+              <Card className="border-border bg-card">
+                <CardContent className="py-12 text-center">
+                  <FileText className="mx-auto mb-3 h-10 w-10 text-muted-foreground opacity-50" />
+                  <p className="text-muted-foreground">No articles yet.</p>
+                  <p className="text-sm text-muted-foreground">Create your first gold analysis article above.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-4">
+                {articles.map((article) => (
+                  <Card key={article.id} className="border-border bg-card">
+                    <CardHeader className="pb-2">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <CardTitle className="text-base">{article.title_en}</CardTitle>
+                          {article.title_ar && (
+                            <p className="text-sm text-muted-foreground mt-1" dir="rtl">{article.title_ar}</p>
+                          )}
+                        </div>
+                        <div className="flex items-center gap-1 ml-4">
+                          <Badge variant="outline" className={article.published
+                            ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                            : "bg-zinc-500/20 text-zinc-400 border-zinc-500/30"
+                          }>
+                            {article.published ? "Published" : "Draft"}
+                          </Badge>
+                        </div>
+                      </div>
+                    </CardHeader>
+                    <CardContent>
+                      <p className="text-sm text-muted-foreground line-clamp-2 mb-3">{article.content_en}</p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-xs text-muted-foreground">
+                          {new Date(article.created_at).toLocaleDateString("en-US", {
+                            year: "numeric",
+                            month: "short",
+                            day: "numeric",
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}
+                        </p>
+                        <div className="flex items-center gap-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-yellow-400 hover:text-yellow-300"
+                            onClick={() => handleTogglePublished(article)}
+                          >
+                            {article.published ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-blue-400 hover:text-blue-300"
+                            onClick={() => handleEditArticle(article)}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-400 hover:text-red-300"
+                            onClick={() => handleDeleteArticle(article.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             )}
           </TabsContent>
         </Tabs>

@@ -249,6 +249,10 @@
     "disclaimerText": "Prices shown are indicative and sourced from international markets with USD/EGP conversion. Actual local prices may vary based on dealer premiums, taxes, and market conditions. This is not financial advice.",
     "ctaText": "Want expert guidance on gold investments?",
     "ctaButton": "Book a Consultation",
+    "articlesTitle": "Gold Analysis",
+    "articlesSubtitle": "Latest market insights and analysis",
+    "readMore": "Read more",
+    "readLess": "Show less",
     "errorTitle": "Unable to load gold prices",
     "errorDescription": "Please check your connection and try again.",
     "retry": "Try Again"
