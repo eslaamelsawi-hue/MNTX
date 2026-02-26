@@ -1,0 +1,43 @@
+﻿const fs = require("fs");
+const p = "components/gold-page.tsx";
+let c = fs.readFileSync(p, "utf8");
+const NL = "\r\n";
+
+const stateLines = [];
+stateLines.push("");
+stateLines.push("  // Ingot Calculator State");
+stateLines.push("  const [selectedKarat, setSelectedKarat] = useState(24)");
+stateLines.push("  const [selectedWeight, setSelectedWeight] = useState(1)");
+stateLines.push('  const [customWeight, setCustomWeight] = useState("")');
+stateLines.push("");
+stateLines.push("  const standardWeights = [1, 2.5, 5, 10, 20, 31.1035, 50, 100, 500]");
+stateLines.push("");
+stateLines.push("  const activeWeight = customWeight ? parseFloat(customWeight) || 0 : selectedWeight");
+stateLines.push("");
+stateLines.push("  const calcResults = useMemo(() => {");
+stateLines.push("    if (!data) return null");
+stateLines.push("    const priceMap = { 24: data.gram24, 21: data.gram21, 18: data.gram18 }");
+stateLines.push("    const pricePerGram = priceMap[selectedKarat]");
+stateLines.push("    const totalEGP = pricePerGram * activeWeight");
+stateLines.push("    const totalUSD = data.usdToEgp > 0 ? totalEGP / data.usdToEgp : 0");
+stateLines.push("    const pricePerGramUSD = data.usdToEgp > 0 ? pricePerGram / data.usdToEgp : 0");
+stateLines.push("    return { pricePerGram, pricePerGramUSD, totalEGP, totalUSD }");
+stateLines.push("  }, [data, selectedKarat, activeWeight])");
+stateLines.push("");
+stateLines.push("  const comparisonRows = useMemo(() => {");
+stateLines.push("    if (!data) return []");
+stateLines.push("    return [24, 21, 18].map(k => {");
+stateLines.push("      const priceMap = { 24: data.gram24, 21: data.gram21, 18: data.gram18 }");
+stateLines.push("      const ppg = priceMap[k]");
+stateLines.push("      const total = ppg * activeWeight");
+stateLines.push("      const totalUSD = data.usdToEgp > 0 ? total / data.usdToEgp : 0");
+stateLines.push("      return { karat: k, priceEGP: total, priceUSD: totalUSD }");
+stateLines.push("    })");
+stateLines.push("  }, [data, activeWeight])");
+
+const stateCode = stateLines.join(NL);
+const anchor = "  const isPositive = (data?.change24h ?? 0) >= 0";
+c = c.replace(anchor, anchor + NL + stateCode);
+
+fs.writeFileSync(p, c, "utf8");
+console.log("Done. selectedKarat:", c.includes("selectedKarat"), "calcResults:", c.includes("calcResults"));
