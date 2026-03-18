@@ -1,4 +1,4 @@
-{
+﻿{
   "navbar": {
     "brand": "Mentix Trading",
     "joinDiscord": "Join Discord",
@@ -34,7 +34,7 @@
       },
       {
         "title": "Consistency Profitable",
-        "description": "Learn how to be a consistent profitable trader â€” long term profitable."
+        "description": "Learn how to be a consistent profitable trader Ã¢â‚¬â€ long term profitable."
       },
       {
         "title": "PropFirm & Funded Acc",
@@ -207,7 +207,7 @@
     "step2": "For",
     "step2StarterPlan": "STARTER PLAN",
     "step2Pay": "Pay",
-    "step2Amount": "12,500 EGP",
+    "step2Amount": "20,000 EGP",
     "step2And": "and For",
     "step2CoachingPlan": "1-on-1 Coaching",
     "step2ContactUs": "PLAN Contact Us",
@@ -278,3 +278,4 @@
     "quarterPound": "1/4 Pound (2g)"
   }
 }
+

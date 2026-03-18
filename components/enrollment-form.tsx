@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import React from "react"
 
@@ -250,7 +250,7 @@ export function EnrollmentForm() {
                   <h3 className="text-2xl font-bold text-foreground">{t('courseTitle')}</h3>
                   <div className="mt-3 flex items-baseline justify-center gap-2">
                     <span className="text-lg text-muted-foreground line-through">$500</span>
-                    <span className="text-5xl font-bold text-[hsl(210,60%,50%)]">$250</span>
+                    <span className="text-5xl font-bold text-[hsl(210,60%,50%)]">$379</span>
                   </div>
                   <p className="mt-2 text-sm text-muted-foreground">{t('oneTimePayment')}</p>
                 </div>
@@ -599,3 +599,4 @@ export function EnrollmentForm() {
     </section>
   )
 }
+

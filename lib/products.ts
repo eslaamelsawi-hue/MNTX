@@ -1,4 +1,4 @@
-export interface Product {
+﻿export interface Product {
   id: string
   name: string
   description: string
@@ -11,7 +11,7 @@ export const PRODUCTS: Product[] = [
     name: "ADVANCED SMC Course - Starter Plan",
     description:
       "Full SMC Course with 20+ video lessons, private Discord community (limited access), and one zoom meeting with group of 10 people. One-time payment, lifetime access.",
-    priceInCents: 25000, // $250.00
+    priceInCents: 37900, // $379.00
   },
   {
     id: "coaching",

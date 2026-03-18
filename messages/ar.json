@@ -1,4 +1,4 @@
-{
+﻿{
   "navbar": {
     "brand": "منتكس للتداول",
     "joinDiscord": "انضم إلى ديسكورد",
@@ -207,7 +207,7 @@
     "step2": "بالنسبة لـ",
     "step2StarterPlan": "خطة المبتدئ",
     "step2Pay": "ادفع",
-    "step2Amount": "12,500 جنيه مصري",
+    "step2Amount": "20,000 جنيه مصري",
     "step2And": "وبالنسبة لـ",
     "step2CoachingPlan": "التدريب الفردي",
     "step2ContactUs": "تواصل معنا",
@@ -278,3 +278,4 @@
     "quarterPound": "ربع جنيه (2ج)"
   }
 }
+

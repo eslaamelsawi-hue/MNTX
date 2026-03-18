@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState } from "react"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
@@ -103,7 +103,7 @@ export function Pricing() {
               <CardTitle className="text-2xl text-foreground">ADVANCED SMC Course</CardTitle>
               <div className="mt-4 flex items-baseline justify-center gap-2">
                 <span className="text-lg text-muted-foreground line-through">$500</span>
-                <span className="text-5xl font-bold text-[hsl(210,60%,50%)]">$250</span>
+                <span className="text-5xl font-bold text-[hsl(210,60%,50%)]">$379</span>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">One-time payment, lifetime access</p>
             </CardHeader>
@@ -180,3 +180,4 @@ export function Pricing() {
     </section>
   )
 }
+
