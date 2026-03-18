@@ -1,4 +1,4 @@
-﻿"use client"
+"use client"
 
 import React from "react"
 
@@ -118,7 +118,7 @@ export function EnrollmentForm() {
       case 1:
         return formData.email.trim().length > 0 && isValidEmail(formData.email)
       case 2:
-        return formData.age.trim().length > 0 && Number(formData.age) > 0
+        return formData.age.trim().length === 2 && Number(formData.age) > 0
       case 3:
         return formData.ambitions.trim().length > 0
       case 4:
@@ -446,9 +446,11 @@ export function EnrollmentForm() {
                     type="number"
                     placeholder={t('question3Placeholder')}
                     value={formData.age}
-                    onChange={(e) =>
-                      setFormData({ ...formData, age: e.target.value })
-                    }
+                    maxLength={2}
+                    onChange={(e) => {
+                      const val = e.target.value.replace(/\D/g, "").slice(0, 2)
+                      setFormData({ ...formData, age: val })
+                    }}
                     onKeyDown={handleKeyDown}
                     className="h-12 border-border bg-secondary text-foreground placeholder:text-muted-foreground focus:border-primary"
                   />
