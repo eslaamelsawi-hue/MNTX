@@ -10,6 +10,13 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { useTranslations } from "next-intl"
 
+interface GoldProPriceData {
+  gram24USD: number; gram24KWD: number
+  gram21USD: number; gram21KWD: number
+  gram18USD: number; gram18KWD: number
+  usdToKwd: number; lastUpdated: string; source: string
+}
+
 interface GoldPriceData {
   ounceUSD: number | null
   ounceEGP: number | null
@@ -40,16 +47,21 @@ function formatUSD(price: number): string {
   })
 }
 
-export function IngotCalculator() {
+export function IngotCalculator({ currency = "EGP", embedded = false }: { currency?: "EGP" | "KWD"; embedded?: boolean } = {}) {
   const t = useTranslations("ingotCalc")
   const [selectedKerat, setSelectedKerat] = useState(21)
   const [selectedWeight, setSelectedWeight] = useState(8)
   const [customWeight, setCustomWeight] = useState("")
 
-  const { data, error, isLoading, mutate } = useSWR<GoldPriceData>("/api/gold", fetcher, {
+  const ep = currency === "KWD" ? "/api/gold-pro" : "/api/gold"
+  const { data: rawData, error, isLoading, mutate } = useSWR<GoldPriceData|GoldProPriceData>(ep, fetcher, {
     refreshInterval: 300000,
     revalidateOnFocus: false,
   })
+
+  const data = rawData ? (currency === "KWD"
+    ? (() => { const d = rawData as GoldProPriceData; return { gram24: d.gram24KWD, gram21: d.gram21KWD, gram18: d.gram18KWD, gram24USD: d.gram24USD, gram21USD: d.gram21USD, gram18USD: d.gram18USD, usdToKwd: d.usdToKwd, usdToEgp: null } })()
+    : rawData as GoldPriceData) : null
 
   const standardWeights = [
     { grams: 2, label: t("quarterPound"), isPound: true },
@@ -70,20 +82,17 @@ export function IngotCalculator() {
 
   const calcResults = useMemo(() => {
     if (!data) return null
-    const priceMap: Record<number, number | null> = {
-      24: data.gram24,
-      21: data.gram21,
-      18: data.gram18,
-    }
-    const pricePerGram = priceMap[selectedKerat] ?? 0
-    const totalEGP = pricePerGram * activeWeight
-    const totalUSD = (data.usdToEgp ?? 0) > 0 ? totalEGP / data.usdToEgp! : 0
-    const pricePerGramUSD = (data.usdToEgp ?? 0) > 0 ? pricePerGram / data.usdToEgp! : 0
-    return { pricePerGram, pricePerGramUSD, totalEGP, totalUSD }
-  }, [data, selectedKerat, activeWeight])
+    const d = data as any
+    const pricePerGram = (selectedKerat === 24 ? d.gram24 : selectedKerat === 21 ? d.gram21 : d.gram18) ?? 0
+    const pricePerGramUSD = currency === "KWD"
+      ? (selectedKerat === 24 ? d.gram24USD : selectedKerat === 21 ? d.gram21USD : d.gram18USD) ?? 0
+      : (d.usdToEgp ?? 0) > 0 ? pricePerGram / d.usdToEgp : 0
+    const total = pricePerGram * activeWeight
+    const totalUSD = currency === "KWD" ? pricePerGramUSD * activeWeight : (d.usdToEgp ?? 0) > 0 ? total / d.usdToEgp : 0
+    return { pricePerGram, pricePerGramUSD, totalEGP: total, totalUSD }
+  }, [data, selectedKerat, activeWeight, currency])
 
-  return (
-    <div className="mx-auto max-w-3xl px-4 py-12">
+  const title = !embedded && (
       <div className="mb-10 text-center">
         <Badge variant="outline" className="mb-4 border-yellow-500/30 text-yellow-500">
           <Calculator className="mr-1.5 h-3.5 w-3.5" />
@@ -94,6 +103,11 @@ export function IngotCalculator() {
         </h1>
         <p className="mx-auto mt-3 max-w-xl text-muted-foreground">{t("subtitle")}</p>
       </div>
+
+  )
+  return (
+    <div className={embedded ? "" : "mx-auto max-w-3xl px-4 py-12"}>
+      {title}
 
       {isLoading && (
         <Card className="border-yellow-500/20 animate-pulse">
@@ -210,8 +224,8 @@ export function IngotCalculator() {
               <div className="rounded-lg border border-yellow-500/20 bg-yellow-500/5 p-4 space-y-3">
                 <div className="grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-muted-foreground">{t("pricePerGram")}</p>
-                    <p className="text-lg font-bold text-foreground">{formatEGP(calcResults.pricePerGram)} EGP</p>
+                    <p className="text-xs text-muted-foreground">{currency === "KWD" ? "Price / gram" : t("pricePerGram")}</p>
+                    <p className="text-lg font-bold text-foreground">{formatEGP(calcResults.pricePerGram)} {currency === "KWD" ? "KWD" : "EGP"}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">{t("pricePerGramUSD")}</p>
@@ -220,8 +234,8 @@ export function IngotCalculator() {
                 </div>
                 <div className="border-t border-yellow-500/20 pt-3 grid grid-cols-2 gap-4">
                   <div>
-                    <p className="text-xs text-muted-foreground">{t("totalPriceEGP")} ({activeWeight}g)</p>
-                    <p className="text-2xl font-bold text-yellow-500">{formatEGP(calcResults.totalEGP)} EGP</p>
+                    <p className="text-xs text-muted-foreground">{currency === "KWD" ? "Total" : t("totalPriceEGP")} ({activeWeight}g)</p>
+                    <p className="text-2xl font-bold text-yellow-500">{formatEGP(calcResults.totalEGP)} {currency === "KWD" ? "KWD" : "EGP"}</p>
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">{t("totalPriceUSD")}</p>
@@ -238,25 +252,23 @@ export function IngotCalculator() {
                   <thead className="bg-muted/50">
                     <tr>
                       <th className="p-3 text-left font-medium text-muted-foreground">{t("kerat")}</th>
-                      <th className="p-3 text-right font-medium text-muted-foreground">{t("priceEGP")} ({activeWeight}g)</th>
+                      <th className="p-3 text-right font-medium text-muted-foreground">{currency === "KWD" ? "KWD" : t("priceEGP")} ({activeWeight}g)</th>
                       <th className="p-3 text-right font-medium text-muted-foreground">{t("priceUSD")}</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-border">
                     {([24, 21, 18] as const).map((k) => {
-                      const priceMap: Record<number, number | null> = {
-                        24: data.gram24,
-                        21: data.gram21,
-                        18: data.gram18,
-                      }
-                      const totalEGP = (priceMap[k] ?? 0) * activeWeight
-                      const totalUSD = (data.usdToEgp ?? 0) > 0 ? totalEGP / data.usdToEgp! : 0
+                      const d2 = data as any
+                      const main = (k === 24 ? d2.gram24 : k === 21 ? d2.gram21 : d2.gram18) ?? 0
+                      const usdPg = currency === "KWD" ? (k === 24 ? d2.gram24USD : k === 21 ? d2.gram21USD : d2.gram18USD) ?? 0 : 0
+                      const totalEGP = main * activeWeight
+                      const totalUSD = currency === "KWD" ? usdPg * activeWeight : (d2.usdToEgp ?? 0) > 0 ? totalEGP / d2.usdToEgp : 0
                       return (
                         <tr key={k} className={selectedKerat === k ? "bg-yellow-500/10" : ""}>
                           <td className="p-3 font-medium text-foreground">
                             {k}K {k === 24 ? t("pure") : ""}
                           </td>
-                          <td className="p-3 text-right text-foreground">{formatEGP(totalEGP)} EGP</td>
+                          <td className="p-3 text-right text-foreground">{formatEGP(totalEGP)} {currency === "KWD" ? "KWD" : "EGP"}</td>
                           <td className="p-3 text-right text-muted-foreground">{formatUSD(totalUSD)}</td>
                         </tr>
                       )
