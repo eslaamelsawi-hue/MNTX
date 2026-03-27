@@ -28,6 +28,8 @@ export async function createNowpaymentsInvoice(params: {
     is_fee_paid_by_user: false,
   }
 
+  console.log("NowPayments invoice request:", JSON.stringify(invoiceData))
+
   const response = await fetch(`${NOWPAYMENTS_API_URL}/invoice`, {
     method: "POST",
     headers: {
@@ -37,13 +39,14 @@ export async function createNowpaymentsInvoice(params: {
     body: JSON.stringify(invoiceData),
   })
 
+  const data = await response.json()
+  console.log("NowPayments invoice response:", JSON.stringify(data))
+
   if (!response.ok) {
-    const errorData = await response.json()
     throw new Error(
-      `Nowpayments API error: ${errorData.message || response.statusText}`
+      `Nowpayments API error: ${data.message || response.statusText}`
     )
   }
 
-  const data = await response.json()
   return data
 }

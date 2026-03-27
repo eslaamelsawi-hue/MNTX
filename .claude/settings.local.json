@@ -1,0 +1,11 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(grep -r \"gold.pro\\\\|goldPro\" /c/Users/ikloo/OneDrive/Desktop/mentixz --include=*.ts --include=*.tsx --include=*.prisma)",
+      "Bash(find /c/Users/ikloo/OneDrive/Desktop/mentixz -name route.ts -path */api/* ! -path */.next/*)",
+      "Bash(grep -r \"invoice_url\\\\|IPN\\\\|webhook\" /c/Users/ikloo/OneDrive/Desktop/mentixz --include=*.ts --include=*.tsx)",
+      "WebSearch",
+      "Bash(npx tsc:*)"
+    ]
+  }
+}

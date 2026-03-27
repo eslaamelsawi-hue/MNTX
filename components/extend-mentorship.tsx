@@ -15,6 +15,7 @@ import {
 } from "@/components/ui/dialog"
 import { Check, ArrowRight, Calendar, Loader2 } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
+import { OKXPayButton, NowPaymentsButton } from "@/components/payment-buttons"
 
 const plans = [
   {
@@ -59,6 +60,7 @@ export function ExtendMentorship() {
   const [email, setEmail] = useState("")
   const [telegram, setTelegram] = useState("")
   const [errors, setErrors] = useState<{ name?: string; email?: string; telegram?: string }>({})
+  const [showPaymentMethods, setShowPaymentMethods] = useState(false)
 
   const openDialog = (planId: string) => {
     setSelectedPlan(planId)
@@ -66,6 +68,7 @@ export function ExtendMentorship() {
     setEmail("")
     setTelegram("")
     setErrors({})
+    setShowPaymentMethods(false)
     setDialogOpen(true)
   }
 
@@ -81,6 +84,11 @@ export function ExtendMentorship() {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!validate() || !selectedPlan) return
+
+    if (!showPaymentMethods) {
+      setShowPaymentMethods(true)
+      return
+    }
 
     setSubmitting(true)
     try {
@@ -256,18 +264,30 @@ export function ExtendMentorship() {
               {errors.telegram && <p className="text-xs text-destructive">{errors.telegram}</p>}
             </div>
 
-            <Button type="submit" className="w-full gap-2" size="lg" disabled={submitting}>
-              {submitting ? (
-                <>
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  {t("processing")}
-                </>
+            <div className="flex flex-col gap-2 pt-2">
+              {!showPaymentMethods ? (
+                <Button type="submit" className="w-full gap-2" size="lg" disabled={submitting}>
+                  {submitting ? (
+                    <><Loader2 className="h-4 w-4 animate-spin" />{t("processing")}</>
+                  ) : (
+                    <>{t("proceedToPayment")} <ArrowRight className="h-4 w-4" /></>
+                  )}
+                </Button>
               ) : (
                 <>
-                  {t("proceedToPayment")} <ArrowRight className="h-4 w-4" />
+                  <NowPaymentsButton
+                    plan={selectedPlan ?? ""}
+                    prefillEmail={email}
+                    className="w-full text-base bg-transparent border border-primary/30 text-foreground hover:bg-primary hover:text-primary-foreground"
+                  />
+                  <OKXPayButton
+                    plan={selectedPlan ?? ""}
+                    prefillEmail={email}
+                    className="w-full text-base bg-transparent border border-primary/30 text-foreground hover:bg-primary hover:text-primary-foreground"
+                  />
                 </>
               )}
-            </Button>
+            </div>
           </form>
         </DialogContent>
       </Dialog>

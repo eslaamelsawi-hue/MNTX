@@ -30,6 +30,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useTranslations } from "next-intl"
 import { Label } from "@/components/ui/label"
+import { OKXPayButton, NowPaymentsButton } from "@/components/payment-buttons"
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
@@ -84,9 +85,9 @@ export function GoldProPage() {
   const t = useTranslations("goldPro")
   const [currency, setCurrency] = useState<Currency>("KWD")
   const [email, setEmail] = useState("")
-  const [subscribing, setSubscribing] = useState(false)
   const [hasAccess, setHasAccess] = useState(false)
   const [checkingAccess, setCheckingAccess] = useState(false)
+  const [showPaymentOptions, setShowPaymentOptions] = useState(false)
   const analysis = useAnalysis()
 
   const { data, error, isLoading, mutate } = useSWR<GoldProData>("/api/gold-pro", fetcher, {
@@ -99,23 +100,6 @@ export function GoldProPage() {
 
   const getPrice = (usd: number, kwd: number) => formatPrice(currency === "USD" ? usd : kwd, currency)
 
-  const handleSubscribe = async () => {
-    if (!email) return
-    setSubscribing(true)
-    try {
-      const res = await fetch("/api/gold-pro/subscribe", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email }),
-      })
-      const result = await res.json()
-      if (result.url) window.location.href = result.url
-    } catch {
-      // handle error
-    } finally {
-      setSubscribing(false)
-    }
-  }
 
   const [lastRefresh, setLastRefresh] = useState<string | null>(null)
   useEffect(() => {
@@ -257,11 +241,42 @@ export function GoldProPage() {
                       $100<span className="text-sm font-normal text-muted-foreground">/{t("month")}</span>
                     </p>
                     <div className="space-y-2">
-                      <Input placeholder={t("emailPlaceholder")} type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="border-yellow-500/30" />
-                      <Button className="w-full bg-yellow-500 text-black hover:bg-yellow-600" disabled={subscribing || !email} onClick={handleSubscribe}>
-                        {subscribing ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Crown className="mr-2 h-4 w-4" />}
-                        {t("subscribeButton")}
-                      </Button>
+                      {!showPaymentOptions ? (
+                        <>
+                          <Input placeholder={t("emailPlaceholder")} type="email" value={email} onChange={(e) => setEmail(e.target.value)} className="border-yellow-500/30" />
+                          <Button
+                            className="w-full bg-yellow-500 text-black hover:bg-yellow-600"
+                            disabled={!email}
+                            onClick={() => {
+                              if (!email || !email.includes("@")) return
+                              setShowPaymentOptions(true)
+                            }}
+                          >
+                            <Crown className="mr-2 h-4 w-4" />
+                            {t("subscribeButton")}
+                          </Button>
+                        </>
+                      ) : (
+                        <>
+                          <p className="text-sm text-muted-foreground pb-1">Choose how to pay for <span className="font-medium text-foreground">{email}</span>:</p>
+                          <NowPaymentsButton
+                            plan="gold-pro"
+                            prefillEmail={email}
+                            className="w-full bg-yellow-500 text-black hover:bg-yellow-600"
+                          />
+                          <OKXPayButton
+                            plan="gold-pro"
+                            prefillEmail={email}
+                            className="w-full bg-transparent border border-yellow-500/30 text-foreground hover:bg-yellow-500/10"
+                          />
+                          <button
+                            className="w-full pt-1 text-xs text-muted-foreground hover:text-foreground"
+                            onClick={() => setShowPaymentOptions(false)}
+                          >
+                            ← Change email
+                          </button>
+                        </>
+                      )}
                     </div>
                   </CardContent>
                 </Card>

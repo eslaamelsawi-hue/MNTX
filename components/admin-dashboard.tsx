@@ -31,6 +31,10 @@ import {
   ImageIcon,
   Tag,
   Upload,
+  ShoppingCart,
+  DollarSign,
+  Mail,
+  Copy,
 } from "lucide-react"
 
 type Slot = {
@@ -59,6 +63,19 @@ type Booking = {
   availability_slots: Slot
 }
 
+type OKXOrder = {
+  orderId: string
+  plan: string
+  amount: string
+  email: string
+  address: string
+  chain: string
+  status: "pending" | "paid" | "expired"
+  createdAt: string
+  paidAt?: string
+  txId?: string
+}
+
 type GoldArticle = {
   id: string
   title_en: string
@@ -79,6 +96,11 @@ export function AdminDashboard() {
   const [slots, setSlots] = useState<Slot[]>([])
   const [loadingBookings, setLoadingBookings] = useState(true)
   const [loadingSlots, setLoadingSlots] = useState(true)
+  const [orders, setOrders] = useState<OKXOrder[]>([])
+  const [loadingOrders, setLoadingOrders] = useState(true)
+  const [orderStatusFilter, setOrderStatusFilter] = useState<"all" | "pending" | "paid" | "expired">("all")
+  const [orderActionLoading, setOrderActionLoading] = useState<string | null>(null)
+  const [copiedId, setCopiedId] = useState<string | null>(null)
   const [rescheduleBookingId, setRescheduleBookingId] = useState<string | null>(null)
   const [rescheduleSlotId, setRescheduleSlotId] = useState<string>("")
 
@@ -123,6 +145,44 @@ export function AdminDashboard() {
   const [bulkDuration, setBulkDuration] = useState("60")
   const [addingBulk, setAddingBulk] = useState(false)
 
+  const fetchOrders = useCallback(async () => {
+    setLoadingOrders(true)
+    try {
+      const res = await fetch("/api/admin/orders")
+      const data = await res.json()
+      if (data.orders) setOrders(data.orders)
+    } catch (e) {
+      console.error("Failed to fetch orders:", e)
+    }
+    setLoadingOrders(false)
+  }, [])
+
+  const handleOrderAction = async (orderId: string, action: string) => {
+    setOrderActionLoading(`${orderId}-${action}`)
+    try {
+      const res = await fetch("/api/admin/orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId, action }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        fetchOrders()
+      } else {
+        alert(data.error || "Action failed")
+      }
+    } catch {
+      alert("Something went wrong")
+    }
+    setOrderActionLoading(null)
+  }
+
+  const copyToClipboard = (text: string, id: string) => {
+    navigator.clipboard.writeText(text)
+    setCopiedId(id)
+    setTimeout(() => setCopiedId(null), 2000)
+  }
+
   const fetchBookings = useCallback(async () => {
     setLoadingBookings(true)
     try {
@@ -151,7 +211,8 @@ export function AdminDashboard() {
     fetchBookings()
     fetchSlots()
     fetchArticles()
-  }, [fetchBookings, fetchSlots])
+    fetchOrders()
+  }, [fetchBookings, fetchSlots, fetchOrders])
 
   const formatTime = (time: string) => {
     const [h, m] = time.split(":")
@@ -415,7 +476,7 @@ export function AdminDashboard() {
 
       <div className="mx-auto max-w-7xl px-4 py-8">
         {/* Stats cards */}
-        <div className="mb-8 grid gap-4 sm:grid-cols-3">
+        <div className="mb-8 grid gap-4 sm:grid-cols-4">
           <Card className="border-border bg-card">
             <CardContent className="flex items-center gap-4 p-6">
               <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
@@ -449,6 +510,17 @@ export function AdminDashboard() {
               </div>
             </CardContent>
           </Card>
+          <Card className="border-border bg-card">
+            <CardContent className="flex items-center gap-4 p-6">
+              <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-yellow-500/10">
+                <ShoppingCart className="h-6 w-6 text-yellow-400" />
+              </div>
+              <div>
+                <p className="text-2xl font-bold text-foreground">{orders.filter(o => o.status === "paid").length}</p>
+                <p className="text-sm text-muted-foreground">Paid Orders</p>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <Tabs defaultValue="bookings" className="space-y-6">
@@ -456,6 +528,7 @@ export function AdminDashboard() {
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="slots">Availability</TabsTrigger>
             <TabsTrigger value="articles">Gold Articles</TabsTrigger>
+            <TabsTrigger value="orders">Orders</TabsTrigger>
           </TabsList>
 
           {/* Bookings Tab */}
@@ -1089,6 +1162,189 @@ export function AdminDashboard() {
             )}
           </TabsContent>
           {/* Gold Articles Tab */}
+
+          {/* Orders Tab */}
+          <TabsContent value="orders" className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-xl font-semibold text-foreground">Crypto Orders</h2>
+              <div className="flex items-center gap-2">
+                <div className="flex rounded-lg border border-border overflow-hidden text-sm">
+                  {(["all", "pending", "paid", "expired"] as const).map(f => (
+                    <button
+                      key={f}
+                      onClick={() => setOrderStatusFilter(f)}
+                      className={`px-3 py-1.5 capitalize transition-colors ${orderStatusFilter === f ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
+                    >
+                      {f}
+                    </button>
+                  ))}
+                </div>
+                <Button variant="outline" size="sm" onClick={fetchOrders}>
+                  <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+                </Button>
+              </div>
+            </div>
+
+            {/* Summary stats */}
+            <div className="grid gap-3 sm:grid-cols-4">
+              {[
+                { label: "Total", value: orders.length, color: "text-foreground" },
+                { label: "Pending", value: orders.filter(o => o.status === "pending").length, color: "text-yellow-400" },
+                { label: "Paid", value: orders.filter(o => o.status === "paid").length, color: "text-green-400" },
+                { label: "Revenue (USDT)", value: orders.filter(o => o.status === "paid").reduce((s, o) => s + parseFloat(o.amount), 0).toFixed(2), color: "text-primary" },
+              ].map(stat => (
+                <Card key={stat.label} className="border-border bg-card">
+                  <CardContent className="p-4">
+                    <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
+                    <p className="text-xs text-muted-foreground">{stat.label}</p>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+
+            {loadingOrders ? (
+              <div className="flex items-center justify-center py-12 text-muted-foreground">
+                <RefreshCw className="mr-2 h-5 w-5 animate-spin" /> Loading orders…
+              </div>
+            ) : orders.filter(o => orderStatusFilter === "all" || o.status === orderStatusFilter).length === 0 ? (
+              <Card className="border-border bg-card">
+                <CardContent className="py-12 text-center text-muted-foreground">No orders found.</CardContent>
+              </Card>
+            ) : (
+              <Card className="border-border bg-card">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Order ID</TableHead>
+                      <TableHead>Date</TableHead>
+                      <TableHead>Email</TableHead>
+                      <TableHead>Plan</TableHead>
+                      <TableHead>Amount</TableHead>
+                      <TableHead>Network</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead>TX ID</TableHead>
+                      <TableHead>Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {orders
+                      .filter(o => orderStatusFilter === "all" || o.status === orderStatusFilter)
+                      .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
+                      .map(order => (
+                        <TableRow key={order.orderId}>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <span className="max-w-[110px] truncate font-mono text-xs">{order.orderId}</span>
+                              <button onClick={() => copyToClipboard(order.orderId, order.orderId + "-id")} className="shrink-0 text-muted-foreground hover:text-foreground">
+                                <Copy className="h-3 w-3" />
+                              </button>
+                              {copiedId === order.orderId + "-id" && <span className="text-xs text-green-400">Copied</span>}
+                            </div>
+                          </TableCell>
+                          <TableCell className="text-xs text-muted-foreground whitespace-nowrap">
+                            <div>{new Date(order.createdAt).toLocaleDateString()}</div>
+                            <div>{new Date(order.createdAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</div>
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex items-center gap-1">
+                              <span className="max-w-[140px] truncate text-sm">{order.email}</span>
+                              <button onClick={() => copyToClipboard(order.email, order.orderId + "-email")} className="shrink-0 text-muted-foreground hover:text-foreground">
+                                <Copy className="h-3 w-3" />
+                              </button>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary capitalize">
+                              {order.plan.replace(/-/g, " ")}
+                            </span>
+                          </TableCell>
+                          <TableCell className="font-semibold text-yellow-400">{order.amount} USDT</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">{order.chain || "—"}</TableCell>
+                          <TableCell>
+                            <Badge
+                              className={
+                                order.status === "paid"
+                                  ? "bg-green-500/20 text-green-400 border-green-500/30"
+                                  : order.status === "pending"
+                                  ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
+                                  : "bg-red-500/20 text-red-400 border-red-500/30"
+                              }
+                            >
+                              {order.status}
+                            </Badge>
+                            {order.paidAt && (
+                              <div className="mt-1 text-xs text-muted-foreground">{new Date(order.paidAt).toLocaleDateString()}</div>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {order.txId ? (
+                              <div className="flex items-center gap-1">
+                                <span className="max-w-[80px] truncate font-mono text-xs text-muted-foreground">{order.txId}</span>
+                                <button onClick={() => copyToClipboard(order.txId!, order.orderId + "-tx")} className="shrink-0 text-muted-foreground hover:text-foreground">
+                                  <Copy className="h-3 w-3" />
+                                </button>
+                                {copiedId === order.orderId + "-tx" && <span className="text-xs text-green-400">Copied</span>}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex flex-col gap-1">
+                              {order.status === "pending" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs border-green-500/30 text-green-400 hover:bg-green-500/10"
+                                  disabled={orderActionLoading === `${order.orderId}-mark_paid`}
+                                  onClick={() => handleOrderAction(order.orderId, "mark_paid")}
+                                >
+                                  <CheckCircle2 className="mr-1 h-3 w-3" />
+                                  {orderActionLoading === `${order.orderId}-mark_paid` ? "…" : "Mark Paid"}
+                                </Button>
+                              )}
+                              {order.status === "paid" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs"
+                                  disabled={orderActionLoading === `${order.orderId}-resend_email`}
+                                  onClick={() => handleOrderAction(order.orderId, "resend_email")}
+                                >
+                                  <Mail className="mr-1 h-3 w-3" />
+                                  {orderActionLoading === `${order.orderId}-resend_email` ? "…" : "Resend Email"}
+                                </Button>
+                              )}
+                              {order.status === "pending" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 text-xs border-red-500/30 text-red-400 hover:bg-red-500/10"
+                                  disabled={orderActionLoading === `${order.orderId}-mark_expired`}
+                                  onClick={() => handleOrderAction(order.orderId, "mark_expired")}
+                                >
+                                  <XCircle className="mr-1 h-3 w-3" />
+                                  {orderActionLoading === `${order.orderId}-mark_expired` ? "…" : "Expire"}
+                                </Button>
+                              )}
+                              <div className="flex items-center gap-1">
+                                <button
+                                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                                  onClick={() => copyToClipboard(order.address, order.orderId + "-addr")}
+                                >
+                                  <Copy className="h-3 w-3" /> Address
+                                </button>
+                                {copiedId === order.orderId + "-addr" && <span className="text-xs text-green-400">Copied</span>}
+                              </div>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                  </TableBody>
+                </Table>
+              </Card>
+            )}
+          </TabsContent>
         </Tabs>
       </div>
     </div>

@@ -7,8 +7,9 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
-import { ChevronRight, ChevronLeft, AlertTriangle, CheckCircle2, Check, Loader2 } from "lucide-react"
+import { ChevronRight, ChevronLeft, AlertTriangle, CheckCircle2, Check } from "lucide-react"
 import { EgyptPayment } from "@/components/egypt-payment"
+import { OKXPayButton, NowPaymentsButton } from "@/components/payment-buttons"
 import { useTranslations } from 'next-intl'
 
 const COUNTRY_CODES = [
@@ -192,29 +193,6 @@ export function EnrollmentForm() {
   const isIneligible = formData.budget === "500"
   const isEligible = formData.budget === "above-1000" || formData.budget === "above-2000"
 
-  const [binanceLoading, setBinanceLoading] = useState(false)
-
-  const handleBinancePay = async () => {
-    setBinanceLoading(true)
-    try {
-      const response = await fetch("/api/binance-pay", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan: "starter" }),
-      })
-      const data = await response.json()
-      if (data.checkoutUrl) {
-        window.open(data.checkoutUrl, "_blank", "noopener,noreferrer")
-      } else if (data.error) {
-        alert(data.error)
-      }
-    } catch {
-      alert("Something went wrong. Please try again.")
-    } finally {
-      setBinanceLoading(false)
-    }
-  }
-
   const starterFeatures = [
     t('feature1'),
     t('feature2'),
@@ -274,32 +252,16 @@ export function EnrollmentForm() {
                       {t('payWithVisa')}
                     </Button>
                   </a>
-                  <Button
-                    className="w-full text-base bg-transparent border border-[hsl(210,60%,50%)]/30 text-foreground hover:bg-[hsl(210,60%,50%)] hover:text-foreground active:bg-[hsl(210,60%,40%)]"
-                    size="lg"
-                    onClick={handleBinancePay}
-                    disabled={binanceLoading}
-                  >
-                    {binanceLoading ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {t('processing')}
-                      </>
-                    ) : (
-                      <>
-                        <svg
-                          className="mr-2 h-5 w-5"
-                          viewBox="0 0 126.61 126.61"
-                          fill="currentColor"
-                          aria-hidden="true"
-                        >
-                          <path d="M38.73 53.2l24.59-24.58 24.6 24.6 14.3-14.31L63.32 0l-38.9 38.9zM0 63.31l14.3-14.31 14.31 14.31-14.31 14.3zM38.73 73.41l24.59 24.59 24.6-24.6 14.31 14.29-38.9 38.91-38.91-38.88zM98 63.31l14.3-14.31 14.31 14.3-14.31 14.31z" />
-                          <path d="M77.83 63.3l-14.51-14.52-10.73 10.73-1.24 1.23-2.54 2.54 14.51 14.53 14.51-14.51z" />
-                        </svg>
-                        {t('payWithBinance')}
-                      </>
-                    )}
-                  </Button>
+                  <NowPaymentsButton
+                    plan="starter"
+                    prefillEmail={formData.email}
+                    className="w-full text-base bg-transparent border border-[hsl(210,60%,50%)]/30 text-foreground hover:bg-[hsl(210,60%,50%)] hover:text-foreground"
+                  />
+                  <OKXPayButton
+                    plan="starter"
+                    prefillEmail={formData.email}
+                    className="w-full text-base bg-transparent border border-[hsl(210,60%,50%)]/30 text-foreground hover:bg-[hsl(210,60%,50%)] hover:text-foreground"
+                  />
                 </div>
               </CardContent>
             </Card>
