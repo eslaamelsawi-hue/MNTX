@@ -96,7 +96,7 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Order ID is required" }, { status: 400 })
     }
 
-    const order = getOrder(orderId)
+    const order = await getOrder(orderId)
     if (!order) {
       return NextResponse.json({ error: "Order not found" }, { status: 404 })
     }
@@ -149,7 +149,7 @@ export async function POST(request: Request) {
     }
 
     // Mark order as paid
-    updateOrder(orderId, {
+    await updateOrder(orderId, {
       status: "paid",
       paidAt: new Date().toISOString(),
       txId: match.txId,

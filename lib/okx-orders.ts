@@ -1,5 +1,4 @@
-import fs from "fs"
-import path from "path"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 export type OKXOrder = {
   orderId: string
@@ -14,42 +13,72 @@ export type OKXOrder = {
   txId?: string
 }
 
-const DATA_FILE = path.join(process.cwd(), "data", "okx-orders.json")
-
-function readOrders(): OKXOrder[] {
-  try {
-    if (!fs.existsSync(DATA_FILE)) return []
-    return JSON.parse(fs.readFileSync(DATA_FILE, "utf-8"))
-  } catch {
-    return []
+export async function createOrder(order: OKXOrder): Promise<void> {
+  const supabase = createAdminClient()
+  const { error } = await supabase.from("okx_orders").insert({
+    order_id: order.orderId,
+    plan: order.plan,
+    amount: order.amount,
+    email: order.email,
+    address: order.address,
+    chain: order.chain,
+    status: order.status,
+    created_at: order.createdAt,
+  })
+  if (error) throw new Error("Failed to create order: " + error.message)
+}
+export async function getOrder(orderId: string): Promise<OKXOrder | null> {
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from("okx_orders")
+    .select("*")
+    .eq("order_id", orderId)
+    .single()
+  if (error || !data) return null
+  return {
+    orderId: data.order_id,
+    plan: data.plan,
+    amount: data.amount,
+    email: data.email,
+    address: data.address,
+    chain: data.chain,
+    status: data.status,
+    createdAt: data.created_at,
+    paidAt: data.paid_at || undefined,
+    txId: data.tx_id || undefined,
   }
 }
 
-function writeOrders(orders: OKXOrder[]): void {
-  const dir = path.dirname(DATA_FILE)
-  if (!fs.existsSync(dir)) fs.mkdirSync(dir, { recursive: true })
-  fs.writeFileSync(DATA_FILE, JSON.stringify(orders, null, 2))
+export async function updateOrder(orderId: string, updates: Partial<OKXOrder>): Promise<void> {
+  const supabase = createAdminClient()
+  const mapped: Record<string, unknown> = {}
+  if (updates.status) mapped.status = updates.status
+  if (updates.paidAt) mapped.paid_at = updates.paidAt
+  if (updates.txId) mapped.tx_id = updates.txId
+  const { error } = await supabase
+    .from("okx_orders")
+    .update(mapped)
+    .eq("order_id", orderId)
+  if (error) throw new Error("Failed to update order: " + error.message)
 }
 
-export function createOrder(order: OKXOrder): void {
-  const orders = readOrders()
-  orders.push(order)
-  writeOrders(orders)
-}
-
-export function getOrder(orderId: string): OKXOrder | null {
-  return readOrders().find((o) => o.orderId === orderId) || null
-}
-
-export function updateOrder(orderId: string, updates: Partial<OKXOrder>): void {
-  const orders = readOrders()
-  const idx = orders.findIndex((o) => o.orderId === orderId)
-  if (idx !== -1) {
-    orders[idx] = { ...orders[idx], ...updates }
-    writeOrders(orders)
-  }
-}
-
-export function getPendingOrders(): OKXOrder[] {
-  return readOrders().filter((o) => o.status === "pending")
+export async function getPendingOrders(): Promise<OKXOrder[]> {
+  const supabase = createAdminClient()
+  const { data, error } = await supabase
+    .from("okx_orders")
+    .select("*")
+    .eq("status", "pending")
+  if (error || !data) return []
+  return data.map((d) => ({
+    orderId: d.order_id,
+    plan: d.plan,
+    amount: d.amount,
+    email: d.email,
+    address: d.address,
+    chain: d.chain,
+    status: d.status,
+    createdAt: d.created_at,
+    paidAt: d.paid_at || undefined,
+    txId: d.tx_id || undefined,
+  }))
 }

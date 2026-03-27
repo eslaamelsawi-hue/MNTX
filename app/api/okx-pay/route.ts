@@ -79,7 +79,7 @@ export async function POST(request: Request) {
     const orderId = `MENTIX${Date.now()}${Math.random().toString(36).substring(2, 8).toUpperCase()}`
 
     // Store the pending order
-    createOrder({
+    await createOrder({
       orderId,
       plan,
       amount: planInfo.amount,
