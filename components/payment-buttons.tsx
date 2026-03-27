@@ -33,7 +33,7 @@ const t = (locale: string, key: string) => {
   const en: Record<string, string> = {
     payWithOKX: "Pay with OKX",
     payWithCrypto: "Pay with Crypto",
-    loadingPayment: "{t(locale, "loadingPayment")}",
+    loadingPayment: "Loading payment details…",
     enterEmail: "Enter your email to get the payment address",
     getPaymentDetails: "Get Payment Details",
     cancel: "Cancel",
@@ -43,16 +43,16 @@ const t = (locale: string, key: string) => {
     sendExactly: "Send exactly",
     to: "to:",
     orderRef: "Order ref",
-    networkFeesNotice: "{t(locale, "networkFeesNotice")}",
+    networkFeesNotice: "Please send the amount + network fees to ensure the full payment is received.",
     sendOnlyUSDT: "Send only USDT on",
     wrongNetwork: "Wrong network = lost funds.",
     verifyPayment: "I’ve Paid — Verify Payment",
-    checking: "{t(locale, "checking")}",
+    checking: "Checking…",
     copied: "Copied!",
     copy: "Copy",
     enterEmailContinue: "Enter your email to continue",
-    continueToPayment: t(locale, "continueToPayment"),
-    loading: t(locale, "loading"),
+    continueToPayment: "Continue to Payment",
+    loading: "Loading…",
   };
   return (locale === "ar" ? ar[key] : en[key]) || en[key] || key;
 };
@@ -202,7 +202,7 @@ function OKXPayModal({
               <p className="mb-3 rounded-lg bg-red-500/10 p-3 text-center text-xs text-red-400">{verifyResult.message}</p>
             )}
             <Button className="mb-2 w-full bg-green-600 text-white hover:bg-green-700" onClick={handleVerify} disabled={verifying}>
-              {verifying ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Checking…</> : t(locale, "verifyPayment")}
+              {verifying ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t(locale, "checking")}</> : t(locale, "verifyPayment")}
             </Button>
             <button onClick={onClose} className="w-full rounded-lg border border-[hsl(210,60%,50%)]/30 py-2 text-sm text-muted-foreground hover:bg-[hsl(210,60%,50%)]/10">{t(locale, "close")}</button>
           </>
@@ -290,7 +290,7 @@ export function NowPaymentsButton({
               className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
             />
             <Button className="mb-2 w-full bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" onClick={() => handlePay(email)} disabled={loading}>
-              {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…</> : t(locale, "continueToPayment")}
+              {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t(locale, "loading")}</> : t(locale, "continueToPayment")}
             </Button>
             <button onClick={() => setOpen(false)} className="w-full rounded-lg border border-[hsl(210,60%,50%)]/30 py-2 text-sm text-muted-foreground hover:bg-[hsl(210,60%,50%)]/10">{t(locale, "cancel")}</button>
           </div>
@@ -298,7 +298,7 @@ export function NowPaymentsButton({
       )}
       <Button type="button" className={className} size="lg" onClick={handleClick} disabled={loading}>
         {loading ? (
-          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> Loading…</>
+          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t(locale, "loading")}</>
         ) : (
           <>
             <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
