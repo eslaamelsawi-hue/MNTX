@@ -166,14 +166,14 @@ function OKXPayModal({
             <Button className="mb-2 w-full bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" onClick={handleGetDetails}>
               Get Payment Details
             </Button>
-            <button onClick={onClose} className="w-full rounded-lg border border-[hsl(210,60%,50%)]/30 py-2 text-sm text-muted-foreground hover:bg-[hsl(210,60%,50%)]/10">{t(locale, "cancel")}</button>
+            <button type="button" onClick={onClose} className="w-full rounded-lg border border-[hsl(210,60%,50%)]/30 py-2 text-sm text-muted-foreground hover:bg-[hsl(210,60%,50%)]/10">{t(locale, "cancel")}</button>
           </>
         ) : verifyResult?.status === "paid" ? (
           <div className="text-center">
             <div className="mb-3 text-4xl">✅</div>
             <p className="text-lg font-bold text-green-400">{t(locale, "paymentConfirmed")}</p>
             <p className="mt-2 text-sm text-muted-foreground">{verifyResult.message}</p>
-            <button onClick={onClose} className="mt-4 w-full rounded-lg border border-[hsl(210,60%,50%)]/30 py-2 text-sm text-muted-foreground hover:bg-[hsl(210,60%,50%)]/10">{t(locale, "close")}</button>
+            <button type="button" onClick={onClose} className="mt-4 w-full rounded-lg border border-[hsl(210,60%,50%)]/30 py-2 text-sm text-muted-foreground hover:bg-[hsl(210,60%,50%)]/10">{t(locale, "close")}</button>
           </div>
         ) : (
           <>
@@ -186,7 +186,7 @@ function OKXPayModal({
               <p className="mb-1 text-xs text-muted-foreground">{t(locale, "sendExactly")} {payInfo.amount} USDT {t(locale, "to")}</p>
               <div className="flex items-center gap-2 rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background p-3">
                 <span className="flex-1 break-all font-mono text-xs text-foreground">{payInfo.address}</span>
-                <button onClick={() => copy(payInfo.address)} className="shrink-0 rounded px-2 py-1 text-xs font-medium text-[hsl(210,60%,50%)] hover:bg-[hsl(210,60%,50%)]/10">
+                <button type="button" onClick={() => copy(payInfo.address)} className="shrink-0 rounded px-2 py-1 text-xs font-medium text-[hsl(210,60%,50%)] hover:bg-[hsl(210,60%,50%)]/10">
                   {copied ? t(locale, "copied") : t(locale, "copy")}
                 </button>
               </div>
@@ -204,7 +204,7 @@ function OKXPayModal({
             <Button className="mb-2 w-full bg-green-600 text-white hover:bg-green-700" onClick={handleVerify} disabled={verifying}>
               {verifying ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t(locale, "checking")}</> : t(locale, "verifyPayment")}
             </Button>
-            <button onClick={onClose} className="w-full rounded-lg border border-[hsl(210,60%,50%)]/30 py-2 text-sm text-muted-foreground hover:bg-[hsl(210,60%,50%)]/10">{t(locale, "close")}</button>
+            <button type="button" onClick={onClose} className="w-full rounded-lg border border-[hsl(210,60%,50%)]/30 py-2 text-sm text-muted-foreground hover:bg-[hsl(210,60%,50%)]/10">{t(locale, "close")}</button>
           </>
         )}
       </div>
@@ -292,7 +292,7 @@ export function NowPaymentsButton({
             <Button className="mb-2 w-full bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" onClick={() => handlePay(email)} disabled={loading}>
               {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t(locale, "loading")}</> : t(locale, "continueToPayment")}
             </Button>
-            <button onClick={() => setOpen(false)} className="w-full rounded-lg border border-[hsl(210,60%,50%)]/30 py-2 text-sm text-muted-foreground hover:bg-[hsl(210,60%,50%)]/10">{t(locale, "cancel")}</button>
+            <button type="button" onClick={() => setOpen(false)} className="w-full rounded-lg border border-[hsl(210,60%,50%)]/30 py-2 text-sm text-muted-foreground hover:bg-[hsl(210,60%,50%)]/10">{t(locale, "cancel")}</button>
           </div>
         </div>
       )}
