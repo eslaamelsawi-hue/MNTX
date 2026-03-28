@@ -19,6 +19,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { useTranslations } from "next-intl"
 
 // --- Types ---
 
@@ -60,53 +61,16 @@ interface CryptoApiResponse {
   lastUpdated: string
 }
 
-interface TradingTip {
-  title: string
-  description: string
-  category: "risk" | "strategy" | "psychology" | "technical"
-}
+// --- Static data for trading tips (keys only, text from i18n) ---
 
-// --- Static data for trading tips (these don't come from API) ---
-
-const tradingTips: TradingTip[] = [
-  {
-    title: "Never Risk More Than 2% Per Trade",
-    description:
-      "Professional traders protect their capital first. Limit each trade to 1-2% of your total portfolio to survive drawdowns and stay in the game long-term.",
-    category: "risk",
-  },
-  {
-    title: "Trade the Structure, Not the News",
-    description:
-      "News creates noise. Focus on market structure, key levels, and order flow. Let price action tell you the story - the chart never lies.",
-    category: "strategy",
-  },
-  {
-    title: "Master Your Emotions Before the Market",
-    description:
-      "FOMO and fear are your biggest enemies. Develop a trading plan and follow it religiously. Journal every trade and review your psychology weekly.",
-    category: "psychology",
-  },
-  {
-    title: "Use Multiple Timeframe Analysis",
-    description:
-      "Always check the higher timeframe for bias, then zoom into the lower timeframe for entries. The weekly sets the trend, the daily confirms, and the 4H/1H provides entries.",
-    category: "technical",
-  },
-  {
-    title: "Take Profits in Stages",
-    description:
-      "Don't be greedy. Take partial profits at key levels (TP1, TP2, TP3) and move your stop to breakeven. This secures gains while letting winners run.",
-    category: "strategy",
-  },
-  {
-    title: "Understand Liquidity Before Entry",
-    description:
-      "Smart money hunts liquidity. Look for equal highs/lows, stop hunts, and liquidity sweeps before entering. Trade with the smart money, not against it.",
-    category: "technical",
-  },
+const tradingTipKeys = [
+  { titleKey: "tip1Title", descKey: "tip1Desc", category: "risk" },
+  { titleKey: "tip2Title", descKey: "tip2Desc", category: "strategy" },
+  { titleKey: "tip3Title", descKey: "tip3Desc", category: "psychology" },
+  { titleKey: "tip4Title", descKey: "tip4Desc", category: "technical" },
+  { titleKey: "tip5Title", descKey: "tip5Desc", category: "strategy" },
+  { titleKey: "tip6Title", descKey: "tip6Desc", category: "technical" },
 ]
-
 // --- Helpers ---
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
@@ -144,12 +108,12 @@ function getSentimentFromChange(change: number | null): "bullish" | "bearish" | 
   return "neutral"
 }
 
-function getFearGreedLabel(value: number): string {
-  if (value <= 25) return "Extreme Fear"
-  if (value <= 45) return "Fear"
-  if (value <= 55) return "Neutral"
-  if (value <= 75) return "Greed"
-  return "Extreme Greed"
+function getFearGreedLabel(value: number, t: (key: string) => string): string {
+  if (value <= 25) return t("extremeFear")
+  if (value <= 45) return t("fear")
+  if (value <= 55) return t("neutral")
+  if (value <= 75) return t("greed")
+  return t("extremeGreed")
 }
 
 function getFearGreedColor(value: number): string {
@@ -160,12 +124,12 @@ function getFearGreedColor(value: number): string {
   return "text-emerald-300"
 }
 
-function getMarketSentiment(change: number | null): { label: string; color: string } {
-  if (change === null) return { label: "Unknown", color: "text-muted-foreground" }
-  if (change > 2) return { label: "Very Bullish", color: "text-emerald-400" }
-  if (change > 0) return { label: "Bullish", color: "text-emerald-400" }
-  if (change > -2) return { label: "Bearish", color: "text-red-400" }
-  return { label: "Very Bearish", color: "text-red-400" }
+function getMarketSentiment(change: number | null, t: (key: string) => string): { label: string; color: string } {
+  if (change === null) return { label: t("unknown"), color: "text-muted-foreground" }
+  if (change > 2) return { label: t("veryBullish"), color: "text-emerald-400" }
+  if (change > 0) return { label: t("bullish"), color: "text-emerald-400" }
+  if (change > -2) return { label: t("bearish"), color: "text-red-400" }
+  return { label: t("veryBearish"), color: "text-red-400" }
 }
 
 const sentimentBg: Record<string, string> = {
@@ -181,11 +145,11 @@ const categoryIcon: Record<string, typeof Shield> = {
   technical: BarChart3,
 }
 
-const categoryLabel: Record<string, string> = {
-  risk: "Risk Management",
-  strategy: "Strategy",
-  psychology: "Psychology",
-  technical: "Technical Analysis",
+const categoryLabelKey: Record<string, string> = {
+  risk: "categoryRisk",
+  strategy: "categoryStrategy",
+  psychology: "categoryPsychology",
+  technical: "categoryTechnical",
 }
 
 // --- Components ---
@@ -226,7 +190,7 @@ function CoinCardSkeleton() {
   )
 }
 
-function CoinCard({ coin }: { coin: CoinData }) {
+function CoinCard({ coin, t }: { coin: CoinData; t: (key: string) => string }) {
   const [expanded, setExpanded] = useState(false)
   const sentiment = getSentimentFromChange(coin.change24h)
 
@@ -278,7 +242,7 @@ function CoinCard({ coin }: { coin: CoinData }) {
         <div className="mt-4 flex flex-wrap gap-2">
           <Badge variant="outline" className={sentimentBg[sentiment]}>
             <SentimentIcon sentiment={sentiment} />
-            <span className="ml-1 capitalize">{sentiment}</span>
+            <span className="ml-1 capitalize">{t(sentiment)}</span>
           </Badge>
           {coin.marketCapRank && (
             <Badge
@@ -293,13 +257,13 @@ function CoinCard({ coin }: { coin: CoinData }) {
         {/* Key Stats */}
         <div className="mt-4 grid grid-cols-2 gap-3">
           <div className="rounded-lg bg-secondary/50 p-3">
-            <p className="text-xs text-muted-foreground">Market Cap</p>
+            <p className="text-xs text-muted-foreground">{t( marketCap)}</p>
             <p className="mt-0.5 font-bold text-foreground">
               {formatLargeNumber(coin.marketCap)}
             </p>
           </div>
           <div className="rounded-lg bg-secondary/50 p-3">
-            <p className="text-xs text-muted-foreground">24h Volume</p>
+            <p className="text-xs text-muted-foreground">{t("volume24h")}</p>
             <p className="mt-0.5 font-bold text-foreground">
               {formatLargeNumber(coin.totalVolume)}
             </p>
@@ -308,13 +272,13 @@ function CoinCard({ coin }: { coin: CoinData }) {
 
         <div className="mt-3 grid grid-cols-2 gap-3">
           <div className="rounded-lg bg-emerald-400/5 p-3">
-            <p className="text-xs text-emerald-400">24h High</p>
+            <p className="text-xs text-emerald-400">{t("high24h")}</p>
             <p className="mt-0.5 font-bold text-foreground">
               {formatPrice(coin.high24h)}
             </p>
           </div>
           <div className="rounded-lg bg-red-400/5 p-3">
-            <p className="text-xs text-red-400">24h Low</p>
+            <p className="text-xs text-red-400">{t("low24h")}</p>
             <p className="mt-0.5 font-bold text-foreground">
               {formatPrice(coin.low24h)}
             </p>
@@ -341,13 +305,13 @@ function CoinCard({ coin }: { coin: CoinData }) {
           {expanded && (
             <div className="mt-3 space-y-2 text-sm text-muted-foreground">
               <div className="flex justify-between">
-                <span>All-Time High</span>
+                <span>{t("allTimeHigh")}</span>
                 <span className="font-medium text-foreground">
                   {formatPrice(coin.ath)}
                 </span>
               </div>
               <div className="flex justify-between">
-                <span>ATH Change</span>
+                <span>{t("athChange")}</span>
                 <span
                   className={`font-medium ${
                     (coin.athChangePercentage ?? 0) >= 0
@@ -359,7 +323,7 @@ function CoinCard({ coin }: { coin: CoinData }) {
                 </span>
               </div>
               <div className="flex justify-between">
-                <span>Circulating Supply</span>
+                <span>{t("circulatingSupply")}</span>
                 <span className="font-medium text-foreground">
                   {coin.circulatingSupply
                     ? coin.circulatingSupply.toLocaleString(undefined, {
@@ -370,7 +334,7 @@ function CoinCard({ coin }: { coin: CoinData }) {
               </div>
               {coin.totalSupply && (
                 <div className="flex justify-between">
-                  <span>Total Supply</span>
+                  <span>{t("totalSupply")}</span>
                   <span className="font-medium text-foreground">
                     {coin.totalSupply.toLocaleString(undefined, {
                       maximumFractionDigits: 0,
@@ -389,6 +353,7 @@ function CoinCard({ coin }: { coin: CoinData }) {
 // --- Main Page ---
 
 export function CryptoPage() {
+  const t = useTranslations("cryptoPage")
   const { data, error, isLoading, mutate } = useSWR<CryptoApiResponse>(
     "/api/crypto",
     fetcher,
@@ -412,7 +377,7 @@ export function CryptoPage() {
   }, [data?.lastUpdated])
 
   const sentiment = data?.global
-    ? getMarketSentiment(data.global.marketCapChangePercentage24h)
+    ? getMarketSentiment(data.global.marketCapChangePercentage24h, t)
     : null
 
   return (
@@ -420,11 +385,8 @@ export function CryptoPage() {
       {/* Hero Section */}
       <div className="mb-12 text-center">
         <Badge variant="outline" className="mb-4 border-primary/30 text-primary">
-          <BarChart3 className="mr-1.5 h-3.5 w-3.5" />
-          Live Market Data
-        </Badge>
-        <h1 className="text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl">
-          Crypto <span className="text-primary">Advice & Forecasts</span>
+          <BarChart3 className="mr-1.5 h-3.5 w-3.5" />{t("badgeLabel")}</Badge>
+        <h1 className="text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl">{t("title")} <span className="text-primary">{t("titleHighlight")}</span>
         </h1>
         <p className="mx-auto mt-4 max-w-2xl text-muted-foreground leading-relaxed">
           Real-time prices and market data powered by CoinGecko, combined with
@@ -432,15 +394,15 @@ export function CryptoPage() {
         </p>
         {lastRefresh && (
           <p className="mt-2 text-xs text-muted-foreground">
-            Last updated: {lastRefresh}
+            {t("lastUpdated", { time: lastRefresh })}
           </p>
         )}
       </div>
 
       <Tabs defaultValue="forecasts" className="w-full">
         <TabsList className="mb-8 grid w-full max-w-md mx-auto grid-cols-2">
-          <TabsTrigger value="forecasts">Live Prices</TabsTrigger>
-          <TabsTrigger value="advice">Trading Advice</TabsTrigger>
+          <TabsTrigger value="forecasts">{t("tabLivePrices")}</TabsTrigger>
+          <TabsTrigger value="advice">{t("tabTradingAdvice")}</TabsTrigger>
         </TabsList>
 
         {/* Forecasts Tab */}
@@ -450,7 +412,7 @@ export function CryptoPage() {
             {isLoading ? (
               <div className="flex items-center gap-2 text-muted-foreground">
                 <RefreshCw className="h-4 w-4 animate-spin" />
-                <span className="text-sm">Loading market data...</span>
+                <span className="text-sm">{t("loadingMarketData")}</span>
               </div>
             ) : error ? (
               <div className="flex items-center gap-2 text-red-400">
@@ -489,7 +451,7 @@ export function CryptoPage() {
                     }`}
                   >
                     {data?.fearGreed
-                      ? `${data.fearGreed.value} / ${getFearGreedLabel(data.fearGreed.value)}`
+                      ? `${data.fearGreed.value} / ${getFearGreedLabel(data.fearGreed.value, t)}`
                       : "--"}
                   </p>
                 </div>
@@ -543,7 +505,7 @@ export function CryptoPage() {
                 Unable to load crypto data
               </p>
               <p className="mt-1 text-sm text-muted-foreground">
-                CoinGecko API may be rate-limited. Please try again shortly.
+                {t("rateLimitMessage")}
               </p>
               <Button
                 variant="outline"
@@ -557,7 +519,7 @@ export function CryptoPage() {
           ) : (
             <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
               {data?.coins.map((coin) => (
-                <CoinCard key={coin.id} coin={coin} />
+                <CoinCard key={coin.id} coin={coin} t={t} />
               ))}
             </div>
           )}
@@ -577,11 +539,11 @@ export function CryptoPage() {
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
-            {tradingTips.map((tip) => {
+            {tradingTipKeys.map((tip) => {
               const Icon = categoryIcon[tip.category]
               return (
                 <Card
-                  key={tip.title}
+                  key={t(tip.titleKey)}
                   className="border-border bg-card transition-all duration-200 hover:border-primary/30"
                 >
                   <CardHeader className="pb-3">
@@ -594,7 +556,7 @@ export function CryptoPage() {
                           variant="outline"
                           className="mb-2 border-border text-xs text-muted-foreground"
                         >
-                          {categoryLabel[tip.category]}
+                          {t(categoryLabelKey[tip.category])}
                         </Badge>
                         <CardTitle className="text-base">
                           {tip.title}
@@ -604,7 +566,7 @@ export function CryptoPage() {
                   </CardHeader>
                   <CardContent>
                     <p className="text-sm text-muted-foreground leading-relaxed">
-                      {tip.description}
+                      {t(tip.descKey)}
                     </p>
                   </CardContent>
                 </Card>
@@ -619,7 +581,7 @@ export function CryptoPage() {
         <div className="flex items-start gap-3">
           <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
           <div>
-            <h3 className="font-bold text-foreground">Disclaimer</h3>
+            <h3 className="font-bold text-foreground">{t("disclaimerTitle")}</h3>
             <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
               This content is for educational and informational purposes only
               and should not be considered financial advice. Cryptocurrency
@@ -636,10 +598,10 @@ export function CryptoPage() {
       {/* CTA */}
       <div className="mt-8 text-center">
         <p className="mb-4 text-muted-foreground">
-          Want personalized crypto trading guidance?
+          {t("ctaText")}
         </p>
         <Button size="lg" asChild>
-          <a href="/booking">Book a Mentorship Session</a>
+          <a href="/booking">{t("ctaButton")}</a>
         </Button>
       </div>
     </div>

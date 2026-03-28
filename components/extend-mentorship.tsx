@@ -1,4 +1,4 @@
-"use client"
+﻿"use client"
 
 import { useState } from "react"
 import { Button } from "@/components/ui/button"
@@ -87,6 +87,17 @@ export function ExtendMentorship() {
 
     if (!showPaymentMethods) {
       setShowPaymentMethods(true)
+      // Send form data to Discord webhook (fire-and-forget)
+      fetch("/api/extend-mentorship/notify", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          planId: selectedPlan,
+          name: name.trim(),
+          email: email.trim(),
+          telegram: telegram.trim().replace(/^@/, ""),
+        }),
+      }).catch(() => {})
       return
     }
 

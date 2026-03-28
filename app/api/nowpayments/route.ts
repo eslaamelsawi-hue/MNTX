@@ -1,10 +1,10 @@
-import { NextResponse } from "next/server"
+﻿import { NextResponse } from "next/server"
 import { createNowpaymentsInvoice } from "@/lib/nowpayments"
 
 const PLAN_INFO: Record<string, { amount: number; description: string }> = {
   test:        { amount: 1,    description: "Mentix Trading - Test Plan" },
   "gold-pro":  { amount: 100,  description: "Mentix Trading - Gold Pro Monthly Analysis" },
-  starter:     { amount: 199,  description: "Mentix Trading - ADVANCED SMC Course" },
+  starter:     { amount: 379,  description: "Mentix Trading - ADVANCED SMC Course" },
   coaching:    { amount: 1599, description: "Mentix Trading - 1-on-1 Coaching Plan" },
   "extend-1m": { amount: 199,  description: "Mentix Trading - Mentorship Extension 1 Month" },
   "extend-2m": { amount: 379,  description: "Mentix Trading - Mentorship Extension 2 Months" },
