@@ -257,7 +257,7 @@ function CoinCard({ coin, t }: { coin: CoinData; t: (key: string) => string }) {
         {/* Key Stats */}
         <div className="mt-4 grid grid-cols-2 gap-3">
           <div className="rounded-lg bg-secondary/50 p-3">
-            <p className="text-xs text-muted-foreground">{t( marketCap)}</p>
+            <p className="text-xs text-muted-foreground">{t("marketCap")}</p>
             <p className="mt-0.5 font-bold text-foreground">
               {formatLargeNumber(coin.marketCap)}
             </p>
@@ -559,7 +559,7 @@ export function CryptoPage() {
                           {t(categoryLabelKey[tip.category])}
                         </Badge>
                         <CardTitle className="text-base">
-                          {tip.title}
+                          {t(tip.titleKey)}
                         </CardTitle>
                       </div>
                     </div>
