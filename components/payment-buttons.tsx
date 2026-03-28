@@ -163,7 +163,7 @@ function OKXPayModal({
               onChange={(e) => setEmail(e.target.value)}
               className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
             />
-            <Button className="mb-2 w-full bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" onClick={handleGetDetails}>
+            <Button type="button" className="mb-2 w-full bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" onClick={handleGetDetails}>
               Get Payment Details
             </Button>
             <button type="button" onClick={onClose} className="w-full rounded-lg border border-[hsl(210,60%,50%)]/30 py-2 text-sm text-muted-foreground hover:bg-[hsl(210,60%,50%)]/10">{t(locale, "cancel")}</button>
@@ -201,7 +201,7 @@ function OKXPayModal({
             {verifyResult && verifyResult.status !== "paid" && (
               <p className="mb-3 rounded-lg bg-red-500/10 p-3 text-center text-xs text-red-400">{verifyResult.message}</p>
             )}
-            <Button className="mb-2 w-full bg-green-600 text-white hover:bg-green-700" onClick={handleVerify} disabled={verifying}>
+            <Button type="button" className="mb-2 w-full bg-green-600 text-white hover:bg-green-700" onClick={handleVerify} disabled={verifying}>
               {verifying ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t(locale, "checking")}</> : t(locale, "verifyPayment")}
             </Button>
             <button type="button" onClick={onClose} className="w-full rounded-lg border border-[hsl(210,60%,50%)]/30 py-2 text-sm text-muted-foreground hover:bg-[hsl(210,60%,50%)]/10">{t(locale, "close")}</button>
@@ -289,7 +289,7 @@ export function NowPaymentsButton({
               onChange={(e) => setEmail(e.target.value)}
               className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
             />
-            <Button className="mb-2 w-full bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" onClick={() => handlePay(email)} disabled={loading}>
+            <Button type="button" className="mb-2 w-full bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" onClick={() => handlePay(email)} disabled={loading}>
               {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t(locale, "loading")}</> : t(locale, "continueToPayment")}
             </Button>
             <button type="button" onClick={() => setOpen(false)} className="w-full rounded-lg border border-[hsl(210,60%,50%)]/30 py-2 text-sm text-muted-foreground hover:bg-[hsl(210,60%,50%)]/10">{t(locale, "cancel")}</button>
