@@ -1,0 +1,17 @@
+"use client"
+
+import { useState, useEffect, useCallback } from "react"
+import { AdminLogin } from "@/components/admin-login"
+import { Button } from "@/components/ui/button"
+import { ArrowLeft, RefreshCw, Users, CreditCard, BarChart3, Plus, Trash2, ToggleLeft, ToggleRight } from "lucide-react"
+import Link from "next/link"
+import { useLocale } from "next-intl"
+
+type Plan = { id: string; plan_id: string; name: string; description: string | null; price_usd: number; duration_days: number; is_active: boolean }
+type Subscriber = { id: string; telegram_user_id: number; telegram_username: string | null; first_name: string | null; last_name: string | null; email: string | null; created_at: string; tg_subscriptions: Array<{ id: string; plan_id: string; status: string; starts_at: string; expires_at: string | null; payment_method: string | null }> }
+type Stats = { totalSubscribers: number; activeSubscriptions: number; totalPayments: number; totalRevenue: number }
+
+const API_BASE = "/api/tg-bot/admin"
+function getAdminKey(): string { if (typeof window === "undefined") return ""; return localStorage.getItem("tg_admin_key") || "" }
+async function api(action: string): Promise<Response> { return fetch(`${API_BASE}?action=${action}`, { headers: { "x-admin-key": getAdminKey() } }) }
+async function apiPost(body: Record<string, unknown>): Promise<Response> { return fetch(API_BASE, { method: "POST", headers: { "Content-Type": "application/json", "x-admin-key": getAdminKey() }, body: JSON.stringify(body) }) }

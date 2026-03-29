@@ -1,0 +1,647 @@
+﻿"use client"
+
+import { useState, useEffect } from "react"
+import useSWR from "swr"
+import {
+  TrendingUp,
+  TrendingDown,
+  BarChart3,
+  Shield,
+  Target,
+  AlertTriangle,
+  ArrowUpRight,
+  ArrowDownRight,
+  Minus,
+  ChevronRight,
+  RefreshCw,
+} from "lucide-react"
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Badge } from "@/components/ui/badge"
+import { Button } from "@/components/ui/button"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+
+// --- Types ---
+
+interface CoinData {
+  id: string
+  symbol: string
+  name: string
+  image: string
+  currentPrice: number | null
+  change24h: number | null
+  marketCap: number | null
+  marketCapRank: number | null
+  totalVolume: number | null
+  high24h: number | null
+  low24h: number | null
+  ath: number | null
+  athChangePercentage: number | null
+  circulatingSupply: number | null
+  totalSupply: number | null
+}
+
+interface GlobalData {
+  totalMarketCap: number | null
+  btcDominance: number | null
+  totalVolume: number | null
+  marketCapChangePercentage24h: number | null
+  activeCryptocurrencies: number | null
+}
+
+interface FearGreedData {
+  value: number
+  classification: string
+}
+
+interface CryptoApiResponse {
+  coins: CoinData[]
+  global: GlobalData | null
+  fearGreed: FearGreedData | null
+  lastUpdated: string
+}
+
+interface TradingTip {
+  title: string
+  description: string
+  category: "risk" | "strategy" | "psychology" | "technical"
+}
+
+// --- Static data for trading tips (these don't come from API) ---
+
+const tradingTips: TradingTip[] = [
+  {
+    title: "Never Risk More Than 2% Per Trade",
+    description:
+      "Professional traders protect their capital first. Limit each trade to 1-2% of your total portfolio to survive drawdowns and stay in the game long-term.",
+    category: "risk",
+  },
+  {
+    title: "Trade the Structure, Not the News",
+    description:
+      "News creates noise. Focus on market structure, key levels, and order flow. Let price action tell you the story - the chart never lies.",
+    category: "strategy",
+  },
+  {
+    title: "Master Your Emotions Before the Market",
+    description:
+      "FOMO and fear are your biggest enemies. Develop a trading plan and follow it religiously. Journal every trade and review your psychology weekly.",
+    category: "psychology",
+  },
+  {
+    title: "Use Multiple Timeframe Analysis",
+    description:
+      "Always check the higher timeframe for bias, then zoom into the lower timeframe for entries. The weekly sets the trend, the daily confirms, and the 4H/1H provides entries.",
+    category: "technical",
+  },
+  {
+    title: "Take Profits in Stages",
+    description:
+      "Don't be greedy. Take partial profits at key levels (TP1, TP2, TP3) and move your stop to breakeven. This secures gains while letting winners run.",
+    category: "strategy",
+  },
+  {
+    title: "Understand Liquidity Before Entry",
+    description:
+      "Smart money hunts liquidity. Look for equal highs/lows, stop hunts, and liquidity sweeps before entering. Trade with the smart money, not against it.",
+    category: "technical",
+  },
+]
+
+// --- Helpers ---
+
+const fetcher = (url: string) => fetch(url).then((r) => r.json())
+
+function formatPrice(price: number | null): string {
+  if (price === null) return "--"
+  if (price >= 1) {
+    return price.toLocaleString("en-US", {
+      style: "currency",
+      currency: "USD",
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    })
+  }
+  return price.toLocaleString("en-US", {
+    style: "currency",
+    currency: "USD",
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6,
+  })
+}
+
+function formatLargeNumber(n: number | null): string {
+  if (n === null) return "--"
+  if (n >= 1e12) return `$${(n / 1e12).toFixed(2)}T`
+  if (n >= 1e9) return `$${(n / 1e9).toFixed(2)}B`
+  if (n >= 1e6) return `$${(n / 1e6).toFixed(2)}M`
+  return `$${n.toLocaleString()}`
+}
+
+function getSentimentFromChange(change: number | null): "bullish" | "bearish" | "neutral" {
+  if (change === null) return "neutral"
+  if (change > 1) return "bullish"
+  if (change < -1) return "bearish"
+  return "neutral"
+}
+
+function getFearGreedLabel(value: number): string {
+  if (value <= 25) return "Extreme Fear"
+  if (value <= 45) return "Fear"
+  if (value <= 55) return "Neutral"
+  if (value <= 75) return "Greed"
+  return "Extreme Greed"
+}
+
+function getFearGreedColor(value: number): string {
+  if (value <= 25) return "text-red-400"
+  if (value <= 45) return "text-orange-400"
+  if (value <= 55) return "text-primary"
+  if (value <= 75) return "text-emerald-400"
+  return "text-emerald-300"
+}
+
+function getMarketSentiment(change: number | null): { label: string; color: string } {
+  if (change === null) return { label: "Unknown", color: "text-muted-foreground" }
+  if (change > 2) return { label: "Very Bullish", color: "text-emerald-400" }
+  if (change > 0) return { label: "Bullish", color: "text-emerald-400" }
+  if (change > -2) return { label: "Bearish", color: "text-red-400" }
+  return { label: "Very Bearish", color: "text-red-400" }
+}
+
+const sentimentBg: Record<string, string> = {
+  bullish: "bg-emerald-400/10 text-emerald-400 border-emerald-400/20",
+  bearish: "bg-red-400/10 text-red-400 border-red-400/20",
+  neutral: "bg-primary/10 text-primary border-primary/20",
+}
+
+const categoryIcon: Record<string, typeof Shield> = {
+  risk: Shield,
+  strategy: Target,
+    psychology: Target,
+  technical: BarChart3,
+}
+
+const categoryLabel: Record<string, string> = {
+  risk: "Risk Management",
+  strategy: "Strategy",
+  psychology: "Psychology",
+  technical: "Technical Analysis",
+}
+
+// --- Components ---
+
+function SentimentIcon({ sentiment }: { sentiment: string }) {
+  if (sentiment === "bullish") return <TrendingUp className="h-4 w-4" />
+  if (sentiment === "bearish") return <TrendingDown className="h-4 w-4" />
+  return <Minus className="h-4 w-4" />
+}
+
+function CoinCardSkeleton() {
+  return (
+    <Card className="border-border bg-card animate-pulse">
+      <CardContent className="p-5">
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            <div className="h-10 w-10 rounded-lg bg-secondary" />
+            <div>
+              <div className="h-4 w-20 rounded bg-secondary" />
+              <div className="mt-1.5 h-3 w-14 rounded bg-secondary" />
+            </div>
+          </div>
+          <div className="text-right">
+            <div className="h-4 w-24 rounded bg-secondary" />
+            <div className="mt-1.5 h-3 w-16 rounded bg-secondary ml-auto" />
+          </div>
+        </div>
+        <div className="mt-4 flex gap-2">
+          <div className="h-6 w-20 rounded-full bg-secondary" />
+          <div className="h-6 w-16 rounded-full bg-secondary" />
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="h-16 rounded-lg bg-secondary" />
+          <div className="h-16 rounded-lg bg-secondary" />
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+function CoinCard({ coin }: { coin: CoinData }) {
+  const [expanded, setExpanded] = useState(false)
+  const sentiment = getSentimentFromChange(coin.change24h)
+
+  return (
+    <Card className="border-border bg-card transition-all duration-200 hover:border-primary/30">
+      <CardContent className="p-5">
+        {/* Header */}
+        <div className="flex items-start justify-between">
+          <div className="flex items-center gap-3">
+            {coin.image ? (
+              <img
+                src={coin.image}
+                alt={coin.name}
+                className="h-10 w-10 rounded-lg"
+                crossOrigin="anonymous"
+              />
+            ) : (
+              <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-secondary font-bold text-sm text-foreground">
+                {coin.symbol}
+              </div>
+            )}
+            <div>
+              <h3 className="font-bold text-foreground">{coin.name}</h3>
+              <p className="text-sm text-muted-foreground">
+                {coin.symbol}/USDT
+              </p>
+            </div>
+          </div>
+          <div className="text-right">
+            <p className="font-bold text-foreground">
+              {formatPrice(coin.currentPrice)}
+            </p>
+            <div
+              className={`flex items-center justify-end gap-1 text-sm ${
+                (coin.change24h ?? 0) >= 0 ? "text-emerald-400" : "text-red-400"
+              }`}
+            >
+              {(coin.change24h ?? 0) >= 0 ? (
+                <ArrowUpRight className="h-3.5 w-3.5" />
+              ) : (
+                <ArrowDownRight className="h-3.5 w-3.5" />
+              )}
+              {Math.abs(coin.change24h ?? 0).toFixed(2)}%
+            </div>
+          </div>
+        </div>
+
+        {/* Badges */}
+        <div className="mt-4 flex flex-wrap gap-2">
+          <Badge variant="outline" className={sentimentBg[sentiment]}>
+            <SentimentIcon sentiment={sentiment} />
+            <span className="ml-1 capitalize">{sentiment}</span>
+          </Badge>
+          {coin.marketCapRank && (
+            <Badge
+              variant="outline"
+              className="border-border text-muted-foreground"
+            >
+              #{coin.marketCapRank}
+            </Badge>
+          )}
+        </div>
+
+        {/* Key Stats */}
+        <div className="mt-4 grid grid-cols-2 gap-3">
+          <div className="rounded-lg bg-secondary/50 p-3">
+            <p className="text-xs text-muted-foreground">Market Cap</p>
+            <p className="mt-0.5 font-bold text-foreground">
+              {formatLargeNumber(coin.marketCap)}
+            </p>
+          </div>
+          <div className="rounded-lg bg-secondary/50 p-3">
+            <p className="text-xs text-muted-foreground">24h Volume</p>
+            <p className="mt-0.5 font-bold text-foreground">
+              {formatLargeNumber(coin.totalVolume)}
+            </p>
+          </div>
+        </div>
+
+        <div className="mt-3 grid grid-cols-2 gap-3">
+          <div className="rounded-lg bg-emerald-400/5 p-3">
+            <p className="text-xs text-emerald-400">24h High</p>
+            <p className="mt-0.5 font-bold text-foreground">
+              {formatPrice(coin.high24h)}
+            </p>
+          </div>
+          <div className="rounded-lg bg-red-400/5 p-3">
+            <p className="text-xs text-red-400">24h Low</p>
+            <p className="mt-0.5 font-bold text-foreground">
+              {formatPrice(coin.low24h)}
+            </p>
+          </div>
+        </div>
+
+        {/* Expandable details */}
+        <div className="mt-4">
+          <button
+            type="button"
+            onClick={() => setExpanded(!expanded)}
+            className="flex w-full items-center justify-between text-sm font-medium text-primary hover:text-primary/80 transition-colors"
+          >
+            <span className="flex items-center gap-1.5">
+                <ChevronRight className="h-3.5 w-3.5" />
+              More Details
+            </span>
+            <ChevronRight
+              className={`h-4 w-4 transition-transform duration-200 ${
+                expanded ? "rotate-90" : ""
+              }`}
+            />
+          </button>
+          {expanded && (
+            <div className="mt-3 space-y-2 text-sm text-muted-foreground">
+              <div className="flex justify-between">
+                <span>All-Time High</span>
+                <span className="font-medium text-foreground">
+                  {formatPrice(coin.ath)}
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>ATH Change</span>
+                <span
+                  className={`font-medium ${
+                    (coin.athChangePercentage ?? 0) >= 0
+                      ? "text-emerald-400"
+                      : "text-red-400"
+                  }`}
+                >
+                  {(coin.athChangePercentage ?? 0).toFixed(2)}%
+                </span>
+              </div>
+              <div className="flex justify-between">
+                <span>Circulating Supply</span>
+                <span className="font-medium text-foreground">
+                  {coin.circulatingSupply
+                    ? coin.circulatingSupply.toLocaleString(undefined, {
+                        maximumFractionDigits: 0,
+                      })
+                    : "--"}
+                </span>
+              </div>
+              {coin.totalSupply && (
+                <div className="flex justify-between">
+                  <span>Total Supply</span>
+                  <span className="font-medium text-foreground">
+                    {coin.totalSupply.toLocaleString(undefined, {
+                      maximumFractionDigits: 0,
+                    })}
+                  </span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </CardContent>
+    </Card>
+  )
+}
+
+// --- Main Page ---
+
+export function CryptoPage() {
+  const { data, error, isLoading, mutate } = useSWR<CryptoApiResponse>(
+    "/api/crypto",
+    fetcher,
+    {
+      refreshInterval: 120_000, // refresh every 2 minutes
+      revalidateOnFocus: true,
+    }
+  )
+
+  const [lastRefresh, setLastRefresh] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (data?.lastUpdated) {
+      setLastRefresh(
+        new Date(data.lastUpdated).toLocaleTimeString([], {
+          hour: "2-digit",
+          minute: "2-digit",
+        })
+      )
+    }
+  }, [data?.lastUpdated])
+
+  const sentiment = data?.global
+    ? getMarketSentiment(data.global.marketCapChangePercentage24h)
+    : null
+
+  return (
+    <div className="mx-auto max-w-6xl px-4 py-12">
+      {/* Hero Section */}
+      <div className="mb-12 text-center">
+        <Badge variant="outline" className="mb-4 border-primary/30 text-primary">
+          <BarChart3 className="mr-1.5 h-3.5 w-3.5" />
+          Live Market Data
+        </Badge>
+        <h1 className="text-balance text-3xl font-bold tracking-tight text-foreground sm:text-4xl md:text-5xl">
+          Crypto <span className="text-primary">Advice & Forecasts</span>
+        </h1>
+        <p className="mx-auto mt-4 max-w-2xl text-muted-foreground leading-relaxed">
+          Real-time prices and market data powered by CoinGecko, combined with
+          expert trading advice from the Mentix team.
+        </p>
+        {lastRefresh && (
+          <p className="mt-2 text-xs text-muted-foreground">
+            Last updated: {lastRefresh}
+          </p>
+        )}
+      </div>
+
+      <Tabs defaultValue="forecasts" className="w-full">
+        <TabsList className="mb-8 grid w-full max-w-md mx-auto grid-cols-2">
+          <TabsTrigger value="forecasts">Live Prices</TabsTrigger>
+          <TabsTrigger value="advice">Trading Advice</TabsTrigger>
+        </TabsList>
+
+        {/* Forecasts Tab */}
+        <TabsContent value="forecasts">
+          {/* Market Overview Bar */}
+          <div className="mb-8 flex flex-wrap items-center justify-center gap-6 rounded-xl border border-border bg-card p-4">
+            {isLoading ? (
+              <div className="flex items-center gap-2 text-muted-foreground">
+                <RefreshCw className="h-4 w-4 animate-spin" />
+                <span className="text-sm">Loading market data...</span>
+              </div>
+            ) : error ? (
+              <div className="flex items-center gap-2 text-red-400">
+                <AlertTriangle className="h-4 w-4" />
+                <span className="text-sm">
+                  Failed to load data.{" "}
+                  <button
+                    type="button"
+                    onClick={() => mutate()}
+                    className="underline hover:text-red-300"
+                  >
+                    Retry
+                  </button>
+                </span>
+              </div>
+            ) : (
+              <>
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground">
+                    Market Sentiment
+                  </p>
+                  <p className={`mt-1 font-bold ${sentiment?.color ?? "text-muted-foreground"}`}>
+                    {sentiment?.label ?? "--"}
+                  </p>
+                </div>
+                <div className="hidden h-8 w-px bg-border sm:block" />
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground">
+                    Fear & Greed
+                  </p>
+                  <p
+                    className={`mt-1 font-bold ${
+                      data?.fearGreed
+                        ? getFearGreedColor(data.fearGreed.value)
+                        : "text-muted-foreground"
+                    }`}
+                  >
+                    {data?.fearGreed
+                      ? `${data.fearGreed.value} / ${getFearGreedLabel(data.fearGreed.value)}`
+                      : "--"}
+                  </p>
+                </div>
+                <div className="hidden h-8 w-px bg-border sm:block" />
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground">
+                    BTC Dominance
+                  </p>
+                  <p className="mt-1 font-bold text-foreground">
+                    {data?.global?.btcDominance
+                      ? `${data.global.btcDominance.toFixed(1)}%`
+                      : "--"}
+                  </p>
+                </div>
+                <div className="hidden h-8 w-px bg-border sm:block" />
+                <div className="text-center">
+                  <p className="text-xs text-muted-foreground">
+                    Total Market Cap
+                  </p>
+                  <p className="mt-1 font-bold text-foreground">
+                    {data?.global?.totalMarketCap
+                      ? formatLargeNumber(data.global.totalMarketCap)
+                      : "--"}
+                  </p>
+                </div>
+                <div className="hidden h-8 w-px bg-border sm:block" />
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={() => mutate()}
+                  className="text-muted-foreground hover:text-foreground"
+                >
+                  <RefreshCw className="mr-1.5 h-3.5 w-3.5" />
+                  Refresh
+                </Button>
+              </>
+            )}
+          </div>
+
+          {/* Coin Cards Grid */}
+          {isLoading ? (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {Array.from({ length: 6 }).map((_, i) => (
+                <CoinCardSkeleton key={i} />
+              ))}
+            </div>
+          ) : error ? (
+            <div className="flex flex-col items-center justify-center py-20 text-center">
+              <AlertTriangle className="mb-4 h-12 w-12 text-red-400 opacity-50" />
+              <p className="text-lg font-medium text-foreground">
+                Unable to load crypto data
+              </p>
+              <p className="mt-1 text-sm text-muted-foreground">
+                CoinGecko API may be rate-limited. Please try again shortly.
+              </p>
+              <Button
+                variant="outline"
+                className="mt-4"
+                onClick={() => mutate()}
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Try Again
+              </Button>
+            </div>
+          ) : (
+            <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {data?.coins.map((coin) => (
+                <CoinCard key={coin.id} coin={coin} />
+              ))}
+            </div>
+          )}
+        </TabsContent>
+
+        {/* Advice Tab */}
+        <TabsContent value="advice">
+          <div className="mb-8 rounded-xl border border-primary/20 bg-primary/5 p-6 text-center">
+                <Target className="mx-auto mb-3 h-8 w-8 text-primary" />
+            <h2 className="text-xl font-bold text-foreground">
+              Trading Wisdom from the Mentix Team
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground leading-relaxed">
+              These principles are battle-tested by professional traders. Apply
+              them consistently to improve your edge.
+            </p>
+          </div>
+
+          <div className="grid gap-4 sm:grid-cols-2">
+            {tradingTips.map((tip) => {
+              const Icon = categoryIcon[tip.category]
+              return (
+                <Card
+                  key={tip.title}
+                  className="border-border bg-card transition-all duration-200 hover:border-primary/30"
+                >
+                  <CardHeader className="pb-3">
+                    <div className="flex items-start gap-3">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-primary/10">
+                        <Icon className="h-5 w-5 text-primary" />
+                      </div>
+                      <div>
+                        <Badge
+                          variant="outline"
+                          className="mb-2 border-border text-xs text-muted-foreground"
+                        >
+                          {categoryLabel[tip.category]}
+                        </Badge>
+                        <CardTitle className="text-base">
+                          {tip.title}
+                        </CardTitle>
+                      </div>
+                    </div>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-sm text-muted-foreground leading-relaxed">
+                      {tip.description}
+                    </p>
+                  </CardContent>
+                </Card>
+              )
+            })}
+          </div>
+        </TabsContent>
+      </Tabs>
+
+      {/* Disclaimer */}
+      <div className="mt-12 rounded-xl border border-border bg-secondary/30 p-6">
+        <div className="flex items-start gap-3">
+          <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-primary" />
+          <div>
+            <h3 className="font-bold text-foreground">Disclaimer</h3>
+            <p className="mt-1 text-sm text-muted-foreground leading-relaxed">
+              This content is for educational and informational purposes only
+              and should not be considered financial advice. Cryptocurrency
+              trading involves significant risk, and you could lose your entire
+              investment. Always do your own research (DYOR) and consult with a
+              qualified financial advisor before making any investment decisions.
+              Past performance does not guarantee future results. Price data
+              provided by CoinGecko.
+            </p>
+          </div>
+        </div>
+      </div>
+
+      {/* CTA */}
+      <div className="mt-8 text-center">
+        <p className="mb-4 text-muted-foreground">
+          Want personalized crypto trading guidance?
+        </p>
+        <Button size="lg" asChild>
+          <a href="/booking">Book a Mentorship Session</a>
+        </Button>
+      </div>
+    </div>
+  )
+}

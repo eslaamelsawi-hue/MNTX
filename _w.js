@@ -1,0 +1,1 @@
+const fs=require("fs");const path=require("path");let d="";process.stdin.setEncoding("utf8");process.stdin.on("data",c=>d+=c);process.stdin.on("end",()=>{const p=process.argv[2];fs.mkdirSync(path.dirname(p),{recursive:true});fs.writeFileSync(p,d);console.log("Wrote",d.length,"bytes",p)});
