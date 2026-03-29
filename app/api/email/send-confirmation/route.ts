@@ -39,7 +39,7 @@ export async function POST(request: NextRequest) {
         <p style="color: #ccc; line-height: 1.6;">Your coaching session has been confirmed! Here are the details:</p>
         <div style="background-color: #1a1a1a; border-radius: 8px; padding: 20px; margin: 20px 0; border-left: 4px solid #d4a017;">
           <p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Date:</strong> ${formattedDate}</p>
-          <p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Time:</strong> ${start_time} UTC</p>
+          <p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Time:</strong> ${start_time} (Cairo Time)</p>
           <p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Duration:</strong> ${duration} minutes</p>
           <p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Booking ID:</strong> ${booking_id}</p>
           ${zoom_join_url ? `<p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Zoom Link:</strong> <a href="${zoom_join_url}" style="color: #d4a017;">${zoom_join_url}</a></p>` : ""}
@@ -71,7 +71,7 @@ export async function POST(request: NextRequest) {
           <p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Client:</strong> ${client_name}</p>
           <p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Email:</strong> ${client_email}</p>
           <p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Date:</strong> ${formattedDate}</p>
-          <p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Time:</strong> ${start_time} UTC</p>
+          <p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Time:</strong> ${start_time} (Cairo Time)</p>
           <p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Duration:</strong> ${duration} min</p>
           ${zoom_join_url ? `<p style="margin: 8px 0;"><a href="${zoom_join_url}" style="color: #d4a017;">Start Zoom Meeting</a></p>` : ""}
         </div>

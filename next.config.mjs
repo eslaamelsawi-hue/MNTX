@@ -1,6 +1,9 @@
-﻿import createNextIntlPlugin from 'next-intl/plugin';
+import createNextIntlPlugin from 'next-intl/plugin';
 
 const withNextIntl = createNextIntlPlugin('./i18n.ts');
+
+// Force server runtime to use Cairo timezone
+process.env.TZ = 'Africa/Cairo';
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
@@ -25,4 +28,3 @@ const nextConfig = {
 }
 
 export default withNextIntl(nextConfig);
-

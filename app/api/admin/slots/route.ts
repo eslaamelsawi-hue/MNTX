@@ -1,10 +1,11 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { todayCairo } from "@/lib/timezone";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const body = await request.json();
-  const { slots } = body; // Array of { date, start_time, end_time, duration }
+  const { slots } = body;
 
   if (!slots || !Array.isArray(slots) || slots.length === 0) {
     return NextResponse.json({ error: "Slots array is required" }, { status: 400 });
@@ -32,8 +33,7 @@ export async function POST(request: NextRequest) {
 
 export async function GET() {
   const supabase = await createClient();
-  const now = new Date();
-  const today = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  const today = todayCairo();
 
   const { data, error } = await supabase
     .from("availability_slots")
@@ -55,7 +55,6 @@ export async function DELETE(request: NextRequest) {
   const id = searchParams.get("id");
   const deleteAll = searchParams.get("all");
 
-  // Delete all unbooked slots
   if (deleteAll === "true") {
     const { error } = await supabase
       .from("availability_slots")
@@ -69,7 +68,6 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ success: true, message: "All available slots deleted" });
   }
 
-  // Delete single slot by ID
   if (!id) {
     return NextResponse.json({ error: "Slot ID is required" }, { status: 400 });
   }

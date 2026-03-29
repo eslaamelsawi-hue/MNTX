@@ -1,5 +1,6 @@
-﻿import { createClient } from "@/lib/supabase/server";
+import { createClient } from "@/lib/supabase/server";
 import { NextResponse } from "next/server";
+import { SITE_TIMEZONE, todayCairo } from "@/lib/timezone";
 
 export async function GET() {
   const supabase = await createClient();
@@ -15,13 +16,13 @@ export async function GET() {
   }
 
   const now = new Date();
-  const localDate = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-${String(now.getDate()).padStart(2, "0")}`;
+  const cairoDate = todayCairo();
   const utcDate = now.toISOString().split("T")[0];
 
   return NextResponse.json({
     serverInfo: {
-      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
-      localDate,
+      siteTimezone: SITE_TIMEZONE,
+      cairoDate,
       utcDate,
       serverTime: now.toISOString(),
     },

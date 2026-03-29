@@ -1,5 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { NextRequest, NextResponse } from "next/server";
+import { todayCairo, formatDateCairo } from "@/lib/timezone";
 
 export async function GET(request: NextRequest) {
   const supabase = await createClient();
@@ -19,11 +20,11 @@ export async function GET(request: NextRequest) {
   } else if (month) {
     const startDate = `${month}-01`;
     const [year, mon] = month.split("-").map(Number);
-    const endDate = new Date(year, mon, 0).toISOString().split("T")[0];
+    const endDate = formatDateCairo(new Date(year, mon, 0));
     query = query.gte("date", startDate).lte("date", endDate);
   } else {
-    // Default: fetch slots from today onwards
-    const today = new Date().toISOString().split("T")[0];
+    // Default: fetch slots from today onwards (Cairo timezone)
+    const today = todayCairo();
     query = query.gte("date", today);
   }
 

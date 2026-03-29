@@ -45,7 +45,7 @@ export async function POST(request: NextRequest) {
         type: 2,
         start_time,
         duration,
-        timezone: "UTC",
+        timezone: "Africa/Cairo",
         settings: {
           host_video: true,
           participant_video: true,
