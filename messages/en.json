@@ -1,4 +1,4 @@
-{
+﻿{
   "navbar": {
     "brand": "Mentix Trading",
     "joinDiscord": "Join Discord",
@@ -35,7 +35,7 @@
       },
       {
         "title": "Consistency Profitable",
-        "description": "Learn how to be a consistent profitable trader ÃƒÂ¢Ã¢â€šÂ¬Ã¢â‚¬Â long term profitable."
+        "description": "Learn how to be a consistent profitable trader ÃƒÆ’Ã‚Â¢ÃƒÂ¢Ã¢â‚¬Å¡Ã‚Â¬ÃƒÂ¢Ã¢â€šÂ¬Ã‚Â long term profitable."
       },
       {
         "title": "PropFirm & Funded Acc",
@@ -440,6 +440,35 @@
     "disclaimerTitle": "Disclaimer",
     "disclaimerText": "This content is for educational and informational purposes only and should not be considered financial advice. Cryptocurrency trading involves significant risk, and you could lose your entire investment. Always do your own research (DYOR) and consult with a qualified financial advisor before making any investment decisions. Past performance does not guarantee future results. Price data provided by CoinGecko.",
     "ctaText": "Want personalized crypto trading guidance?",
-    "ctaButton": "Book a Mentorship Session"
+    "ctaButton": "Book a Mentorship Session"  },
+  "booking": {
+    "badge": "1-on-1 Coaching",
+    "title": "Book a",
+    "titleHighlight": "Session",
+    "description": "Pick a date and time that works for you. We'll confirm your session instantly.",
+    "selectDate": "Select a Date",
+    "availableSlots": "Available Times",
+    "noSlots": "No available slots for this date.",
+    "minutes": "min",
+    "yourDetails": "Your Details",
+    "name": "Full Name",
+    "namePlaceholder": "John Doe",
+    "email": "Email Address",
+    "emailPlaceholder": "you@example.com",
+    "phone": "Phone (optional)",
+    "phonePlaceholder": "+1 234 567 890",
+    "message": "Message (optional)",
+    "messagePlaceholder": "Anything you'd like to discuss...",
+    "confirmBooking": "Confirm Booking",
+    "submitting": "Booking...",
+    "successTitle": "Booking Confirmed!",
+    "successMessage": "Your session has been booked successfully. Check your email for details.",
+    "date": "Date",
+    "time": "Time",
+    "joinMeeting": "Join Zoom Meeting",
+    "confirmationEmail": "A confirmation email has been sent to your inbox.",
+    "bookAnother": "Book Another Session",
+    "errorLoading": "Failed to load available slots. Please try again.",
+    "errorBooking": "Failed to book the session. Please try again."
   }
 }
