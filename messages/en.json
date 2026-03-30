@@ -204,6 +204,7 @@
     "titleHighlight": "Online Mentorship",
     "description": "Keep the momentum going. Choose the extension that fits your schedule and continue your 1-on-1 mentorship journey with personalized weekly sessions.",
     "sessionNote": "Sessions continue from your current plan end date",
+    "sessionDurationNotice": "Each session is 1 hour per week (4 hours per month). If you take 2 sessions per week or exceed 1 hour, it will count as 2 or more sessions.",
     "plan1Label": "1 Month",
     "plan2Label": "2 Months",
     "plan3Label": "3 Months",

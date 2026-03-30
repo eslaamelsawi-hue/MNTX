@@ -155,6 +155,10 @@ export function ExtendMentorship() {
             <Calendar className="h-4 w-4 text-primary" />
             <span>{t("sessionNote")}</span>
           </div>
+
+          <div className="mx-auto mt-4 max-w-2xl rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-sm text-yellow-200">
+            <p>{t("sessionDurationNotice")}</p>
+          </div>
         </div>
       </section>
 
