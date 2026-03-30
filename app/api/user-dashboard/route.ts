@@ -1,0 +1,35 @@
+import { NextRequest, NextResponse } from "next/server"
+import { createAdminClient } from "@/lib/supabase/admin"
+
+export async function POST(req: NextRequest) {
+  const body = await req.json()
+  const { email } = body
+  if (!email) return NextResponse.json({ error: "Email is required" }, { status: 400 })
+
+  const supabase = createAdminClient()
+  const normalizedEmail = email.toLowerCase().trim()
+
+  // Get active subscriptions
+  const { data: subscriptions, error: subError } = await supabase
+    .from("user_subscriptions")
+    .select("*")
+    .eq("client_email", normalizedEmail)
+    .order("created_at", { ascending: false })
+
+  if (subError) return NextResponse.json({ error: subError.message }, { status: 500 })
+
+  // Get booking history
+  const { data: bookings, error: bookError } = await supabase
+    .from("bookings")
+    .select("id, client_name, duration, status, created_at, availability_slots(date, start_time, end_time)")
+    .eq("client_email", normalizedEmail)
+    .order("created_at", { ascending: false })
+
+  if (bookError) return NextResponse.json({ error: bookError.message }, { status: 500 })
+
+  if (!subscriptions || subscriptions.length === 0) {
+    return NextResponse.json({ found: false, message: "No subscription found for this email" })
+  }
+
+  return NextResponse.json({ found: true, subscriptions, bookings: bookings || [] })
+}

@@ -26,6 +26,9 @@ export function Navbar() {
           <Link href="/gold-pro" className="text-sm font-medium text-yellow-500 transition-colors hover:text-yellow-400">
             {t('goldPro')}
           </Link>
+          <Link href="/dashboard" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+            {t("dashboard")}
+          </Link>
           <LanguageSwitcher />
           <Button asChild size="sm">
             <a href="https://discord.gg/MKysYbcnYW" target="_blank" rel="noopener noreferrer">{t('joinDiscord')}</a>
@@ -57,6 +60,13 @@ export function Navbar() {
               onClick={() => setOpen(false)}
             >
               {t('goldPro')}
+            </Link>
+            <Link
+              href="/dashboard"
+              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              onClick={() => setOpen(false)}
+            >
+              {t("dashboard")}
             </Link>
             <LanguageSwitcher />
             <Button asChild size="sm" className="w-full">

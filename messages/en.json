@@ -5,7 +5,8 @@
     "booking": "Book Session",
     "crypto": "Crypto Insights",
     "gold": "Gold Prices",
-    "goldPro": "Gold Pro"
+    "goldPro": "Gold Pro",
+    "dashboard": "My Dashboard"
   },
   "hero": {
     "badge": "Limited Spots Available",

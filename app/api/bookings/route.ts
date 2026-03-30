@@ -1,4 +1,5 @@
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
 
 export async function POST(request: NextRequest) {
@@ -84,6 +85,30 @@ export async function POST(request: NextRequest) {
       { error: bookingError.message },
       { status: 500 }
     );
+  }
+
+
+  // Deduct mentorship hours from active subscription
+  try {
+    const adminDb = createAdminClient();
+    const { data: activeSub } = await adminDb
+      .from("user_subscriptions")
+      .select("id, used_hours")
+      .eq("client_email", client_email.toLowerCase().trim())
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    if (activeSub) {
+      const hoursToDeduct = duration / 60;
+      await adminDb
+        .from("user_subscriptions")
+        .update({ used_hours: activeSub.used_hours + hoursToDeduct, updated_at: new Date().toISOString() })
+        .eq("id", activeSub.id);
+      console.log("Deducted", hoursToDeduct, "hours from subscription", activeSub.id);
+    }
+  } catch (e) {
+    console.error("Hour deduction failed:", e);
   }
 
   // Send confirmation email
