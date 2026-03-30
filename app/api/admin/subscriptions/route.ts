@@ -4,7 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 
 async function isAdmin() {
   const cookieStore = await cookies()
-  return cookieStore.get("admin_session")?.value === "authenticated"
+  return !!cookieStore.get("admin_session")?.value
 }
 
 export async function GET() {
