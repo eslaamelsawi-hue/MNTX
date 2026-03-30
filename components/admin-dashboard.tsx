@@ -528,7 +528,7 @@ export function AdminDashboard() {
         </div>
 
         <Tabs defaultValue="bookings" className="space-y-6">
-          <TabsList className="bg-muted">
+          <TabsList className="bg-muted flex flex-wrap h-auto gap-1">
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="slots">Availability</TabsTrigger>
             <TabsTrigger value="articles">Gold Articles</TabsTrigger>
