@@ -1,15 +1,29 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { getPendingOrders, getOrder, updateOrder } from "@/lib/okx-orders"
-import fs from "fs"
-import path from "path"
+import { createAdminClient } from "@/lib/supabase/admin"
 import { Resend } from "resend"
 
-function getAllOrders() {
+async function getAllOrders() {
   try {
-    const file = path.join(process.cwd(), "data", "okx-orders.json")
-    if (!fs.existsSync(file)) return []
-    return JSON.parse(fs.readFileSync(file, "utf-8"))
+    const supabase = createAdminClient()
+    const { data, error } = await supabase
+      .from("okx_orders")
+      .select("*")
+      .order("created_at", { ascending: false })
+    if (error || !data) return []
+    return data.map((d: Record<string, unknown>) => ({
+      orderId: d.order_id,
+      plan: d.plan,
+      amount: d.amount,
+      email: d.email,
+      address: d.address,
+      chain: d.chain,
+      status: d.status,
+      createdAt: d.created_at,
+      paidAt: d.paid_at || undefined,
+      txId: d.tx_id || undefined,
+    }))
   } catch {
     return []
   }
@@ -25,7 +39,7 @@ export async function GET() {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const orders = getAllOrders()
+  const orders = await getAllOrders()
   return NextResponse.json({ orders })
 }
 
@@ -36,13 +50,27 @@ export async function PATCH(request: Request) {
 
   const { orderId, action } = await request.json()
 
-  const order = getOrder(orderId)
+  // Handle bulk action: expire all pending orders
+  if (action === "expire_all_pending") {
+    try {
+      const pending = await getPendingOrders()
+      for (const o of pending) {
+        await updateOrder(o.orderId, { status: "expired" })
+      }
+      return NextResponse.json({ success: true, count: pending.length })
+    } catch (e) {
+      console.error("Failed to expire all pending:", e)
+      return NextResponse.json({ error: "Failed to expire pending orders" }, { status: 500 })
+    }
+  }
+
+  const order = await getOrder(orderId)
   if (!order) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 })
   }
 
   if (action === "mark_paid") {
-    updateOrder(orderId, {
+    await updateOrder(orderId, {
       status: "paid",
       paidAt: new Date().toISOString(),
     })
@@ -116,7 +144,7 @@ export async function PATCH(request: Request) {
   }
 
   if (action === "mark_expired") {
-    updateOrder(orderId, { status: "expired" })
+    await updateOrder(orderId, { status: "expired" })
     return NextResponse.json({ success: true })
   }
 

@@ -212,6 +212,29 @@ export function AdminDashboard() {
     setOrderActionLoading(null)
   }
 
+  const handleExpireAllPending = async () => {
+    const pendingCount = orders.filter(o => o.status === "pending").length
+    if (pendingCount === 0) { alert("No pending orders"); return }
+    if (!confirm(`Expire all ${pendingCount} pending order(s)?`)) return
+    setOrderActionLoading("expire_all")
+    try {
+      const res = await fetch("/api/admin/orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "expire_all_pending" }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        fetchOrders()
+      } else {
+        alert(data.error || "Action failed")
+      }
+    } catch {
+      alert("Something went wrong")
+    }
+    setOrderActionLoading(null)
+  }
+
   const copyToClipboard = (text: string, id: string) => {
     navigator.clipboard.writeText(text)
     setCopiedId(id)
@@ -1337,6 +1360,18 @@ export function AdminDashboard() {
                 <Button variant="outline" size="sm" onClick={fetchOrders}>
                   <RefreshCw className="mr-2 h-4 w-4" /> Refresh
                 </Button>
+                {orders.filter(o => o.status === "pending").length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                    onClick={handleExpireAllPending}
+                    disabled={orderActionLoading === "expire_all"}
+                  >
+                    <XCircle className="mr-2 h-4 w-4" />
+                    {orderActionLoading === "expire_all" ? "Expiring…" : `Expire All Pending (${orders.filter(o => o.status === "pending").length})`}
+                  </Button>
+                )}
               </div>
             </div>
 
