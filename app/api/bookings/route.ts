@@ -29,6 +29,25 @@ export async function POST(request: NextRequest) {
     );
   }
 
+  // Check if user has remaining mentorship hours
+  const adminDb = createAdminClient();
+  const { data: activeSub } = await adminDb
+    .from("user_subscriptions")
+    .select("id, remaining_hours")
+    .eq("client_email", client_email.toLowerCase().trim())
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  const hoursNeeded = duration / 60;
+  if (!activeSub || activeSub.remaining_hours < hoursNeeded) {
+    return NextResponse.json(
+      { error: "noHoursRemaining" },
+      { status: 403 }
+    );
+  }
+
   // Create Zoom meeting
   let zoomData = null;
   try {

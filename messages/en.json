@@ -471,6 +471,12 @@
     "confirmationEmail": "A confirmation email has been sent to your inbox.",
     "bookAnother": "Book Another Session",
     "errorLoading": "Failed to load available slots. Please try again.",
-    "errorBooking": "Failed to book the session. Please try again."
+    "errorBooking": "Failed to book the session. Please try again.",
+    "verifyingEmail": "Verifying your subscription...",
+    "hoursAvailable": "You have {hours} mentorship hours remaining.",
+    "noHoursError": "You don't have mentorship hours. Please purchase a plan to book sessions.",
+    "verifyingEmail": "Verifying your subscription...",
+    "hoursAvailable": "You have {hours} mentorship hours remaining.",
+    "noHoursError": "You don't have mentorship hours. Please purchase a plan to book sessions."
   }
 }
