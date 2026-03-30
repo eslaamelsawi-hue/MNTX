@@ -125,6 +125,30 @@ export async function POST(request: NextRequest) {
         .update({ used_hours: activeSub.used_hours + hoursToDeduct, updated_at: new Date().toISOString() })
         .eq("id", activeSub.id);
       console.log("Deducted", hoursToDeduct, "hours from subscription", activeSub.id);
+
+      // Check remaining hours after deduction and send warning email if <= 1
+      const { data: updatedSub } = await adminDb
+        .from("user_subscriptions")
+        .select("remaining_hours")
+        .eq("id", activeSub.id)
+        .single();
+
+      if (updatedSub && updatedSub.remaining_hours <= 1) {
+        try {
+          await fetch(`${request.nextUrl.origin}/api/email/send-low-hours`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              client_name,
+              client_email,
+              remaining_hours: updatedSub.remaining_hours,
+            }),
+          });
+          console.log("Low-hours warning email triggered for", client_email);
+        } catch (emailErr) {
+          console.error("Low-hours email trigger failed:", emailErr);
+        }
+      }
     }
   } catch (e) {
     console.error("Hour deduction failed:", e);
@@ -149,12 +173,12 @@ export async function POST(request: NextRequest) {
     const emailResult = await emailRes.json();
     
     if (!emailRes.ok) {
-      console.error("❌ Email sending failed:", emailResult);
+      console.error("âŒ Email sending failed:", emailResult);
     } else {
-      console.log("✅ Email confirmation sent successfully");
+      console.log("âœ… Email confirmation sent successfully");
     }
   } catch (e) {
-    console.error("❌ Email sending error:", e);
+    console.error("âŒ Email sending error:", e);
   }
 
   // Notion calendar automation

@@ -732,6 +732,7 @@ export function AdminDashboard() {
                         <SelectItem value="30">30 min</SelectItem>
                         <SelectItem value="60">60 min</SelectItem>
                         <SelectItem value="90">90 min</SelectItem>
+                        <SelectItem value="120">120 min</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>
@@ -801,6 +802,7 @@ export function AdminDashboard() {
                         <SelectItem value="30">30 min</SelectItem>
                         <SelectItem value="60">60 min</SelectItem>
                         <SelectItem value="90">90 min</SelectItem>
+                        <SelectItem value="120">120 min</SelectItem>
                       </SelectContent>
                     </Select>
                   </div>

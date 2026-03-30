@@ -5,7 +5,8 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
-import { Clock, Package, Calendar, Mail, Loader2, AlertCircle, CheckCircle2, XCircle } from "lucide-react"
+import { Clock, Package, Calendar, Mail, Loader2, AlertCircle, CheckCircle2, XCircle, CalendarPlus } from "lucide-react"
+import Link from "next/link"
 import { useLocale } from "next-intl"
 
 type Subscription = {
@@ -43,6 +44,7 @@ const translations: Record<string, Record<string, string>> = {
     completed: "Completed",
     min: "min",
     subscriptions: "Your Subscriptions",
+    bookSession: "Book Your Session",
     sessionNotice: "Each session is 1 hour per week (4 hours/month). Taking 2 sessions/week or exceeding 1 hour counts as multiple sessions.",
   },
   ar: {
@@ -157,7 +159,15 @@ export function UserDashboard() {
             {l.sessionNotice}
           </div>
 
-          <h2 className="mb-4 text-xl font-semibold">{l.subscriptions}</h2>
+          <div className="mb-4 flex items-center justify-between">
+            <h2 className="text-xl font-semibold">{l.subscriptions}</h2>
+            <Link href={//booking}>
+              <Button className="gap-2">
+                <CalendarPlus className="h-4 w-4" />
+                {l.bookSession}
+              </Button>
+            </Link>
+          </div>
           <div className="space-y-4 mb-8">
             {subscriptions.map((sub) => (
               <Card key={sub.id} className="border-border bg-card">
