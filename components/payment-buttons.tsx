@@ -74,10 +74,12 @@ type OKXPayData = {
 function OKXPayModal({
   plan,
   prefillEmail,
+  couponCode,
   onClose,
 }: {
   plan: string
   prefillEmail?: string
+  couponCode?: string
   onClose: () => void
 }) {
   const locale = useLocale()
@@ -96,7 +98,7 @@ function OKXPayModal({
     fetch("/api/okx-pay", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan, email: prefillEmail }),
+      body: JSON.stringify({ plan, email: prefillEmail, couponCode }),
     })
       .then((r) => r.json())
       .then((data) => {
@@ -120,7 +122,7 @@ function OKXPayModal({
       const res = await fetch("/api/okx-pay", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, email }),
+        body: JSON.stringify({ plan, email, couponCode }),
       })
       const data = await res.json()
       if (data.address) setPayInfo(data)
@@ -218,16 +220,18 @@ export function OKXPayButton({
   plan,
   className,
   prefillEmail,
+  couponCode,
 }: {
   plan: string
   className?: string
   prefillEmail?: string
+  couponCode?: string
 }) {
   const locale = useLocale()
   const [open, setOpen] = useState(false)
   return (
     <>
-      {open && <OKXPayModal plan={plan} prefillEmail={prefillEmail} onClose={() => setOpen(false)} />}
+      {open && <OKXPayModal plan={plan} prefillEmail={prefillEmail} couponCode={couponCode} onClose={() => setOpen(false)} />}
       <Button type="button" className={className} size="lg" onClick={() => setOpen(true)}>
         <svg className="mr-2 h-5 w-5" viewBox="0 0 32 32" fill="none" aria-hidden="true">
           <rect width="32" height="32" rx="6" fill="#000"/>
@@ -245,10 +249,12 @@ export function NowPaymentsButton({
   plan,
   className,
   prefillEmail,
+  couponCode,
 }: {
   plan: string
   className?: string
   prefillEmail?: string
+  couponCode?: string
 }) {
   const locale = useLocale()
   const [open, setOpen] = useState(false)
@@ -261,7 +267,7 @@ export function NowPaymentsButton({
       const res = await fetch("/api/nowpayments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, email: emailToUse }),
+        body: JSON.stringify({ plan, email: emailToUse, couponCode }),
       })
       const data = await res.json()
       if (data.url) window.location.href = data.url

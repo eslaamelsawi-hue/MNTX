@@ -163,8 +163,8 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
   }
 
   const fetchClientSecret = useCallback(
-    () => startCheckoutSession(selectedPlan!),
-    [selectedPlan]
+    () => startCheckoutSession(selectedPlan!, appliedCoupon?.code),
+    [selectedPlan, appliedCoupon]
   )
 
   if (!selectedPlan) {
@@ -381,7 +381,7 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
                 />
               </button>
               {paymentMethod === "stripe" && (
-                <div className="rounded-lg border border-border p-4">
+                <div key={appliedCoupon?.code || "no-coupon"} className="rounded-lg border border-border p-4">
                   <EmbeddedCheckoutProvider
                     stripe={stripePromise}
                     options={{ clientSecret: fetchClientSecret }}
@@ -394,12 +394,14 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
               <OKXPayButton
                 plan={selectedPlan}
                 prefillEmail={email || undefined}
+                couponCode={appliedCoupon?.code}
                 className="w-full justify-start gap-3 border border-border bg-transparent text-foreground hover:border-primary/50 hover:bg-primary/5 h-auto p-4"
               />
 
               <NowPaymentsButton
                 plan={selectedPlan}
                 prefillEmail={email || undefined}
+                couponCode={appliedCoupon?.code}
                 className="w-full justify-start gap-3 border border-border bg-transparent text-foreground hover:border-primary/50 hover:bg-primary/5 h-auto p-4"
               />
 

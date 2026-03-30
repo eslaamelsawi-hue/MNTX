@@ -25,18 +25,6 @@ const completeFeatures = [
   { text: "Lifetime Access & Updates", highlight: false },
 ]
 
-const VisaButton = ({ href, className }: { href: string; className?: string }) => (
-  <a href={href} target="_blank" rel="noopener noreferrer" className="w-full">
-    <Button className={`w-full text-base ${className ?? ""}`} size="lg">
-      <svg className="mr-2 h-5 w-8" viewBox="0 0 780 500" fill="currentColor" aria-hidden="true">
-        <path d="M293.2 348.73l33.36-195.76h53.35l-33.38 195.76zm246.11-191.54c-10.57-3.97-27.16-8.21-47.89-8.21-52.78 0-89.94 26.6-90.18 64.76-.47 28.16 26.48 43.87 46.73 53.24 20.72 9.6 27.68 15.74 27.68 24.32-.24 13.12-16.59 19.12-31.93 19.12-21.37 0-32.69-2.96-50.21-10.25l-6.88-3.12-7.49 43.89c12.46 5.47 35.52 10.21 59.47 10.45 56.13 0 92.58-26.24 92.82-67.04.24-22.36-14.06-39.34-44.94-53.36-18.71-9.08-30.19-15.14-30.19-24.32.24-8.33 9.72-16.89 30.67-16.89 17.53-.24 30.19 3.56 40.06 7.53l4.83 2.26 7.33-42.38h-.01zm137.31-4.22h-41.27c-12.77 0-22.33 3.49-27.92 16.26l-79.27 179.5h56.13l11.21-29.35 68.45.08c1.58 6.85 6.48 29.27 6.48 29.27h49.62l-43.31-195.76h-.12zm-65.25 126.41c4.43-11.32 21.37-54.96 21.37-54.96-.24.47 4.39-11.36 7.13-18.72l3.64 16.89 12.38 56.79h-44.52zm-382.79-126.41l-52.31 133.37-5.56-27.22c-9.72-31.24-39.94-65.12-73.78-82.01l47.89 171.62 56.6-.08 84.22-195.68h-56.6l-.46-.01z" />
-        <path d="M51.71 152.97l-.82 4.96c21.37 5.16 40.53 12.63 57.3 22.51l48.38 173.22 57.08-.08 84.94-200.61h-57.08l-52.78 136.14-5.72-27.57c-9.72-13.12-17.77-23.7-28.68-32.89-22.83-19.14-48.03-30.87-66.53-37.43l-36.09-38.25z" fill="#F7A600" />
-      </svg>
-      Pay with Visa
-    </Button>
-  </a>
-)
-
 export function Pricing() {
   const locale = useLocale()
 
@@ -114,7 +102,6 @@ export function Pricing() {
                   Checkout
                 </Button>
               </Link>
-              <VisaButton href="https://whop.com/checkout/plan_bAvnJpC9SmIIa" className="bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" />
               <NowPaymentsButton plan="starter" className="w-full text-base bg-transparent border border-[hsl(210,60%,50%)]/30 text-foreground hover:bg-[hsl(210,60%,50%)] hover:text-foreground" />
               <OKXPayButton plan="starter" className="w-full text-base bg-transparent border border-[hsl(210,60%,50%)]/30 text-foreground hover:bg-[hsl(210,60%,50%)] hover:text-foreground" />
             </CardFooter>
@@ -150,7 +137,6 @@ export function Pricing() {
                   Checkout
                 </Button>
               </Link>
-              <VisaButton href="https://whop.com/checkout/plan_WyMVBllfatAYa" />
               <NowPaymentsButton plan="coaching" className="w-full text-base bg-transparent border border-primary/30 text-foreground hover:bg-primary hover:text-primary-foreground" />
               <OKXPayButton plan="coaching" className="w-full text-base bg-transparent border border-primary/30 text-foreground hover:bg-primary hover:text-primary-foreground" />
             </CardFooter>
