@@ -19,11 +19,11 @@ export async function POST(req: NextRequest) {
   if (!(await isAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const body = await req.json()
   const { client_email, client_name, plan, total_hours, expires_at, notes } = body
-  if (!client_email || !client_name || !plan) return NextResponse.json({ error: "client_email, client_name, and plan are required" }, { status: 400 })
+  if (!client_email || !plan) return NextResponse.json({ error: "client_email and plan are required" }, { status: 400 })
   const supabase = createAdminClient()
   const { data, error } = await supabase.from("user_subscriptions").insert({
     client_email: client_email.toLowerCase().trim(),
-    client_name: client_name.trim(),
+    client_name: (client_name || client_email.split("@")[0]).trim(),
     plan,
     total_hours: total_hours || 4,
     used_hours: 0,
