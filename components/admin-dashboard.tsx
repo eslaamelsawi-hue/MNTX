@@ -533,6 +533,8 @@ export function AdminDashboard() {
             <TabsTrigger value="slots">Availability</TabsTrigger>
             <TabsTrigger value="articles">Gold Articles</TabsTrigger>
             <TabsTrigger value="orders">Orders</TabsTrigger>
+            <TabsTrigger value="coupons">Coupons</TabsTrigger>
+            <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
           </TabsList>
 
           {/* Bookings Tab */}
