@@ -92,6 +92,21 @@ type GoldArticle = {
   updated_at: string
 }
 
+type Coupon = {
+  id: string
+  code: string
+  discount_type: "percent" | "fixed"
+  discount_value: number
+  max_uses: number | null
+  used_count: number
+  min_order_cents: number
+  applicable_plans: string[]
+  is_active: boolean
+  expires_at: string | null
+  created_at: string
+  updated_at: string
+}
+
 export function AdminDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([])
   const [slots, setSlots] = useState<Slot[]>([])
@@ -122,6 +137,22 @@ export function AdminDashboard() {
     published: true,
   })
   const [uploadingImage, setUploadingImage] = useState(false)
+
+  // Coupons state
+  const [coupons, setCoupons] = useState<Coupon[]>([])
+  const [loadingCoupons, setLoadingCoupons] = useState(true)
+  const [couponDialogOpen, setCouponDialogOpen] = useState(false)
+  const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null)
+  const [couponForm, setCouponForm] = useState({
+    code: "",
+    discount_type: "percent" as "percent" | "fixed",
+    discount_value: "",
+    max_uses: "",
+    min_order_cents: "",
+    applicable_plans: [] as string[],
+    expires_at: "",
+  })
+  const [couponSaving, setCouponSaving] = useState(false)
 
   // Helper function to format date in local timezone (not UTC)
   // Helper function to format date in Cairo timezone
@@ -216,6 +247,7 @@ export function AdminDashboard() {
     fetchSlots()
     fetchArticles()
     fetchOrders()
+    fetchCoupons()
   }, [fetchBookings, fetchSlots, fetchOrders])
 
   const formatTime = (time: string) => {
@@ -364,6 +396,121 @@ export function AdminDashboard() {
       console.error("Failed to reschedule:", e)
     }
   }
+
+  // ========== Coupons functions ==========
+  const fetchCoupons = async () => {
+    setLoadingCoupons(true)
+    try {
+      const res = await fetch("/api/admin/coupons")
+      const data = await res.json()
+      if (data.coupons) setCoupons(data.coupons)
+    } catch (e) {
+      console.error("Failed to fetch coupons:", e)
+    }
+    setLoadingCoupons(false)
+  }
+
+  const resetCouponForm = () => {
+    setCouponForm({
+      code: "",
+      discount_type: "percent",
+      discount_value: "",
+      max_uses: "",
+      min_order_cents: "",
+      applicable_plans: [],
+      expires_at: "",
+    })
+    setEditingCoupon(null)
+  }
+
+  const handleEditCoupon = (coupon: Coupon) => {
+    setEditingCoupon(coupon)
+    setCouponForm({
+      code: coupon.code,
+      discount_type: coupon.discount_type,
+      discount_value: String(coupon.discount_value),
+      max_uses: coupon.max_uses ? String(coupon.max_uses) : "",
+      min_order_cents: coupon.min_order_cents ? String(coupon.min_order_cents / 100) : "",
+      applicable_plans: coupon.applicable_plans || [],
+      expires_at: coupon.expires_at ? coupon.expires_at.slice(0, 10) : "",
+    })
+    setCouponDialogOpen(true)
+  }
+
+  const handleSaveCoupon = async () => {
+    if (!couponForm.code || !couponForm.discount_value) return
+    setCouponSaving(true)
+    try {
+      const payload: Record<string, unknown> = {
+        code: couponForm.code,
+        discount_type: couponForm.discount_type,
+        discount_value: parseFloat(couponForm.discount_value),
+        max_uses: couponForm.max_uses ? parseInt(couponForm.max_uses) : null,
+        min_order_cents: couponForm.min_order_cents ? Math.round(parseFloat(couponForm.min_order_cents) * 100) : 0,
+        applicable_plans: couponForm.applicable_plans,
+        expires_at: couponForm.expires_at || null,
+      }
+      if (editingCoupon) {
+        payload.id = editingCoupon.id
+        const res = await fetch("/api/admin/coupons", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+        const data = await res.json()
+        if (!res.ok) { alert(data.error || "Failed to update coupon"); setCouponSaving(false); return }
+      } else {
+        const res = await fetch("/api/admin/coupons", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        })
+        const data = await res.json()
+        if (!res.ok) { alert(data.error || "Failed to create coupon"); setCouponSaving(false); return }
+      }
+      setCouponDialogOpen(false)
+      resetCouponForm()
+      fetchCoupons()
+    } catch {
+      alert("Something went wrong")
+    }
+    setCouponSaving(false)
+  }
+
+  const handleDeleteCoupon = async (id: string) => {
+    if (!confirm("Delete this coupon?")) return
+    try {
+      const res = await fetch(`/api/admin/coupons?id=${id}`, { method: "DELETE" })
+      const data = await res.json()
+      if (!res.ok) { alert(data.error || "Failed to delete"); return }
+      fetchCoupons()
+    } catch {
+      alert("Something went wrong")
+    }
+  }
+
+  const handleToggleCoupon = async (coupon: Coupon) => {
+    try {
+      const res = await fetch("/api/admin/coupons", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: coupon.id, is_active: !coupon.is_active }),
+      })
+      if (res.ok) fetchCoupons()
+    } catch {
+      alert("Something went wrong")
+    }
+  }
+
+  const PLAN_OPTIONS = [
+    { value: "starter", label: "Starter" },
+    { value: "coaching", label: "Coaching" },
+    { value: "extend-1m", label: "Extend 1M" },
+    { value: "extend-2m", label: "Extend 2M" },
+    { value: "extend-3m", label: "Extend 3M" },
+    { value: "extend-6m", label: "Extend 6M" },
+    { value: "gold-pro", label: "Gold Pro" },
+  ]
 
   // ========== Gold Articles functions ==========
   const fetchArticles = async () => {
@@ -1353,6 +1500,227 @@ export function AdminDashboard() {
               </Card>
             )}
           </TabsContent>
+          {/* Coupons Tab */}
+          <TabsContent value="coupons" className="space-y-4">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="text-xl font-semibold text-foreground">Discount Coupons</h2>
+              <div className="flex items-center gap-2">
+                <Dialog open={couponDialogOpen} onOpenChange={(open) => { setCouponDialogOpen(open); if (!open) resetCouponForm() }}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" onClick={() => { resetCouponForm(); setCouponDialogOpen(true) }}>
+                      <Plus className="mr-2 h-4 w-4" /> New Coupon
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>{editingCoupon ? "Edit Coupon" : "Create Coupon"}</DialogTitle>
+                      <DialogDescription>
+                        {editingCoupon ? "Update coupon details." : "Create a new discount coupon."}
+                      </DialogDescription>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <div>
+                        <Label>Code</Label>
+                        <Input
+                          value={couponForm.code}
+                          onChange={(e) => setCouponForm({ ...couponForm, code: e.target.value.toUpperCase() })}
+                          placeholder="SAVE20"
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label>Type</Label>
+                          <Select value={couponForm.discount_type} onValueChange={(v) => setCouponForm({ ...couponForm, discount_type: v as "percent" | "fixed" })}>
+                            <SelectTrigger><SelectValue /></SelectTrigger>
+                            <SelectContent>
+                              <SelectItem value="percent">Percentage (%)</SelectItem>
+                              <SelectItem value="fixed">Fixed ($)</SelectItem>
+                            </SelectContent>
+                          </Select>
+                        </div>
+                        <div>
+                          <Label>Value</Label>
+                          <Input
+                            type="number"
+                            value={couponForm.discount_value}
+                            onChange={(e) => setCouponForm({ ...couponForm, discount_value: e.target.value })}
+                            placeholder={couponForm.discount_type === "percent" ? "20" : "50"}
+                          />
+                        </div>
+                      </div>
+                      <div className="grid grid-cols-2 gap-3">
+                        <div>
+                          <Label>Max Uses <span className="text-xs text-muted-foreground">(optional)</span></Label>
+                          <Input
+                            type="number"
+                            value={couponForm.max_uses}
+                            onChange={(e) => setCouponForm({ ...couponForm, max_uses: e.target.value })}
+                            placeholder="Unlimited"
+                          />
+                        </div>
+                        <div>
+                          <Label>Min Order ($) <span className="text-xs text-muted-foreground">(optional)</span></Label>
+                          <Input
+                            type="number"
+                            value={couponForm.min_order_cents}
+                            onChange={(e) => setCouponForm({ ...couponForm, min_order_cents: e.target.value })}
+                            placeholder="0"
+                          />
+                        </div>
+                      </div>
+                      <div>
+                        <Label>Expires At <span className="text-xs text-muted-foreground">(optional)</span></Label>
+                        <Input
+                          type="date"
+                          value={couponForm.expires_at}
+                          onChange={(e) => setCouponForm({ ...couponForm, expires_at: e.target.value })}
+                        />
+                      </div>
+                      <div>
+                        <Label className="mb-2 block">Applicable Plans <span className="text-xs text-muted-foreground">(empty = all plans)</span></Label>
+                        <div className="flex flex-wrap gap-2">
+                          {PLAN_OPTIONS.map((plan) => (
+                            <button
+                              key={plan.value}
+                              type="button"
+                              onClick={() => {
+                                const plans = couponForm.applicable_plans.includes(plan.value)
+                                  ? couponForm.applicable_plans.filter((p) => p !== plan.value)
+                                  : [...couponForm.applicable_plans, plan.value]
+                                setCouponForm({ ...couponForm, applicable_plans: plans })
+                              }}
+                              className={`rounded-full px-3 py-1 text-xs font-medium border transition-colors ${
+                                couponForm.applicable_plans.includes(plan.value)
+                                  ? "bg-primary text-primary-foreground border-primary"
+                                  : "bg-muted text-muted-foreground border-border hover:border-primary/50"
+                              }`}
+                            >
+                              {plan.label}
+                            </button>
+                          ))}
+                        </div>
+                      </div>
+                      <Button onClick={handleSaveCoupon} disabled={couponSaving || !couponForm.code || !couponForm.discount_value} className="w-full">
+                        {couponSaving ? "Saving…" : editingCoupon ? "Update Coupon" : "Create Coupon"}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+                <Button variant="outline" size="sm" onClick={fetchCoupons}>
+                  <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+                </Button>
+              </div>
+            </div>
+
+            {loadingCoupons ? (
+              <div className="flex items-center justify-center py-12 text-muted-foreground">
+                <RefreshCw className="mr-2 h-5 w-5 animate-spin" /> Loading coupons…
+              </div>
+            ) : coupons.length === 0 ? (
+              <Card className="border-border bg-card">
+                <CardContent className="py-12 text-center">
+                  <Tag className="mx-auto mb-3 h-10 w-10 text-muted-foreground opacity-50" />
+                  <p className="text-muted-foreground">No coupons yet. Create your first coupon.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card className="border-border bg-card">
+                <Table>
+                  <TableHeader>
+                    <TableRow>
+                      <TableHead>Code</TableHead>
+                      <TableHead>Discount</TableHead>
+                      <TableHead>Uses</TableHead>
+                      <TableHead>Min Order</TableHead>
+                      <TableHead>Plans</TableHead>
+                      <TableHead>Expires</TableHead>
+                      <TableHead>Status</TableHead>
+                      <TableHead className="text-right">Actions</TableHead>
+                    </TableRow>
+                  </TableHeader>
+                  <TableBody>
+                    {coupons.map((coupon) => (
+                      <TableRow key={coupon.id}>
+                        <TableCell>
+                          <div className="flex items-center gap-2">
+                            <span className="font-mono font-semibold text-foreground">{coupon.code}</span>
+                            <button onClick={() => copyToClipboard(coupon.code, coupon.id + "-code")} className="text-muted-foreground hover:text-foreground">
+                              <Copy className="h-3 w-3" />
+                            </button>
+                            {copiedId === coupon.id + "-code" && <span className="text-xs text-green-400">Copied</span>}
+                          </div>
+                        </TableCell>
+                        <TableCell>
+                          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                            {coupon.discount_type === "percent" ? `${coupon.discount_value}%` : `$${coupon.discount_value}`}
+                          </Badge>
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {coupon.used_count}{coupon.max_uses !== null ? ` / ${coupon.max_uses}` : " / ∞"}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {coupon.min_order_cents > 0 ? `$${(coupon.min_order_cents / 100).toFixed(0)}` : "—"}
+                        </TableCell>
+                        <TableCell>
+                          {coupon.applicable_plans && coupon.applicable_plans.length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {coupon.applicable_plans.map((p) => (
+                                <Badge key={p} variant="outline" className="text-[10px] px-1.5 py-0">{p}</Badge>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-xs text-muted-foreground">All plans</span>
+                          )}
+                        </TableCell>
+                        <TableCell className="text-sm text-muted-foreground">
+                          {coupon.expires_at
+                            ? new Date(coupon.expires_at).toLocaleDateString()
+                            : "Never"}
+                        </TableCell>
+                        <TableCell>
+                          <Badge className={coupon.is_active
+                            ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
+                            : "bg-zinc-500/20 text-zinc-400 border-zinc-500/30"
+                          }>
+                            {coupon.is_active ? "Active" : "Inactive"}
+                          </Badge>
+                        </TableCell>
+                        <TableCell>
+                          <div className="flex items-center justify-end gap-1">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-yellow-400 hover:text-yellow-300"
+                              onClick={() => handleToggleCoupon(coupon)}
+                            >
+                              {coupon.is_active ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-blue-400 hover:text-blue-300"
+                              onClick={() => handleEditCoupon(coupon)}
+                            >
+                              <Edit className="h-4 w-4" />
+                            </Button>
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              className="text-red-400 hover:text-red-300"
+                              onClick={() => handleDeleteCoupon(coupon.id)}
+                            >
+                              <Trash2 className="h-4 w-4" />
+                            </Button>
+                          </div>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                  </TableBody>
+                </Table>
+              </Card>
+            )}
+          </TabsContent>
+
           {/* Subscriptions Tab */}
           <TabsContent value="subscriptions" className="space-y-4">
             <AdminSubscriptions />

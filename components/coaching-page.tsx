@@ -5,8 +5,10 @@ import Image from "next/image"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
-import { ArrowRight, Play, Check, Loader2, Target, Video, Shield, Infinity } from "lucide-react"
+import { ArrowRight, Play, Check, Loader2, Target, Video, Shield, Infinity, ShoppingCart } from "lucide-react"
 import { useTranslations } from "next-intl"
+import Link from "next/link"
+import { useLocale } from "next-intl"
 
 function BinancePayButton({ className }: { className?: string }) {
   const [loading, setLoading] = useState(false)
@@ -70,6 +72,7 @@ export function CoachingPage() {
   const videoRef = useRef<HTMLIFrameElement>(null)
   const [videoLoaded, setVideoLoaded] = useState(false)
   const t = useTranslations("coaching")
+  const locale = useLocale()
 
   const loadVideo = useCallback(() => {
     setVideoLoaded(true)
@@ -230,6 +233,12 @@ export function CoachingPage() {
               </ul>
             </CardContent>
             <CardFooter className="mt-auto flex flex-col gap-3">
+              <Link href={`/${locale}/checkout`} className="w-full">
+                <Button className="w-full text-base" size="lg">
+                  <ShoppingCart className="mr-2 h-5 w-5" />
+                  Checkout
+                </Button>
+              </Link>
               <a
                 href="https://whop.com/checkout/plan_WyMVBllfatAYa"
                 target="_blank"

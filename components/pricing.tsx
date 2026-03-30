@@ -2,8 +2,10 @@
 
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Check } from "lucide-react"
+import { Check, ShoppingCart } from "lucide-react"
 import { OKXPayButton, NowPaymentsButton } from "@/components/payment-buttons"
+import Link from "next/link"
+import { useLocale } from "next-intl"
 
 const essentialFeatures = [
   "Full SMC Course",
@@ -36,6 +38,8 @@ const VisaButton = ({ href, className }: { href: string; className?: string }) =
 )
 
 export function Pricing() {
+  const locale = useLocale()
+
   return (
     <section id="pricing" className="px-4 py-20">
       <div className="mx-auto max-w-4xl">
@@ -67,7 +71,13 @@ export function Pricing() {
               </ul>
             </CardContent>
             <CardFooter className="mt-auto flex flex-col gap-3">
-              <NowPaymentsButton plan="test" className="w-full text-base bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" />
+              <Link href={`/${locale}/checkout`} className="w-full">
+                <Button className="w-full text-base bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" size="lg">
+                  <ShoppingCart className="mr-2 h-5 w-5" />
+                  Checkout
+                </Button>
+              </Link>
+              <NowPaymentsButton plan="test" className="w-full text-base bg-transparent border border-[hsl(210,60%,50%)]/30 text-foreground hover:bg-[hsl(210,60%,50%)] hover:text-foreground" />
               <OKXPayButton plan="test" className="w-full text-base bg-transparent border border-[hsl(210,60%,50%)]/30 text-foreground hover:bg-[hsl(210,60%,50%)] hover:text-foreground" />
             </CardFooter>
           </Card>
@@ -98,6 +108,12 @@ export function Pricing() {
               </ul>
             </CardContent>
             <CardFooter className="mt-auto flex flex-col gap-3">
+              <Link href={`/${locale}/checkout`} className="w-full">
+                <Button className="w-full text-base bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" size="lg">
+                  <ShoppingCart className="mr-2 h-5 w-5" />
+                  Checkout
+                </Button>
+              </Link>
               <VisaButton href="https://whop.com/checkout/plan_bAvnJpC9SmIIa" className="bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" />
               <NowPaymentsButton plan="starter" className="w-full text-base bg-transparent border border-[hsl(210,60%,50%)]/30 text-foreground hover:bg-[hsl(210,60%,50%)] hover:text-foreground" />
               <OKXPayButton plan="starter" className="w-full text-base bg-transparent border border-[hsl(210,60%,50%)]/30 text-foreground hover:bg-[hsl(210,60%,50%)] hover:text-foreground" />
@@ -128,6 +144,12 @@ export function Pricing() {
               </ul>
             </CardContent>
             <CardFooter className="mt-auto flex flex-col gap-3">
+              <Link href={`/${locale}/checkout`} className="w-full">
+                <Button className="w-full text-base" size="lg">
+                  <ShoppingCart className="mr-2 h-5 w-5" />
+                  Checkout
+                </Button>
+              </Link>
               <VisaButton href="https://whop.com/checkout/plan_WyMVBllfatAYa" />
               <NowPaymentsButton plan="coaching" className="w-full text-base bg-transparent border border-primary/30 text-foreground hover:bg-primary hover:text-primary-foreground" />
               <OKXPayButton plan="coaching" className="w-full text-base bg-transparent border border-primary/30 text-foreground hover:bg-primary hover:text-primary-foreground" />
