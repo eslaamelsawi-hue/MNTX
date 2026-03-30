@@ -114,11 +114,12 @@ const PLAN_FEATURES: Record<string, string[]> = {
   test: ["Test plan for payment verification"],
 }
 
-export default function UnifiedCheckout({ products }: { products: Product[] }) {
+export default function UnifiedCheckout({ products, initialPlan }: { products: Product[]; initialPlan?: string }) {
   const locale = useLocale()
   const t = translations[locale as keyof typeof translations] || translations.en
 
-  const [selectedPlan, setSelectedPlan] = useState<string | null>(null)
+  const validInitialPlan = initialPlan && products.some((p) => p.id === initialPlan) ? initialPlan : null
+  const [selectedPlan, setSelectedPlan] = useState<string | null>(validInitialPlan)
   const [email, setEmail] = useState("")
   const [couponCode, setCouponCode] = useState("")
   const [couponLoading, setCouponLoading] = useState(false)

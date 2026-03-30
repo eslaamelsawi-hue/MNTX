@@ -71,7 +71,7 @@ export function Pricing() {
               </ul>
             </CardContent>
             <CardFooter className="mt-auto flex flex-col gap-3">
-              <Link href={`/${locale}/checkout`} className="w-full">
+              <Link href={`/${locale}/checkout?plan=test`} className="w-full">
                 <Button className="w-full text-base bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" size="lg">
                   <ShoppingCart className="mr-2 h-5 w-5" />
                   Checkout
@@ -108,7 +108,7 @@ export function Pricing() {
               </ul>
             </CardContent>
             <CardFooter className="mt-auto flex flex-col gap-3">
-              <Link href={`/${locale}/checkout`} className="w-full">
+              <Link href={`/${locale}/checkout?plan=starter`} className="w-full">
                 <Button className="w-full text-base bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" size="lg">
                   <ShoppingCart className="mr-2 h-5 w-5" />
                   Checkout
@@ -144,7 +144,7 @@ export function Pricing() {
               </ul>
             </CardContent>
             <CardFooter className="mt-auto flex flex-col gap-3">
-              <Link href={`/${locale}/checkout`} className="w-full">
+              <Link href={`/${locale}/checkout?plan=coaching`} className="w-full">
                 <Button className="w-full text-base" size="lg">
                   <ShoppingCart className="mr-2 h-5 w-5" />
                   Checkout

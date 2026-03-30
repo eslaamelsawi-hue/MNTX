@@ -233,7 +233,7 @@ export function CoachingPage() {
               </ul>
             </CardContent>
             <CardFooter className="mt-auto flex flex-col gap-3">
-              <Link href={`/${locale}/checkout`} className="w-full">
+              <Link href={`/${locale}/checkout?plan=coaching`} className="w-full">
                 <Button className="w-full text-base" size="lg">
                   <ShoppingCart className="mr-2 h-5 w-5" />
                   Checkout
