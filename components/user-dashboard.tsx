@@ -161,7 +161,7 @@ export function UserDashboard() {
 
           <div className="mb-4 flex items-center justify-between">
             <h2 className="text-xl font-semibold">{l.subscriptions}</h2>
-            <Link href={//booking}>
+            <Link href={`/${locale}/booking`}>
               <Button className="gap-2">
                 <CalendarPlus className="h-4 w-4" />
                 {l.bookSession}
