@@ -64,6 +64,7 @@ export async function POST(request: Request) {
 
     const invoice = await createNowpaymentsInvoice({
       email,
+      customerEmail: email,
       amount: Math.round(finalAmount * 1.005 * 100) / 100,
       description: planInfo.description,
       successUrl: `${baseUrl}/payment/success?provider=nowpayments&plan=${plan}`,

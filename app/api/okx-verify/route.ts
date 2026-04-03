@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { getOrder, updateOrder } from "@/lib/okx-orders"
 import { Resend } from "resend"
+import { grantExtendHours } from "@/lib/grant-hours"
 
 const OKX_API_BASE = "https://www.okx.com"
 
@@ -154,6 +155,9 @@ export async function POST(request: Request) {
       paidAt: new Date().toISOString(),
       txId: match.txId,
     })
+
+    // Grant hours if this is an extend plan
+    await grantExtendHours(order.email, order.plan)
 
     // Send confirmation emails
     await sendConfirmationEmail(order.email, order.plan, order.amount, orderId)

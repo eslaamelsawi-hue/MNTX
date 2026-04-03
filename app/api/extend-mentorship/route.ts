@@ -65,6 +65,7 @@ export async function POST(request: Request) {
 
     const invoice = await createNowpaymentsInvoice({
       email,
+      customerEmail: email,
       amount: plan.amount,
       description: `${plan.label} | ${name} | @${telegram}`,
       successUrl: `${baseUrl}/${locale || "en"}/extend?success=true`,

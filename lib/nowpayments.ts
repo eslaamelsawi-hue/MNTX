@@ -9,6 +9,7 @@ export async function createNowpaymentsInvoice(params: {
   successUrl: string
   cancelUrl: string
   orderId: string
+  customerEmail?: string
 }) {
   const apiKey = process.env.NOWPAYMENTS_API_KEY
 
@@ -16,7 +17,7 @@ export async function createNowpaymentsInvoice(params: {
     throw new Error("NOWPAYMENTS_API_KEY environment variable is required")
   }
 
-  const invoiceData = {
+  const invoiceData: Record<string, unknown> = {
     price_amount: params.amount,
     price_currency: "usd",
     order_id: params.orderId,
@@ -26,6 +27,11 @@ export async function createNowpaymentsInvoice(params: {
     cancel_url: params.cancelUrl,
     is_fixed_rate: true,
     is_fee_paid_by_user: false,
+  }
+
+  const emailForInvoice = params.customerEmail || params.email
+  if (emailForInvoice) {
+    invoiceData.customer_email = emailForInvoice
   }
 
   console.log("NowPayments invoice request:", JSON.stringify(invoiceData))
