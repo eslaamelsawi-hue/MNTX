@@ -65,6 +65,18 @@ export async function PATCH(request: Request) {
     }
   }
 
+  if (action === "delete_all_paid") {
+    try {
+      const supabase = createAdminClient()
+      const { error } = await supabase.from("okx_orders").delete().eq("status", "paid")
+      if (error) throw error
+      return NextResponse.json({ success: true })
+    } catch (e) {
+      console.error("Failed to delete paid orders:", e)
+      return NextResponse.json({ error: "Failed to delete paid orders" }, { status: 500 })
+    }
+  }
+
   const order = await getOrder(orderId)
   if (!order) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 })

@@ -212,6 +212,29 @@ export function AdminDashboard() {
     setOrderActionLoading(null)
   }
 
+  const handleDeleteAllPaid = async () => {
+    const paidCount = orders.filter(o => o.status === "paid").length
+    if (paidCount === 0) { alert("No paid orders to delete"); return }
+    if (!confirm(`Permanently delete all ${paidCount} paid order(s)? This cannot be undone.`)) return
+    setOrderActionLoading("delete_all_paid")
+    try {
+      const res = await fetch("/api/admin/orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete_all_paid" }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        fetchOrders()
+      } else {
+        alert(data.error || "Action failed")
+      }
+    } catch {
+      alert("Something went wrong")
+    }
+    setOrderActionLoading(null)
+  }
+
   const handleExpireAllPending = async () => {
     const pendingCount = orders.filter(o => o.status === "pending").length
     if (pendingCount === 0) { alert("No pending orders"); return }
@@ -1370,6 +1393,18 @@ export function AdminDashboard() {
                   >
                     <XCircle className="mr-2 h-4 w-4" />
                     {orderActionLoading === "expire_all" ? "Expiring…" : `Expire All Pending (${orders.filter(o => o.status === "pending").length})`}
+                  </Button>
+                )}
+                {orders.filter(o => o.status === "paid").length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                    onClick={handleDeleteAllPaid}
+                    disabled={orderActionLoading === "delete_all_paid"}
+                  >
+                    <XCircle className="mr-2 h-4 w-4" />
+                    {orderActionLoading === "delete_all_paid" ? "Deleting…" : `Delete All Paid (${orders.filter(o => o.status === "paid").length})`}
                   </Button>
                 )}
               </div>
