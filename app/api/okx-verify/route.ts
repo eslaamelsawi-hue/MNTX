@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { getOrder, updateOrder } from "@/lib/okx-orders"
 import { Resend } from "resend"
-import { grantExtendHours } from "@/lib/grant-hours"
+import { grantExtendHours, grantExtendHoursIfMissing } from "@/lib/grant-hours"
 
 const OKX_API_BASE = "https://www.okx.com"
 
@@ -103,6 +103,8 @@ export async function POST(request: Request) {
     }
 
     if (order.status === "paid") {
+      // Grant hours if not yet granted (e.g. admin confirmed before this code existed)
+      await grantExtendHoursIfMissing(order.email, order.plan)
       return NextResponse.json({ status: "paid", message: "Payment already confirmed." })
     }
 

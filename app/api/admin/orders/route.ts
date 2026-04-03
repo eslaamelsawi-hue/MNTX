@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import { getPendingOrders, getOrder, updateOrder } from "@/lib/okx-orders"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { Resend } from "resend"
+import { grantExtendHours } from "@/lib/grant-hours"
 
 async function getAllOrders() {
   try {
@@ -74,6 +75,9 @@ export async function PATCH(request: Request) {
       status: "paid",
       paidAt: new Date().toISOString(),
     })
+
+    // Grant hours if this is an extend plan
+    await grantExtendHours(order.email, order.plan)
 
     // Send confirmation email
     const apiKey = process.env.RESEND_API_KEY
