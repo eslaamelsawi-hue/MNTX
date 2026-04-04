@@ -148,8 +148,7 @@ export async function PATCH(request: Request) {
         console.log(`[resend_email] tgInviteLink=${tgInviteLink ? 'GOT URL' : 'NULL - pool empty or bot username missing'}`)
       }
       if (!tgInviteLink) {
-        console.error(`[resend_email] FAILED to get TG token for order ${orderId} — pool may be empty`)
-        return NextResponse.json({ error: "No TG tokens available. Please add more tokens via /api/tg-bot/tokens or run script 013 in Supabase to reset unused tokens." }, { status: 503 })
+        console.error(`[resend_email] No TG token for order ${orderId} — sending email without button`)
       }
     }
     await sendConfirmationEmail({

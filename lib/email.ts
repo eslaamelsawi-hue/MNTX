@@ -26,22 +26,23 @@ function buildConfirmationHtml(opts: ConfirmationEmailOptions): string {
       </tr>`
     : ""
 
-  const tgSection = tgInviteLink
-    ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;background:#0f1e35;border:1px solid #1e3a5f;border-radius:12px">
-        <tr>
-          <td style="padding:28px 24px;text-align:center">
-            <p style="margin:0 0 12px;font-size:18px;font-weight:700;color:#ffffff">&#x1f389; Your Telegram Access</p>
-            <p style="margin:0 0 22px;font-size:14px;color:#aaaaaa;line-height:1.7">
-              Click the button below to join the private ${planLabel} Plan Telegram group. This link can only be used once.
-            </p>
-            <a href="${tgInviteLink}"
+  const tgSection = `<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;background:#0f1e35;border:1px solid #1e3a5f;border-radius:12px">
+      <tr>
+        <td style="padding:28px 24px;text-align:center">
+          <p style="margin:0 0 12px;font-size:18px;font-weight:700;color:#ffffff">&#x1f389; Your Telegram Access</p>
+          <p style="margin:0 0 22px;font-size:14px;color:#aaaaaa;line-height:1.7">
+            Click the button below to join the private ${planLabel} Plan Telegram group. This link can only be used once.
+          </p>
+          ${tgInviteLink
+            ? `<a href="${tgInviteLink}"
                style="display:block;background:#0ea5e9;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;padding:16px 24px;border-radius:8px;text-align:center">
               Join Telegram Group
-            </a>
-          </td>
-        </tr>
-      </table>`
-    : ""
+            </a>`
+            : `<p style="margin:0;font-size:14px;color:#aaaaaa">Your access link will be sent to you shortly by our team.</p>`
+          }
+        </td>
+      </tr>
+    </table>`
 
   return `<!DOCTYPE html>
 <html lang="en">
