@@ -120,8 +120,13 @@ export async function POST(request: Request) {
     }
 
     if (order.status === "paid") {
-      // Grant hours if not yet granted (e.g. admin confirmed before this code existed)
+      // Grant hours if not yet granted
       await grantExtendHoursIfMissing(order.email, order.plan)
+      // Re-generate and re-send TG invite if this is a starter plan (in case the first attempt failed)
+      if (order.plan === "starter") {
+        const tgInviteLink = await createStarterInviteLink(`Starter-OKX-${orderId.slice(-6)}-retry`)
+        await sendConfirmationEmail(order.email, order.plan, order.amount, orderId, tgInviteLink)
+      }
       return NextResponse.json({ status: "paid", message: "Payment already confirmed." })
     }
 
