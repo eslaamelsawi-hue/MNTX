@@ -18,35 +18,45 @@ function buildConfirmationHtml(opts: ConfirmationEmailOptions): string {
   const { planLabel, amount, orderId, tgInviteLink } = opts
   const year = new Date().getFullYear()
 
-  const amountRow = amount
-    ? `<tr>
-        <td style="font-size:13px;color:#8a8a9a;padding:13px 0;border-bottom:1px solid #16162a">Amount Paid</td>
-        <td style="font-size:15px;color:#c9930a;font-weight:700;text-align:right;padding:13px 0;border-bottom:1px solid #16162a">${amount}</td>
-      </tr>`
+  const amountBlock = amount
+    ? `<td style="padding-right:32px">
+        <div style="font-size:9px;letter-spacing:4px;text-transform:uppercase;color:#3a3850;margin-bottom:6px">Amount</div>
+        <div style="font-size:20px;font-weight:800;color:#c9930a">${amount}</div>
+       </td>`
     : ""
 
-  const tgSection = tgInviteLink
-    ? `<tr>
-        <td style="padding:0 44px 40px">
-          <table width="100%" cellpadding="0" cellspacing="0" style="background:linear-gradient(160deg,#120f00,#1c1600,#120f00);border:1px solid #2e2100;border-radius:16px">
-            <tr><td style="height:1px;background:linear-gradient(90deg,transparent,#c49a0a,transparent);border-radius:16px 16px 0 0"></td></tr>
+  const tgStub = tgInviteLink
+    ? `<!-- Perforated tear line -->
+      <tr>
+        <td style="padding:0">
+          <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
-              <td style="padding:32px 32px 28px;text-align:center">
-                <div style="font-size:10px;letter-spacing:6px;text-transform:uppercase;color:#5a4410;margin-bottom:16px">Exclusive Access</div>
-                <h2 style="margin:0 0 14px;font-size:20px;font-weight:700;color:#e8d090;letter-spacing:0.5px">Join Your Private Group</h2>
-                <p style="margin:0 0 26px;font-size:13px;color:#5e4e20;line-height:1.9">
-                  Live SMC signals &nbsp;&bull;&nbsp; Real-time analysis &nbsp;&bull;&nbsp; Full course access
-                </p>
-                <a href="${tgInviteLink}"
-                   style="display:inline-block;background:linear-gradient(135deg,#a87000,#c9930a,#e8b020,#c9930a,#a87000);color:#0a0800;font-weight:800;padding:15px 48px;border-radius:8px;text-decoration:none;font-size:12px;letter-spacing:3px;text-transform:uppercase">
-                  Enter Now
-                </a>
-                <p style="margin:20px 0 0;font-size:10px;color:#2e2010;letter-spacing:2px;text-transform:uppercase">
-                  Single-use &nbsp;&middot;&nbsp; Tap Start to activate
-                </p>
+              <td width="18" style="background:#06060e">
+                <div style="width:18px;height:24px;border-radius:0 12px 12px 0;background:#06060e"></div>
+              </td>
+              <td style="border-top:2px dashed #18182e;height:24px"></td>
+              <td width="18" style="background:#06060e">
+                <div style="width:18px;height:24px;border-radius:12px 0 0 12px;background:#06060e"></div>
               </td>
             </tr>
           </table>
+        </td>
+      </tr>
+      <!-- Stub -->
+      <tr>
+        <td style="padding:30px 40px 36px;text-align:center">
+          <div style="font-size:9px;letter-spacing:6px;text-transform:uppercase;color:#28283c;margin-bottom:16px">Access Pass</div>
+          <h2 style="margin:0 0 8px;font-size:18px;font-weight:700;color:#b0aec8;letter-spacing:0.5px">Private Telegram Group</h2>
+          <p style="margin:0 0 24px;font-size:12px;color:#28283c;line-height:2">
+            Live signals &nbsp;&#xb7;&nbsp; SMC analysis &nbsp;&#xb7;&nbsp; Full course
+          </p>
+          <a href="${tgInviteLink}"
+             style="display:inline-block;background:linear-gradient(135deg,#a06a00,#c9930a,#e8b828,#c9930a,#a06a00);color:#08060a;font-weight:900;padding:14px 46px;border-radius:4px;text-decoration:none;font-size:10px;letter-spacing:5px;text-transform:uppercase">
+            Activate
+          </a>
+          <p style="margin:18px 0 0;font-size:9px;color:#1a1a28;letter-spacing:2px;text-transform:uppercase">
+            Single-use &nbsp;&#xb7;&nbsp; Tap start in Telegram to join
+          </p>
         </td>
       </tr>`
     : ""
@@ -54,75 +64,93 @@ function buildConfirmationHtml(opts: ConfirmationEmailOptions): string {
   return `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
-<body style="margin:0;padding:0;background:#060608;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif">
+<body style="margin:0;padding:0;background:#06060e;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif">
 
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#060608;padding:44px 16px">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#06060e;padding:48px 16px">
   <tr><td align="center">
 
-    <!-- Gold-glow outer border -->
-    <table width="560" cellpadding="2" cellspacing="0" style="max-width:100%;background:linear-gradient(145deg,#2a1c00,#111120,#111120,#2a1c00);border-radius:20px">
-      <tr><td style="border-radius:18px;overflow:hidden;background:#0c0c18;padding:0">
+    <!-- Ticket -->
+    <table width="520" cellpadding="0" cellspacing="0" style="max-width:100%;background:#0c0c1a;border-radius:12px;overflow:hidden">
 
-        <table width="100%" cellpadding="0" cellspacing="0">
+      <!-- Gold header band -->
+      <tr>
+        <td style="background:linear-gradient(135deg,#0f0a00,#1c1400,#0f0a00);padding:30px 40px 26px">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="vertical-align:middle">
+                <div style="font-size:9px;letter-spacing:6px;text-transform:uppercase;color:#5a4010;margin-bottom:7px">Trading Academy</div>
+                <div style="font-size:30px;font-weight:900;letter-spacing:8px;color:#c9930a;line-height:1">MENTIX</div>
+              </td>
+              <td style="text-align:right;vertical-align:middle">
+                <div style="display:inline-block;border:1px solid #3a2c00;border-radius:4px;padding:5px 12px">
+                  <div style="font-size:8px;letter-spacing:4px;text-transform:uppercase;color:#5a4010">Status</div>
+                  <div style="font-size:11px;font-weight:700;color:#c9930a;letter-spacing:2px;margin-top:2px">CONFIRMED</div>
+                </div>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
 
-          <!-- Thin gold top accent -->
-          <tr><td style="height:1px;background:linear-gradient(90deg,transparent,#b8860b,#f5c842,#b8860b,transparent)"></td></tr>
+      <!-- Route row -->
+      <tr>
+        <td style="background:#0a0a16;padding:24px 40px;border-top:1px solid #10101e;border-bottom:1px solid #10101e">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td style="vertical-align:bottom">
+                <div style="font-size:9px;letter-spacing:4px;text-transform:uppercase;color:#28283c;margin-bottom:6px">From</div>
+                <div style="font-size:22px;font-weight:800;letter-spacing:2px;color:#5a5a7a">ENROLL</div>
+              </td>
+              <td style="text-align:center;vertical-align:middle;padding:0 8px">
+                <div style="font-size:24px;color:#1e1e30;letter-spacing:-2px">&#x2014;&#x25b6;</div>
+              </td>
+              <td style="text-align:right;vertical-align:bottom">
+                <div style="font-size:9px;letter-spacing:4px;text-transform:uppercase;color:#28283c;margin-bottom:6px;text-align:right">Plan</div>
+                <div style="font-size:14px;font-weight:800;letter-spacing:1px;color:#c0bedd;text-align:right">${planLabel.toUpperCase()}</div>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
 
-          <!-- Brand header -->
-          <tr>
-            <td style="padding:44px 44px 36px;text-align:center">
-              <div style="font-size:10px;letter-spacing:9px;color:#3a3218;text-transform:uppercase;margin-bottom:14px">TRADING ACADEMY</div>
-              <div style="font-size:34px;font-weight:900;letter-spacing:9px;color:#c9930a;text-transform:uppercase">MENTIX</div>
-              <div style="margin-top:28px;height:1px;background:linear-gradient(90deg,transparent,#1c1c2c,transparent)"></div>
-            </td>
-          </tr>
+      <!-- Details row -->
+      <tr>
+        <td style="padding:24px 40px 28px">
+          <table cellpadding="0" cellspacing="0">
+            <tr>
+              ${amountBlock}
+              <td>
+                <div style="font-size:9px;letter-spacing:4px;text-transform:uppercase;color:#3a3850;margin-bottom:6px">Order Ref</div>
+                <div style="font-size:10px;font-family:'Courier New',monospace;color:#28283e;word-break:break-all;max-width:280px">${orderId}</div>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
 
-          <!-- Confirmed badge + headline -->
-          <tr>
-            <td style="padding:8px 44px 4px;text-align:center">
-              <div style="font-size:10px;letter-spacing:5px;text-transform:uppercase;color:#c9930a;margin-bottom:16px">&#x2714;&nbsp; Verified &amp; Confirmed</div>
-              <h1 style="margin:0;font-size:30px;font-weight:300;color:#e8e6e0;letter-spacing:1px;line-height:1.25">Payment <span style="font-weight:800">Received</span></h1>
-              <p style="margin:14px 0 0;font-size:13px;color:#48486a;line-height:1.8">
-                Your enrollment in the <span style="color:#c9930a;font-weight:600">Advanced SMC Course</span><br>is now active and confirmed.
-              </p>
-            </td>
-          </tr>
+      <!-- TG stub (perforated) -->
+      ${tgStub}
 
-          <!-- Divider -->
-          <tr><td style="padding:28px 44px"><div style="height:1px;background:linear-gradient(90deg,transparent,#1c1c2c,transparent)"></div></td></tr>
+      <!-- Footer barcode strip -->
+      <tr>
+        <td style="background:#08080f;padding:14px 40px;border-top:1px solid #10101e">
+          <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>
+              <td>
+                <div style="font-family:'Courier New',monospace;font-size:24px;letter-spacing:-1px;color:#141420;line-height:1">
+                  |||&#xfe0e; || ||| || || ||| | || ||| || | ||
+                </div>
+              </td>
+              <td style="text-align:right;vertical-align:bottom">
+                <div style="font-size:9px;color:#18182a;letter-spacing:2px;text-transform:uppercase">
+                  &copy;&nbsp;${year}
+                </div>
+              </td>
+            </tr>
+          </table>
+        </td>
+      </tr>
 
-          <!-- Order details -->
-          <tr>
-            <td style="padding:0 44px 36px">
-              <div style="font-size:10px;letter-spacing:4px;text-transform:uppercase;color:#2e2e48;margin-bottom:14px">Order Details</div>
-              <table width="100%" cellpadding="0" cellspacing="0">
-                <tr>
-                  <td style="font-size:13px;color:#8a8a9a;padding:13px 0;border-top:1px solid #16162a;border-bottom:1px solid #16162a">Plan</td>
-                  <td style="font-size:13px;color:#d8d8e8;font-weight:600;text-align:right;padding:13px 0;border-top:1px solid #16162a;border-bottom:1px solid #16162a">${planLabel}</td>
-                </tr>
-                ${amountRow}
-                <tr>
-                  <td style="font-size:13px;color:#8a8a9a;padding:13px 0;border-bottom:1px solid #16162a">Reference</td>
-                  <td style="font-size:11px;color:#383850;font-family:'Courier New',monospace;text-align:right;padding:13px 0;border-bottom:1px solid #16162a;word-break:break-all">${orderId}</td>
-                </tr>
-              </table>
-            </td>
-          </tr>
-
-          <!-- Telegram section -->
-          ${tgSection}
-
-          <!-- Footer -->
-          <tr>
-            <td style="padding:24px 44px;text-align:center;border-top:1px solid #10101e">
-              <p style="margin:0 0 4px;font-size:10px;color:#28283a;text-transform:uppercase;letter-spacing:3px">Mentix &copy; ${year}</p>
-              <p style="margin:0;font-size:11px;color:#1c1c2c">All rights reserved</p>
-            </td>
-          </tr>
-
-        </table>
-
-      </td></tr>
     </table>
 
   </td></tr>
