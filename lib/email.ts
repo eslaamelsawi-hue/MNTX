@@ -19,8 +19,8 @@ function buildConfirmationHtml(opts: ConfirmationEmailOptions): string {
   const year = new Date().getFullYear()
 
   const amountBlock = amount
-    ? `<td style="padding-right:32px">
-        <div style="font-size:9px;letter-spacing:4px;text-transform:uppercase;color:#3a3850;margin-bottom:6px">Amount</div>
+    ? `<td style="padding-right:40px">
+        <div style="font-size:9px;letter-spacing:4px;text-transform:uppercase;color:#8080a0;margin-bottom:6px">Amount</div>
         <div style="font-size:20px;font-weight:800;color:#c9930a">${amount}</div>
        </td>`
     : ""
@@ -34,7 +34,7 @@ function buildConfirmationHtml(opts: ConfirmationEmailOptions): string {
               <td width="18" style="background:#06060e">
                 <div style="width:18px;height:24px;border-radius:0 12px 12px 0;background:#06060e"></div>
               </td>
-              <td style="border-top:2px dashed #18182e;height:24px"></td>
+              <td style="border-top:2px dashed #3a3a5c;height:24px"></td>
               <td width="18" style="background:#06060e">
                 <div style="width:18px;height:24px;border-radius:12px 0 0 12px;background:#06060e"></div>
               </td>
@@ -45,16 +45,16 @@ function buildConfirmationHtml(opts: ConfirmationEmailOptions): string {
       <!-- Stub -->
       <tr>
         <td style="padding:30px 40px 36px;text-align:center">
-          <div style="font-size:9px;letter-spacing:6px;text-transform:uppercase;color:#28283c;margin-bottom:16px">Access Pass</div>
-          <h2 style="margin:0 0 8px;font-size:18px;font-weight:700;color:#b0aec8;letter-spacing:0.5px">Private Telegram Group</h2>
-          <p style="margin:0 0 24px;font-size:12px;color:#28283c;line-height:2">
+          <div style="font-size:9px;letter-spacing:6px;text-transform:uppercase;color:#7070a0;margin-bottom:16px">Access Pass</div>
+          <h2 style="margin:0 0 8px;font-size:18px;font-weight:700;color:#e0dff5;letter-spacing:0.5px">Private Telegram Group</h2>
+          <p style="margin:0 0 24px;font-size:12px;color:#8080a8;line-height:2">
             Live signals &nbsp;&#xb7;&nbsp; SMC analysis &nbsp;&#xb7;&nbsp; Full course
           </p>
           <a href="${tgInviteLink}"
              style="display:inline-block;background:linear-gradient(135deg,#a06a00,#c9930a,#e8b828,#c9930a,#a06a00);color:#08060a;font-weight:900;padding:14px 46px;border-radius:4px;text-decoration:none;font-size:10px;letter-spacing:5px;text-transform:uppercase">
             Activate
           </a>
-          <p style="margin:18px 0 0;font-size:9px;color:#1a1a28;letter-spacing:2px;text-transform:uppercase">
+          <p style="margin:18px 0 0;font-size:10px;color:#505070;letter-spacing:2px;text-transform:uppercase">
             Single-use &nbsp;&#xb7;&nbsp; Tap start in Telegram to join
           </p>
         </td>
@@ -74,16 +74,16 @@ function buildConfirmationHtml(opts: ConfirmationEmailOptions): string {
 
       <!-- Gold header band -->
       <tr>
-        <td style="background:linear-gradient(135deg,#0f0a00,#1c1400,#0f0a00);padding:30px 40px 26px">
+        <td style="background:linear-gradient(135deg,#1a1000,#2a1e00,#1a1000);padding:30px 40px 26px">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td style="vertical-align:middle">
-                <div style="font-size:9px;letter-spacing:6px;text-transform:uppercase;color:#5a4010;margin-bottom:7px">Trading Academy</div>
+                <div style="font-size:9px;letter-spacing:6px;text-transform:uppercase;color:#9a7828;margin-bottom:7px">Trading Academy</div>
                 <div style="font-size:30px;font-weight:900;letter-spacing:8px;color:#c9930a;line-height:1">MENTIX</div>
               </td>
               <td style="text-align:right;vertical-align:middle">
-                <div style="display:inline-block;border:1px solid #3a2c00;border-radius:4px;padding:5px 12px">
-                  <div style="font-size:8px;letter-spacing:4px;text-transform:uppercase;color:#5a4010">Status</div>
+                <div style="display:inline-block;border:1px solid #7a5c18;border-radius:4px;padding:5px 12px">
+                  <div style="font-size:8px;letter-spacing:4px;text-transform:uppercase;color:#9a7828">Status</div>
                   <div style="font-size:11px;font-weight:700;color:#c9930a;letter-spacing:2px;margin-top:2px">CONFIRMED</div>
                 </div>
               </td>
@@ -94,19 +94,19 @@ function buildConfirmationHtml(opts: ConfirmationEmailOptions): string {
 
       <!-- Route row -->
       <tr>
-        <td style="background:#0a0a16;padding:24px 40px;border-top:1px solid #10101e;border-bottom:1px solid #10101e">
+        <td style="background:#0a0a16;padding:24px 40px;border-top:1px solid #1e1e32;border-bottom:1px solid #1e1e32">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td style="vertical-align:bottom">
-                <div style="font-size:9px;letter-spacing:4px;text-transform:uppercase;color:#28283c;margin-bottom:6px">From</div>
-                <div style="font-size:22px;font-weight:800;letter-spacing:2px;color:#5a5a7a">ENROLL</div>
+                <div style="font-size:9px;letter-spacing:4px;text-transform:uppercase;color:#7070a0;margin-bottom:6px">From</div>
+                <div style="font-size:22px;font-weight:800;letter-spacing:2px;color:#c0c0e0">ENROLL</div>
               </td>
               <td style="text-align:center;vertical-align:middle;padding:0 8px">
-                <div style="font-size:24px;color:#1e1e30;letter-spacing:-2px">&#x2014;&#x25b6;</div>
+                <div style="font-size:24px;color:#505080;letter-spacing:-2px">&#x2014;&#x25b6;</div>
               </td>
               <td style="text-align:right;vertical-align:bottom">
-                <div style="font-size:9px;letter-spacing:4px;text-transform:uppercase;color:#28283c;margin-bottom:6px;text-align:right">Plan</div>
-                <div style="font-size:14px;font-weight:800;letter-spacing:1px;color:#c0bedd;text-align:right">${planLabel.toUpperCase()}</div>
+                <div style="font-size:9px;letter-spacing:4px;text-transform:uppercase;color:#7070a0;margin-bottom:6px;text-align:right">Plan</div>
+                <div style="font-size:14px;font-weight:800;letter-spacing:1px;color:#e8e6ff;text-align:right">${planLabel.toUpperCase()}</div>
               </td>
             </tr>
           </table>
@@ -120,8 +120,8 @@ function buildConfirmationHtml(opts: ConfirmationEmailOptions): string {
             <tr>
               ${amountBlock}
               <td>
-                <div style="font-size:9px;letter-spacing:4px;text-transform:uppercase;color:#3a3850;margin-bottom:6px">Order Ref</div>
-                <div style="font-size:10px;font-family:'Courier New',monospace;color:#28283e;word-break:break-all;max-width:280px">${orderId}</div>
+                <div style="font-size:9px;letter-spacing:4px;text-transform:uppercase;color:#8080a0;margin-bottom:6px">Order Ref</div>
+                <div style="font-size:11px;font-family:'Courier New',monospace;color:#606088;word-break:break-all;max-width:280px">${orderId}</div>
               </td>
             </tr>
           </table>
@@ -133,16 +133,16 @@ function buildConfirmationHtml(opts: ConfirmationEmailOptions): string {
 
       <!-- Footer barcode strip -->
       <tr>
-        <td style="background:#08080f;padding:14px 40px;border-top:1px solid #10101e">
+        <td style="background:#08080f;padding:14px 40px;border-top:1px solid #1e1e32">
           <table width="100%" cellpadding="0" cellspacing="0">
             <tr>
               <td>
-                <div style="font-family:'Courier New',monospace;font-size:24px;letter-spacing:-1px;color:#141420;line-height:1">
+                <div style="font-family:'Courier New',monospace;font-size:22px;letter-spacing:-1px;color:#2a2a48;line-height:1">
                   |||&#xfe0e; || ||| || || ||| | || ||| || | ||
                 </div>
               </td>
               <td style="text-align:right;vertical-align:bottom">
-                <div style="font-size:9px;color:#18182a;letter-spacing:2px;text-transform:uppercase">
+                <div style="font-size:9px;color:#7070a0;letter-spacing:2px;text-transform:uppercase">
                   &copy;&nbsp;${year}
                 </div>
               </td>
