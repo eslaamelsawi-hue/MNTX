@@ -4,6 +4,7 @@ import { getOrder, updateOrder } from "@/lib/okx-orders"
 import { grantExtendHours, grantExtendHoursIfMissing } from "@/lib/grant-hours"
 import { createStarterInviteLink } from "@/lib/tg-invite"
 import { sendConfirmationEmail } from "@/lib/email"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 const OKX_API_BASE = "https://www.okx.com"
 
@@ -56,10 +57,22 @@ export async function POST(request: Request) {
     if (order.status === "paid") {
       // Grant hours if not yet granted
       await grantExtendHoursIfMissing(order.email, order.plan)
-      // Claim a new TG token to show in modal (no re-send email — customer already received theirs)
+      // Look up the already-claimed token for this order — do NOT waste a new token
       let tgInviteLinkRetry: string | null = null
       if (order.plan === "starter") {
-        tgInviteLinkRetry = await createStarterInviteLink(`Starter-OKX-${orderId.slice(-6)}-retry`)
+        const botUsername = process.env.TG_BOT_USERNAME
+        if (botUsername) {
+          const supabase = createAdminClient()
+          const { data: tokenRow } = await supabase
+            .from("tg_access_tokens")
+            .select("token")
+            .eq("order_ref", orderId)
+            .limit(1)
+            .maybeSingle()
+          if (tokenRow?.token) {
+            tgInviteLinkRetry = `https://t.me/${botUsername}?start=accesstoken_${tokenRow.token}`
+          }
+        }
       }
       return NextResponse.json({
         status: "paid",
@@ -124,7 +137,7 @@ export async function POST(request: Request) {
     // Generate Telegram invite link for starter plan subscribers
     let tgInviteLink: string | null = null
     if (order.plan === "starter") {
-      tgInviteLink = await createStarterInviteLink(`Starter-OKX-${orderId.slice(-6)}`)
+      tgInviteLink = await createStarterInviteLink(orderId)
       if (!tgInviteLink) {
         console.error("[okx-verify] WARNING: No TG token available — check tg_access_tokens table has unused rows")
       }

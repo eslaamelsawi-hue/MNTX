@@ -104,7 +104,7 @@ export async function PATCH(request: Request) {
     const planLabel = order.plan.charAt(0).toUpperCase() + order.plan.slice(1).replace(/-/g, " ")
     let tgInviteLink: string | null = null
     if (order.plan === "starter") {
-      tgInviteLink = await createStarterInviteLink(`Starter-Admin-${orderId.slice(-6)}`)
+      tgInviteLink = await createStarterInviteLink(orderId)
     }
     await sendConfirmationEmail({
       to: order.email,
@@ -125,7 +125,20 @@ export async function PATCH(request: Request) {
     const planLabel = order.plan.charAt(0).toUpperCase() + order.plan.slice(1).replace(/-/g, " ")
     let tgInviteLink: string | null = null
     if (order.plan === "starter") {
-      tgInviteLink = await createStarterInviteLink(`Starter-Resend-${orderId.slice(-6)}`)
+      // Reuse the token already claimed for this order; only claim a new one if none exists
+      const supabase = createAdminClient()
+      const botUsername = process.env.TG_BOT_USERNAME
+      const { data: tokenRow } = await supabase
+        .from("tg_access_tokens")
+        .select("token")
+        .eq("order_ref", orderId)
+        .limit(1)
+        .maybeSingle()
+      if (tokenRow?.token && botUsername) {
+        tgInviteLink = `https://t.me/${botUsername}?start=accesstoken_${tokenRow.token}`
+      } else {
+        tgInviteLink = await createStarterInviteLink(orderId)
+      }
     }
     await sendConfirmationEmail({
       to: order.email,
