@@ -26,6 +26,14 @@ function buildConfirmationHtml(opts: ConfirmationEmailOptions): string {
       </tr>`
     : ""
 
+  let tgTokenDisplay = ""
+  if (tgInviteLink) {
+    try {
+      const startParam = new URL(tgInviteLink).searchParams.get("start") ?? ""
+      tgTokenDisplay = startParam.startsWith("accesstoken_") ? startParam.slice("accesstoken_".length) : startParam
+    } catch { /* malformed URL — leave blank */ }
+  }
+
   const tgSection = tgInviteLink
     ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;background:#0f1e35;border:1px solid #1e3a5f;border-radius:12px">
         <tr>
@@ -38,6 +46,8 @@ function buildConfirmationHtml(opts: ConfirmationEmailOptions): string {
                style="display:block;background:#0ea5e9;color:#ffffff;font-size:16px;font-weight:700;text-decoration:none;padding:16px 24px;border-radius:8px;text-align:center">
               Join Telegram Group
             </a>
+            ${tgTokenDisplay ? `<p style="margin:20px 0 4px;font-size:12px;color:#aaaaaa;text-transform:uppercase;letter-spacing:0.08em">Your Access Token</p>
+            <p style="margin:0;font-size:13px;font-family:'Courier New',monospace;color:#ffffff;word-break:break-all;background:#0a1628;padding:10px 14px;border-radius:6px;display:inline-block">${tgTokenDisplay}</p>` : ""}
           </td>
         </tr>
       </table>`
