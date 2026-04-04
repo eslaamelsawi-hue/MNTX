@@ -125,6 +125,9 @@ export async function POST(request: Request) {
     let tgInviteLink: string | null = null
     if (order.plan === "starter") {
       tgInviteLink = await createStarterInviteLink(`Starter-OKX-${orderId.slice(-6)}`)
+      if (!tgInviteLink) {
+        console.error("[okx-verify] WARNING: No TG token available — check tg_access_tokens table has unused rows")
+      }
     }
 
     // Send one confirmation email to the customer

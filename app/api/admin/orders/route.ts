@@ -4,6 +4,7 @@ import { getPendingOrders, getOrder, updateOrder } from "@/lib/okx-orders"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { sendConfirmationEmail } from "@/lib/email"
 import { grantExtendHours } from "@/lib/grant-hours"
+import { createStarterInviteLink } from "@/lib/tg-invite"
 
 async function getAllOrders() {
   try {
@@ -91,6 +92,20 @@ export async function PATCH(request: Request) {
     // Grant hours if this is an extend plan
     await grantExtendHours(order.email, order.plan)
 
+    // Claim a TG token and send confirmation email for starter plan
+    const planLabel = order.plan.charAt(0).toUpperCase() + order.plan.slice(1).replace(/-/g, " ")
+    let tgInviteLink: string | null = null
+    if (order.plan === "starter") {
+      tgInviteLink = await createStarterInviteLink(`Starter-Admin-${orderId.slice(-6)}`)
+    }
+    await sendConfirmationEmail({
+      to: order.email,
+      planLabel,
+      amount: `${order.amount} USDT`,
+      orderId,
+      tgInviteLink,
+    })
+
     return NextResponse.json({ success: true })
   }
 
@@ -100,11 +115,16 @@ export async function PATCH(request: Request) {
     }
 
     const planLabel = order.plan.charAt(0).toUpperCase() + order.plan.slice(1).replace(/-/g, " ")
+    let tgInviteLink: string | null = null
+    if (order.plan === "starter") {
+      tgInviteLink = await createStarterInviteLink(`Starter-Resend-${orderId.slice(-6)}`)
+    }
     await sendConfirmationEmail({
       to: order.email,
       planLabel,
       amount: `${order.amount} USDT`,
       orderId,
+      tgInviteLink,
     })
 
     return NextResponse.json({ success: true })
