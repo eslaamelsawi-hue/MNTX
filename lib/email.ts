@@ -140,7 +140,7 @@ export async function sendConfirmationEmail(opts: ConfirmationEmailOptions): Pro
   const { error } = await resend.emails.send({
     from,
     to: opts.to,
-    subject: `Payment Confirmed — ${opts.planLabel}`,
+    subject: `Payment Confirmed — ${opts.planLabel} #${opts.orderId.slice(-6)}`,
     html,
   })
 
