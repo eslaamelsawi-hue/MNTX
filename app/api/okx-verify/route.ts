@@ -122,12 +122,17 @@ export async function POST(request: Request) {
     if (order.status === "paid") {
       // Grant hours if not yet granted
       await grantExtendHoursIfMissing(order.email, order.plan)
-      // Re-generate and re-send TG invite if this is a starter plan (in case the first attempt failed)
+      // Re-generate TG invite if this is a starter plan (in case the first attempt failed)
+      let tgInviteLinkRetry: string | null = null
       if (order.plan === "starter") {
-        const tgInviteLink = await createStarterInviteLink(`Starter-OKX-${orderId.slice(-6)}-retry`)
-        await sendConfirmationEmail(order.email, order.plan, order.amount, orderId, tgInviteLink)
+        tgInviteLinkRetry = await createStarterInviteLink(`Starter-OKX-${orderId.slice(-6)}-retry`)
+        await sendConfirmationEmail(order.email, order.plan, order.amount, orderId, tgInviteLinkRetry)
       }
-      return NextResponse.json({ status: "paid", message: "Payment already confirmed." })
+      return NextResponse.json({
+        status: "paid",
+        message: "Payment already confirmed.",
+        ...(tgInviteLinkRetry ? { tgInviteLink: tgInviteLinkRetry } : {}),
+      })
     }
 
     const accessKey = process.env.OKX_ACCESS_KEY
@@ -195,6 +200,7 @@ export async function POST(request: Request) {
     return NextResponse.json({
       status: "paid",
       message: "Payment confirmed! Check your email for next steps.",
+      ...(tgInviteLink ? { tgInviteLink } : {}),
     })
   } catch (error) {
     console.error("OKX verify error:", error)

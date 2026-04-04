@@ -88,7 +88,7 @@ function OKXPayModal({
   const [verifying, setVerifying] = useState(false)
   const [payInfo, setPayInfo] = useState<OKXPayData | null>(null)
   const [copied, setCopied] = useState(false)
-  const [verifyResult, setVerifyResult] = useState<{ status: string; message: string } | null>(null)
+  const [verifyResult, setVerifyResult] = useState<{ status: string; message: string; tgInviteLink?: string } | null>(null)
 
   // If prefillEmail given, fetch address immediately on mount
   const [autoFetched, setAutoFetched] = useState(false)
@@ -175,7 +175,18 @@ function OKXPayModal({
             <div className="mb-3 text-4xl">✅</div>
             <p className="text-lg font-bold text-green-400">{t(locale, "paymentConfirmed")}</p>
             <p className="mt-2 text-sm text-muted-foreground">{verifyResult.message}</p>
-            <button type="button" onClick={onClose} className="mt-4 w-full rounded-lg border border-[hsl(210,60%,50%)]/30 py-2 text-sm text-muted-foreground hover:bg-[hsl(210,60%,50%)]/10">{t(locale, "close")}</button>
+            {verifyResult.tgInviteLink && (
+              <a
+                href={verifyResult.tgInviteLink}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="mt-4 flex items-center justify-center gap-2 w-full rounded-lg bg-[#229ED9] py-3 text-sm font-bold text-white hover:bg-[#1a8bbf] transition-colors"
+              >
+                <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden="true"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248-2.04 9.613c-.15.677-.546.842-1.107.523l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.332-.373-.12L7.48 14.748l-2.95-.924c-.642-.2-.655-.642.134-.951l11.532-4.448c.535-.194 1.003.13.366.823z"/></svg>
+                {locale === "ar" ? "انضم إلى مجموعة تيليجرام" : "Join Telegram Group"}
+              </a>
+            )}
+            <button type="button" onClick={onClose} className="mt-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/30 py-2 text-sm text-muted-foreground hover:bg-[hsl(210,60%,50%)]/10">{t(locale, "close")}</button>
           </div>
         ) : (
           <>
