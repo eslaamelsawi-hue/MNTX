@@ -20,7 +20,7 @@ function buildConfirmationHtml(opts: ConfirmationEmailOptions): string {
 
   const amountRow = amount
     ? `<tr>
-        <td width="100%" style="padding:16px 24px;border-bottom:1px solid #2a2a2a">
+        <td style="padding:8px 0">
           <span style="font-size:15px;color:#aaaaaa">Amount Paid: </span><span style="font-size:15px;font-weight:700;color:#f0a500">${amount}</span>
         </td>
       </tr>`
@@ -66,17 +66,23 @@ function buildConfirmationHtml(opts: ConfirmationEmailOptions): string {
           </p>
 
           <!-- Details box -->
-          <table width="100%" cellpadding="0" cellspacing="0" style="background:#1e1e1e;border-radius:12px;margin-bottom:24px;table-layout:fixed">
+          <table width="100%" cellpadding="0" cellspacing="0" style="background:#1e1e1e;border-radius:12px;margin-bottom:24px">
             <tr>
-              <td width="100%" style="padding:16px 24px;border-bottom:1px solid #2a2a2a">
-                <span style="font-size:15px;color:#aaaaaa">Plan: </span><span style="font-size:15px;font-weight:700;color:#ffffff">${planLabel}</span>
-              </td>
-            </tr>
-            ${amountRow}
-            <tr>
-              <td width="100%" style="padding:16px 24px">
-                <span style="font-size:15px;color:#aaaaaa">Order ID:</span><br>
-                <span style="font-size:13px;font-family:'Courier New',monospace;color:#ffffff;word-break:break-all">${orderId}</span>
+              <td style="padding:20px 24px;width:100%">
+                <table width="100%" cellpadding="0" cellspacing="0" style="width:100%">
+                  <tr>
+                    <td style="padding:8px 0;border-bottom:1px solid #2a2a2a">
+                      <span style="font-size:15px;color:#aaaaaa">Plan: </span><span style="font-size:15px;font-weight:700;color:#ffffff">${planLabel}</span>
+                    </td>
+                  </tr>
+                  ${amountRow}
+                  <tr>
+                    <td style="padding:8px 0">
+                      <span style="font-size:15px;color:#aaaaaa">Order ID:</span><br>
+                      <span style="font-size:13px;font-family:'Courier New',monospace;color:#ffffff;word-break:break-all">${orderId}</span>
+                    </td>
+                  </tr>
+                </table>
               </td>
             </tr>
           </table>
