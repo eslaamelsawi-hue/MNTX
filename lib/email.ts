@@ -68,8 +68,8 @@ function buildConfirmationHtml(opts: ConfirmationEmailOptions): string {
           <!-- Details box -->
           <table width="100%" cellpadding="0" cellspacing="0" style="background:#1e1e1e;border-radius:12px;margin-bottom:24px">
             <tr>
-              <td style="padding:20px 24px">
-                <table width="100%" cellpadding="0" cellspacing="0">
+              <td style="padding:20px 24px;width:100%">
+                <table width="100%" cellpadding="0" cellspacing="0" style="width:100%">
                   <tr>
                     <td style="padding:8px 0;border-bottom:1px solid #2a2a2a">
                       <span style="font-size:15px;color:#aaaaaa">Plan: </span><span style="font-size:15px;font-weight:700;color:#ffffff">${planLabel}</span>
