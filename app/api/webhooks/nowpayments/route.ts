@@ -2,6 +2,8 @@ import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { grantExtendHours, EXTEND_PLAN_HOURS } from "@/lib/grant-hours"
+import { createStarterInviteLink } from "@/lib/tg-invite"
+import { Resend } from "resend"
 
 function sortObjectKeys(obj: unknown): unknown {
   if (Array.isArray(obj)) return obj.map(sortObjectKeys)
@@ -52,8 +54,11 @@ export async function POST(request: Request) {
     // Extract planId from order_id format: "{planId}-{timestamp}"
     const planId = (order_id as string).replace(/-\d+$/, "")
 
-    if (!EXTEND_PLAN_HOURS[planId]) {
-      // Not an extend plan — nothing to do
+    const isExtendPlan = !!EXTEND_PLAN_HOURS[planId]
+    const isStarterPlan = planId === "starter"
+
+    if (!isExtendPlan && !isStarterPlan) {
+      // Not a handled plan — nothing to do
       return NextResponse.json({ ok: true })
     }
 
@@ -80,7 +85,39 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true })
     }
 
-    await grantExtendHours(email, planId, name)
+    if (isExtendPlan) {
+      await grantExtendHours(email, planId, name)
+    }
+
+    if (isStarterPlan) {
+      const tgInviteLink = await createStarterInviteLink(`Starter-NP-${String(order_id).slice(-6)}`)
+      if (tgInviteLink) {
+        const apiKey = process.env.RESEND_API_KEY
+        if (apiKey) {
+          const resend = new Resend(apiKey)
+          const from = process.env.RESEND_FROM_EMAIL || "Mentix Trading <onboarding@resend.dev>"
+          const planLabel = "Starter"
+          await resend.emails.send({
+            from,
+            to: email,
+            subject: "Payment Confirmed — Your Telegram Access",
+            html: `
+              <div style="background:#0a0a0a;color:#f5f5f5;font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:32px;border-radius:12px;border:1px solid #333">
+                <h1 style="color:#d4a017;font-size:24px;margin-bottom:8px">Payment Confirmed ✓</h1>
+                <p style="color:#ccc;margin-bottom:24px">Thank you for purchasing the ${planLabel} Plan. Your payment has been received.</p>
+                <div style="background:#0d2137;border:1px solid #1d6fa4;border-radius:8px;padding:20px;margin-bottom:24px;text-align:center">
+                  <p style="margin:0 0 8px;font-size:16px;font-weight:bold;color:#f5f5f5">🎉 Your Telegram Access</p>
+                  <p style="margin:0 0 12px;color:#ccc;font-size:13px">Click the button below to join the private Starter Plan Telegram group. This link can only be used once.</p>
+                  <a href="${tgInviteLink}" style="display:inline-block;background:#229ED9;color:#fff;font-weight:bold;padding:12px 28px;border-radius:8px;text-decoration:none;font-size:14px">Join Telegram Group</a>
+                </div>
+                <hr style="border:none;border-top:1px solid #333;margin:24px 0"/>
+                <p style="color:#666;font-size:12px;margin:0">© ${new Date().getFullYear()} Mentix Trading. All rights reserved.</p>
+              </div>
+            `,
+          })
+        }
+      }
+    }
 
     return NextResponse.json({ ok: true })
   } catch (error) {
