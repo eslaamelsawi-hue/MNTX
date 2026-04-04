@@ -1,60 +1,53 @@
 /**
- * Telegram Bot API helper for generating one-time invite links.
- * Used to grant starter plan subscribers access to the private Telegram channel.
+ * BotSubscription (TGmembership) access-token helper.
+ *
+ * Access tokens are pre-generated in bulk via the Telegram bot:
+ *   /members → Add/Delete access token → Create new → Multiple
+ * The bot sends a CSV file; the "Access Token" column values are uploaded
+ * to the `tg_access_tokens` Supabase table via POST /api/tg-bot/tokens.
+ *
+ * When a Starter-plan payment is confirmed we atomically claim one unused
+ * token from the table and return the BotSubscription activation link:
+ *   https://t.me/<BOT_USERNAME>?start=<TOKEN>
  *
  * Required env vars:
- *   TG_BOT_TOKEN  — full bot token  (botId:secret)
- *   TG_CHAT_ID    — channel/group ID (e.g. -1001002128842346)
+ *   TG_BOT_USERNAME — e.g. mentixbot  (no @)
  */
 
-const TG_API = "https://api.telegram.org"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 /**
- * Creates a single-use Telegram invite link for the configured channel.
- * Returns the invite URL string, or null if generation fails.
+ * Claims one unused BotSubscription access token for the Starter plan
+ * and returns the activation link.  Marks the token as used atomically.
+ * Returns null when no tokens remain (alert admin to generate more).
  */
 export async function createStarterInviteLink(
-  label?: string
+  orderRef?: string
 ): Promise<string | null> {
-  const token = process.env.TG_BOT_TOKEN
-  const chatId = process.env.TG_CHAT_ID
-
-  if (!token || !chatId) {
-    console.warn("[tg-invite] TG_BOT_TOKEN or TG_CHAT_ID not set — skipping")
+  const botUsername = process.env.TG_BOT_USERNAME
+  if (!botUsername) {
+    console.warn("[tg-invite] TG_BOT_USERNAME not set — skipping")
     return null
   }
 
-  try {
-    const body: Record<string, unknown> = {
-      chat_id: chatId,
-      member_limit: 1,
-      creates_join_request: false,
-    }
-    if (label) body.name = label.slice(0, 32) // Telegram name max 32 chars
+  const supabase = createAdminClient()
 
-    const res = await fetch(
-      `${TG_API}/bot${token}/createChatInviteLink`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      }
-    )
+  // Atomically fetch and mark one unused token used.
+  // Using a Postgres function avoids race conditions on concurrent payments.
+  const { data, error } = await supabase.rpc("claim_tg_access_token", {
+    p_plan: "starter",
+    p_order_ref: orderRef ?? null,
+  }) as { data: string | null; error: unknown }
 
-    const data = await res.json() as {
-      ok: boolean
-      result?: { invite_link: string }
-      description?: string
-    }
-
-    if (!data.ok) {
-      console.error("[tg-invite] Telegram API error:", data.description)
-      return null
-    }
-
-    return data.result?.invite_link ?? null
-  } catch (err) {
-    console.error("[tg-invite] Failed to create invite link:", err)
+  if (error) {
+    console.error("[tg-invite] DB error claiming token:", error)
     return null
   }
+
+  if (!data) {
+    console.error("[tg-invite] No unused tokens available for starter plan — upload more via POST /api/tg-bot/tokens")
+    return null
+  }
+
+  return `https://t.me/${botUsername}?start=${data}`
 }
