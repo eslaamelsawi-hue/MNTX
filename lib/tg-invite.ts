@@ -49,5 +49,5 @@ export async function createStarterInviteLink(
     return null
   }
 
-  return `https://t.me/${botUsername}?start=${data}`
+  return `https://t.me/${botUsername}?start=accesstoken_${data}`
 }
