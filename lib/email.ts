@@ -45,15 +45,17 @@ function buildConfirmationHtml(opts: ConfirmationEmailOptions): string {
 
   return `<!DOCTYPE html>
 <html lang="en">
-<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0">
+<style>@media only screen and (max-width:600px){.email-body{padding:20px 12px !important}.email-inner{padding:0 !important}}</style>
+</head>
 <body style="margin:0;padding:0;background:#111111;font-family:'Helvetica Neue',Helvetica,Arial,sans-serif">
 
-<table width="100%" cellpadding="0" cellspacing="0" style="background:#111111;padding:40px 16px">
+<table width="100%" cellpadding="0" cellspacing="0" style="background:#111111;padding:40px 16px" class="email-body">
   <tr><td align="center">
 
-    <table width="600" cellpadding="0" cellspacing="0" style="max-width:100%">
+    <table cellpadding="0" cellspacing="0" style="width:100%;max-width:560px">
       <tr>
-        <td style="padding:0 16px">
+        <td style="padding:0 8px" class="email-inner">
 
           <!-- Title -->
           <h1 style="margin:0 0 16px;font-size:28px;font-weight:800;color:#f0a500">
