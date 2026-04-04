@@ -33,3 +33,7 @@ export async function POST(req: NextRequest) {
 
   return NextResponse.json({ found: true, subscriptions, bookings: bookings || [] })
 }
+
+
+
+

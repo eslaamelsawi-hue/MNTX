@@ -22,3 +22,4 @@ fs.writeFileSync(path, c, "utf8");
 console.log("Done. Has Calculator:", c.includes("Calculator"));
 console.log("Has Input:", c.includes("@/components/ui/input"));
 console.log("Has useMemo:", c.includes("useMemo"));
+

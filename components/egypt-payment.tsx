@@ -108,11 +108,11 @@ export function EgyptPayment() {
           <div className="space-y-4">
             <div className="flex items-center justify-between rounded-xl border border-border bg-secondary/50 p-4">
               <div className="flex items-center gap-3">
-                <CreditCard className="h-5 w-5 text-primary" />
+                <img src="/payment-logos/instapay.png" alt="Instapay Logo" className="h-8 w-8 object-contain" />
                 <div>
                   <p className="text-xs text-muted-foreground">{t('instapay')}</p>
                   <p className="text-base font-bold tracking-wide text-foreground">
-                    0115 8022 001
+                    01158022001
                   </p>
                 </div>
               </div>
@@ -125,7 +125,7 @@ export function EgyptPayment() {
                 <div>
                   <p className="text-xs text-muted-foreground">{t('vodafoneCash')}</p>
                   <p className="text-base font-bold tracking-wide text-foreground">
-                    0106 2791 235
+                    01062791235
                   </p>
                 </div>
               </div>
