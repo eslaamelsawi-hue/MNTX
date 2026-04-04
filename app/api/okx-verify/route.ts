@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { getOrder, updateOrder } from "@/lib/okx-orders"
-import { Resend } from "resend"
 import { grantExtendHours, grantExtendHoursIfMissing } from "@/lib/grant-hours"
 import { createStarterInviteLink } from "@/lib/tg-invite"
+import { sendConfirmationEmail } from "@/lib/email"
 
 const OKX_API_BASE = "https://www.okx.com"
 
@@ -38,73 +38,7 @@ async function fetchOKXDeposits(accessKey: string, secretKey: string, passphrase
   return data
 }
 
-async function sendConfirmationEmail(
-  email: string,
-  plan: string,
-  amount: string,
-  orderId: string,
-  tgInviteLink?: string | null
-) {
-  const apiKey = process.env.RESEND_API_KEY
-  if (!apiKey) {
-    console.warn("RESEND_API_KEY not set — skipping confirmation email")
-    return
-  }
 
-  const resend = new Resend(apiKey)
-  const from = process.env.RESEND_FROM_EMAIL || "Mentix Trading <onboarding@resend.dev>"
-  const adminEmail = process.env.ADMIN_EMAIL || "admin@mentix.com"
-
-  const planLabel = plan.charAt(0).toUpperCase() + plan.slice(1).replace(/-/g, " ")
-
-  const tgBlock = tgInviteLink
-    ? `<div style="background:#0d2137;border:1px solid #1d6fa4;border-radius:8px;padding:20px;margin-bottom:24px;text-align:center">
-        <p style="margin:0 0 8px;font-size:16px;font-weight:bold;color:#f5f5f5">🎉 Your Telegram Access</p>
-        <p style="margin:0 0 12px;color:#ccc;font-size:13px">Click the button below to join the private Starter Plan Telegram group. This link can only be used once.</p>
-        <a href="${tgInviteLink}" style="display:inline-block;background:#229ED9;color:#fff;font-weight:bold;padding:12px 28px;border-radius:8px;text-decoration:none;font-size:14px">Join Telegram Group</a>
-      </div>`
-    : ""
-
-  const html = `
-    <div style="background:#0a0a0a;color:#f5f5f5;font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:32px;border-radius:12px;border:1px solid #333">
-      <h1 style="color:#d4a017;font-size:24px;margin-bottom:8px">Payment Confirmed ✓</h1>
-      <p style="color:#ccc;margin-bottom:24px">Thank you for your purchase. Your payment has been received.</p>
-      <div style="background:#111;border:1px solid #333;border-radius:8px;padding:20px;margin-bottom:24px">
-        <p style="margin:0 0 8px"><span style="color:#888">Plan:</span> <strong style="color:#f5f5f5">${planLabel}</strong></p>
-        <p style="margin:0 0 8px"><span style="color:#888">Amount Paid:</span> <strong style="color:#d4a017">${amount} USDT</strong></p>
-        <p style="margin:0"><span style="color:#888">Order ID:</span> <span style="color:#f5f5f5;font-family:monospace">${orderId}</span></p>
-      </div>
-      ${tgBlock}
-      <p style="color:#ccc">Our team will reach out to you shortly to provide access. If you have any questions, reply to this email.</p>
-      <hr style="border:none;border-top:1px solid #333;margin:24px 0"/>
-      <p style="color:#666;font-size:12px;margin:0">© ${new Date().getFullYear()} Mentix Trading. All rights reserved.</p>
-    </div>
-  `
-
-  await Promise.all([
-    resend.emails.send({
-      from,
-      to: email,
-      subject: `Payment Confirmed — ${planLabel} (${orderId})`,
-      html,
-    }),
-    resend.emails.send({
-      from,
-      to: adminEmail,
-      subject: `New OKX Payment: ${email} — ${planLabel} $${amount}`,
-      html: `
-        <div style="background:#0a0a0a;color:#f5f5f5;font-family:Arial,sans-serif;max-width:600px;margin:0 auto;padding:32px;border-radius:12px;border:1px solid #333">
-          <h1 style="color:#d4a017;font-size:20px">New OKX Payment Received</h1>
-          <p><strong>Customer:</strong> ${email}</p>
-          <p><strong>Plan:</strong> ${planLabel}</p>
-          <p><strong>Amount:</strong> ${amount} USDT</p>
-          <p><strong>Order ID:</strong> <span style="font-family:monospace">${orderId}</span></p>
-          ${tgInviteLink ? `<p><strong>TG Invite:</strong> <a href="${tgInviteLink}" style="color:#229ED9">${tgInviteLink}</a></p>` : ""}
-        </div>
-      `,
-    }),
-  ])
-}
 
 export async function POST(request: Request) {
   try {
@@ -122,11 +56,10 @@ export async function POST(request: Request) {
     if (order.status === "paid") {
       // Grant hours if not yet granted
       await grantExtendHoursIfMissing(order.email, order.plan)
-      // Re-generate TG invite if this is a starter plan (in case the first attempt failed)
+      // Claim a new TG token to show in modal (no re-send email — customer already received theirs)
       let tgInviteLinkRetry: string | null = null
       if (order.plan === "starter") {
         tgInviteLinkRetry = await createStarterInviteLink(`Starter-OKX-${orderId.slice(-6)}-retry`)
-        await sendConfirmationEmail(order.email, order.plan, order.amount, orderId, tgInviteLinkRetry)
       }
       return NextResponse.json({
         status: "paid",
@@ -194,8 +127,15 @@ export async function POST(request: Request) {
       tgInviteLink = await createStarterInviteLink(`Starter-OKX-${orderId.slice(-6)}`)
     }
 
-    // Send confirmation emails
-    await sendConfirmationEmail(order.email, order.plan, order.amount, orderId, tgInviteLink)
+    // Send one confirmation email to the customer
+    const planLabel = order.plan.charAt(0).toUpperCase() + order.plan.slice(1).replace(/-/g, " ")
+    await sendConfirmationEmail({
+      to: order.email,
+      planLabel,
+      amount: `${order.amount} USDT`,
+      orderId,
+      tgInviteLink,
+    })
 
     return NextResponse.json({
       status: "paid",
