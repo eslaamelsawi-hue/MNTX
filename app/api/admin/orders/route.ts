@@ -15,10 +15,7 @@ async function getAllOrders() {
       .order("created_at", { ascending: false })
     if (error || !data) return []
     const orderIds = data.map((d: Record<string, unknown>) => d.order_id as string)
-    const { data: tokens } = await supabase
-      .from("tg_access_tokens")
-      .select("token, order_ref")
-      .in("order_ref", orderIds)
+    const { data: tokens } = await supabase.rpc("get_tg_tokens_for_orders", { order_ids: orderIds })
     const tokenMap = Object.fromEntries((tokens ?? []).map((t: { token: string; order_ref: string }) => [t.order_ref, t.token]))
 
     return data.map((d: Record<string, unknown>) => ({
