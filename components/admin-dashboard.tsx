@@ -114,6 +114,7 @@ export function AdminDashboard() {
   const [loadingBookings, setLoadingBookings] = useState(true)
   const [loadingSlots, setLoadingSlots] = useState(true)
   const [orders, setOrders] = useState<OKXOrder[]>([])
+  const [remainingTokens, setRemainingTokens] = useState<number | null>(null)
   const [loadingOrders, setLoadingOrders] = useState(true)
   const [orderStatusFilter, setOrderStatusFilter] = useState<"all" | "pending" | "paid" | "expired">("all")
   const [orderActionLoading, setOrderActionLoading] = useState<string | null>(null)
@@ -187,6 +188,7 @@ export function AdminDashboard() {
       const res = await fetch("/api/admin/orders")
       const data = await res.json()
       if (data.orders) setOrders(data.orders)
+      if (typeof data.remainingTokens === "number") setRemainingTokens(data.remainingTokens)
     } catch (e) {
       console.error("Failed to fetch orders:", e)
     }
@@ -1368,7 +1370,14 @@ export function AdminDashboard() {
           {/* Orders Tab */}
           <TabsContent value="orders" className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
-              <h2 className="text-xl font-semibold text-foreground">Crypto Orders</h2>
+              <div className="flex items-center gap-3">
+                <h2 className="text-xl font-semibold text-foreground">Crypto Orders</h2>
+                {remainingTokens !== null && (
+                  <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${remainingTokens === 0 ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-green-500/20 text-green-400 border border-green-500/30"}`}>
+                    {remainingTokens === 0 ? "⚠ No TG tokens left" : `${remainingTokens} TG tokens`}
+                  </span>
+                )}
+              </div>
               <div className="flex items-center gap-2">
                 <div className="flex rounded-lg border border-border overflow-hidden text-sm">
                   {(["all", "pending", "paid", "expired"] as const).map(f => (

@@ -47,7 +47,18 @@ export async function GET() {
   }
 
   const orders = await getAllOrders()
-  return NextResponse.json({ orders })
+  // Also return remaining token count for dashboard display
+  let remainingTokens: number | null = null
+  try {
+    const supabase = createAdminClient()
+    const { count } = await supabase
+      .from("tg_access_tokens")
+      .select("id", { count: "exact", head: true })
+      .eq("used", false)
+      .eq("plan", "starter")
+    remainingTokens = count ?? 0
+  } catch { /* non-fatal */ }
+  return NextResponse.json({ orders, remainingTokens })
 }
 
 export async function PATCH(request: Request) {
@@ -123,13 +134,22 @@ export async function PATCH(request: Request) {
     let tgInviteLink: string | null = null
     if (order.plan === "starter") {
       const botUsername = process.env.TG_BOT_USERNAME
+      console.log(`[resend_email] orderId=${orderId} TG_BOT_USERNAME=${botUsername ? 'SET' : 'NOT SET'}`)
       const supabase = createAdminClient()
-      const { data: tokenRows } = await supabase.rpc("get_tg_tokens_for_orders", { order_ids: [orderId] })
+      const { data: tokenRows, error: rpcError } = await supabase.rpc("get_tg_tokens_for_orders", { order_ids: [orderId] })
+      if (rpcError) console.error("[resend_email] get_tg_tokens_for_orders error:", rpcError)
       const existingToken = (tokenRows as Array<{ token: string; order_ref: string }> | null)?.[0]?.token
+      console.log(`[resend_email] existingToken=${existingToken ? 'FOUND' : 'NOT FOUND'}`)
       if (existingToken && botUsername) {
         tgInviteLink = `https://t.me/${botUsername}?start=accesstoken_${existingToken}`
       } else {
+        console.log(`[resend_email] claiming new token for orderId=${orderId}`)
         tgInviteLink = await createStarterInviteLink(orderId)
+        console.log(`[resend_email] tgInviteLink=${tgInviteLink ? 'GOT URL' : 'NULL - pool empty or bot username missing'}`)
+      }
+      if (!tgInviteLink) {
+        console.error(`[resend_email] FAILED to get TG token for order ${orderId} — pool may be empty`)
+        return NextResponse.json({ error: "No TG tokens available. Please add more tokens via /api/tg-bot/tokens or run script 013 in Supabase to reset unused tokens." }, { status: 503 })
       }
     }
     await sendConfirmationEmail({
