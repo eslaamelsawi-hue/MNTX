@@ -75,6 +75,7 @@ type OKXOrder = {
   createdAt: string
   paidAt?: string
   txId?: string
+  tgToken?: string
 }
 
 type GoldArticle = {
@@ -1448,6 +1449,7 @@ export function AdminDashboard() {
                       <TableHead>Network</TableHead>
                       <TableHead>Status</TableHead>
                       <TableHead>TX ID</TableHead>
+                      <TableHead>TG Token</TableHead>
                       <TableHead>Actions</TableHead>
                     </TableRow>
                   </TableHeader>
@@ -1509,6 +1511,19 @@ export function AdminDashboard() {
                                   <Copy className="h-3 w-3" />
                                 </button>
                                 {copiedId === order.orderId + "-tx" && <span className="text-xs text-green-400">Copied</span>}
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
+                          </TableCell>
+                          <TableCell>
+                            {order.tgToken ? (
+                              <div className="flex items-center gap-1">
+                                <span className="max-w-[80px] truncate font-mono text-xs text-muted-foreground">{order.tgToken}</span>
+                                <button onClick={() => copyToClipboard(order.tgToken!, order.orderId + "-tg")} className="shrink-0 text-muted-foreground hover:text-foreground">
+                                  <Copy className="h-3 w-3" />
+                                </button>
+                                {copiedId === order.orderId + "-tg" && <span className="text-xs text-green-400">Copied</span>}
                               </div>
                             ) : (
                               <span className="text-xs text-muted-foreground">—</span>

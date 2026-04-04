@@ -14,6 +14,13 @@ async function getAllOrders() {
       .select("*")
       .order("created_at", { ascending: false })
     if (error || !data) return []
+    const orderIds = data.map((d: Record<string, unknown>) => d.order_id as string)
+    const { data: tokens } = await supabase
+      .from("tg_access_tokens")
+      .select("token, order_ref")
+      .in("order_ref", orderIds)
+    const tokenMap = Object.fromEntries((tokens ?? []).map((t: { token: string; order_ref: string }) => [t.order_ref, t.token]))
+
     return data.map((d: Record<string, unknown>) => ({
       orderId: d.order_id,
       plan: d.plan,
@@ -25,6 +32,7 @@ async function getAllOrders() {
       createdAt: d.created_at,
       paidAt: d.paid_at || undefined,
       txId: d.tx_id || undefined,
+      tgToken: tokenMap[d.order_id as string] || undefined,
     }))
   } catch {
     return []
