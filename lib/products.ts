@@ -44,4 +44,10 @@ export const PRODUCTS: Product[] = [
     description: "Extend your 1-on-1 online mentorship for 6 additional months. Includes weekly zoom sessions, Discord & Telegram access, and continued personalized guidance. Best value.",
     priceInCents: 149900, // $1,499.00
   },
+  {
+    id: "funded-challenge",
+    name: "PropFirm Mastery Course",
+    description: "A complete mastery program to pass any prop firm challenge and manage funded accounts like a professional — live sessions, daily analysis, expert risk management, and certified results.",
+    priceInCents: 50000, // $500.00/month
+  },
 ]

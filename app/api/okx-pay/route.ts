@@ -14,6 +14,7 @@ const PLAN_PRICES: Record<string, { amount: number; description: string }> = {
   "extend-2m": { amount: 379,  description: "Mentix Trading - Mentorship Extension 2 Months" },
   "extend-3m": { amount: 699,  description: "Mentix Trading - Mentorship Extension 3 Months" },
   "extend-6m": { amount: 1499, description: "Mentix Trading - Mentorship Extension 6 Months" },
+  "funded-challenge": { amount: 500, description: "Mentix Trading - PropFirm Mastery Course" },
 }
 
 async function applyCouponDiscount(code: string, plan: string, amountDollars: number): Promise<number> {

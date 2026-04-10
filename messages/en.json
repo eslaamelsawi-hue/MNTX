@@ -6,7 +6,8 @@
     "crypto": "Crypto Insights",
     "gold": "Gold Prices",
     "goldPro": "Gold Pro",
-    "dashboard": "My Dashboard"
+    "dashboard": "My Dashboard",
+    "fundedChallenge": "PropFirm"
   },
   "hero": {
     "badge": "Limited Spots Available",
@@ -478,5 +479,96 @@
     "verifyingEmail": "Verifying your subscription...",
     "hoursAvailable": "You have {hours} mentorship hours remaining.",
     "noHoursError": "You don't have mentorship hours. Please purchase a plan to book sessions."
+  },
+  "fundedChallenge": {
+    "badge": "Prop Firm Mastery",
+    "title": "PropFirm",
+    "titleHighlight": "Mastery Course",
+    "description": "A complete mastery program to pass any prop firm challenge and manage funded accounts like a professional — built on real certified results, live sessions, and expert-guided strategy.",
+    "heroCta": "Enroll Now – $500/mo",
+    "heroProof": "View My Certificates",
+    "featuresTitle": "Everything Included in the",
+    "featuresTitleHighlight": "Mastery Course",
+    "featuresDescription": "A complete curriculum designed to give you the skills, strategy, and live guidance to conquer any prop firm challenge.",
+    "features": [
+      {
+        "title": "Personalized Challenge Strategy",
+        "description": "A custom trading plan tailored to your prop firm's rules, drawdown limits, and profit targets."
+      },
+      {
+        "title": "Daily Trade Analysis",
+        "description": "Daily market analysis and trade setups so you always know what to look for and when to act."
+      },
+      {
+        "title": "Risk Management Framework",
+        "description": "Strict professional risk rules to protect your account and keep you within challenge limits at all times."
+      },
+      {
+        "title": "Direct Messaging Support",
+        "description": "Reach out anytime via Telegram or Discord for live feedback on your trades and setup reviews."
+      },
+      {
+        "title": "Live Trading Session at NY Session",
+        "description": "Join live trading sessions during the New York session — trade alongside the mentor in real time with full breakdowns."
+      },
+      {
+        "title": "Live Analysis Session",
+        "description": "Real-time market analysis sessions covering key levels, trade setups, and bias for the trading day ahead."
+      }
+    ],
+    "certBadge": "Proven Results",
+    "certTitle": "My Funded Account",
+    "certTitleHighlight": "Certificates",
+    "certDescription": "Real prop firm challenges passed. Real funded accounts. Real payouts — this is what you're getting guided by.",
+    "pricingTitle": "Enroll in the",
+    "pricingTitleHighlight": "PropFirm Mastery Course",
+    "pricingDescription": "One flat monthly rate. Cancel anytime after you pass.",
+    "pricingBadge": "Most Effective",
+    "planName": "PropFirm Mastery Course",
+    "perMonth": "month",
+    "planSubtitle": "Active support until you pass your challenge",
+    "includeItems": [
+      "Personalized prop firm challenge strategy",
+      "Daily market analysis & trade setups",
+      "Professional risk management rules",
+      "Direct support via Telegram & Discord",
+      "Live Trading Session at NY Session",
+      "Live Analysis Session",
+      "Unlimited trade review & feedback",
+      "Strategy adjustment based on your results"
+    ],
+    "perMonthLabel": "per month",
+    "urgencyText": "Limited spots available. Enroll now to secure your place.",
+    "liveSessionsTitle": "Live Learning Sessions",
+    "liveSessionsSubtitle": "Three daily sessions covering all major trading sessions and market analysis",
+    "sessions": [
+      {
+        "title": "London Trading Session",
+        "description": "Live trading with focus on EUR pairs and major indices",
+        "time": "9:00 AM - 12:00 PM GMT"
+      },
+      {
+        "title": "NY Trading Session",
+        "description": "Live trading with focus on USD pairs and market correlations",
+        "time": "1:00 PM - 4:00 PM EST"
+      },
+      {
+        "title": "Market Analysis",
+        "description": "Deep dive into technical analysis, patterns, and economic events",
+        "time": "5:00 PM GMT Daily"
+      }
+    ],
+    "masterTitle": "What You'll Master",
+    "masterSubtitle": "Everything you need to pass your prop firm challenge and become a professional trader",
+    "masterItems": [
+      "Find your trading edge",
+      "Create and test your own trading system",
+      "Master risk management principles",
+      "Live trading sessions with expert mentors",
+      "Real-time market analysis and setups",
+      "Prop firm strategy optimization",
+      "Direct feedback on your trading",
+      "Access to trading journal templates"
+    ]
   }
 }

@@ -20,13 +20,13 @@ export function Navbar() {
         </Link>
 
         <div className="hidden items-center gap-4 md:flex">
-          <Link href="/crypto" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+          <Link href="/crypto" className="text-sm font-medium text-yellow-500 transition-colors hover:text-yellow-400">
             {t('crypto')}
           </Link>
-          <Link href="/gold-pro" className="text-sm font-medium text-yellow-500 transition-colors hover:text-yellow-400">
-            {t('goldPro')}
+          <Link href="/funded-challenge" className="text-sm font-medium text-primary transition-colors hover:text-primary/80">
+            {t('fundedChallenge')}
           </Link>
-          <Link href="/dashboard" className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground">
+          <Link href="/dashboard" className="text-sm font-medium text-yellow-500 transition-colors hover:text-yellow-400">
             {t("dashboard")}
           </Link>
           <LanguageSwitcher />
@@ -49,21 +49,21 @@ export function Navbar() {
         <div className="border-t border-border bg-background px-4 pb-4 md:hidden">
           <div className="flex flex-col gap-3 pt-3">
             <Link href="/crypto"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="text-sm font-medium text-yellow-500 transition-colors hover:text-yellow-400"
               onClick={() => setOpen(false)}
             >
               {t('crypto')}
             </Link>
             <Link
-              href="/gold-pro"
-              className="text-sm font-medium text-yellow-500 transition-colors hover:text-yellow-400"
+              href="/funded-challenge"
+              className="text-sm font-medium text-primary transition-colors hover:text-primary/80"
               onClick={() => setOpen(false)}
             >
-              {t('goldPro')}
+              {t('fundedChallenge')}
             </Link>
             <Link
               href="/dashboard"
-              className="text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
+              className="text-sm font-medium text-yellow-500 transition-colors hover:text-yellow-400"
               onClick={() => setOpen(false)}
             >
               {t("dashboard")}
