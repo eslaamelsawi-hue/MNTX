@@ -23,6 +23,7 @@ async function getAllOrders() {
       plan: d.plan,
       amount: d.amount,
       email: d.email,
+      telegramUsername: d.telegram_username || undefined,
       address: d.address,
       chain: d.chain,
       status: d.status,

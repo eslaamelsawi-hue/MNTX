@@ -50,6 +50,8 @@ const translations = {
     secureCheckout: "Secure Checkout",
     emailLabel: "Email for confirmation",
     emailPlaceholder: "your@email.com",
+    telegramLabel: "Telegram username (optional)",
+    telegramPlaceholder: "@username",
     features: "What's included",
     perMonth: "/month",
     oneTime: "One-time payment",
@@ -75,6 +77,8 @@ const translations = {
     secureCheckout: "دفع آمن",
     emailLabel: "البريد الإلكتروني للتأكيد",
     emailPlaceholder: "بريدك@الإلكتروني.com",
+    telegramLabel: "اسم مستخدم تيليجرام (اختياري)",
+    telegramPlaceholder: "@username",
     features: "ماذا يشمل",
     perMonth: "/شهر",
     oneTime: "دفعة واحدة",
@@ -121,6 +125,7 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
   const validInitialPlan = initialPlan && products.some((p) => p.id === initialPlan) ? initialPlan : null
   const [selectedPlan, setSelectedPlan] = useState<string | null>(validInitialPlan)
   const [email, setEmail] = useState("")
+  const [telegram, setTelegram] = useState("")
   const [couponCode, setCouponCode] = useState("")
   const [couponLoading, setCouponLoading] = useState(false)
   const [couponError, setCouponError] = useState("")
@@ -351,6 +356,16 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
               />
+              <Label htmlFor="checkout-telegram" className="mb-2 mt-4 block text-sm font-medium">
+                {t.telegramLabel}
+              </Label>
+              <Input
+                id="checkout-telegram"
+                type="text"
+                placeholder={t.telegramPlaceholder}
+                value={telegram}
+                onChange={(e) => setTelegram(e.target.value)}
+              />
             </CardContent>
           </Card>
 
@@ -394,6 +409,7 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
               <OKXPayButton
                 plan={selectedPlan}
                 prefillEmail={email || undefined}
+                prefillTelegram={telegram || undefined}
                 couponCode={appliedCoupon?.code}
                 className="w-full justify-start gap-3 border border-border bg-transparent text-foreground hover:border-primary/50 hover:bg-primary/5 h-auto p-4"
               />
@@ -401,6 +417,7 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
               <NowPaymentsButton
                 plan={selectedPlan}
                 prefillEmail={email || undefined}
+                prefillTelegram={telegram || undefined}
                 couponCode={appliedCoupon?.code}
                 className="w-full justify-start gap-3 border border-border bg-transparent text-foreground hover:border-primary/50 hover:bg-primary/5 h-auto p-4"
               />

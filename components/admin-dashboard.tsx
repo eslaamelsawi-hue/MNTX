@@ -69,6 +69,7 @@ type OKXOrder = {
   plan: string
   amount: string
   email: string
+  telegramUsername?: string
   address: string
   chain: string
   status: "pending" | "paid" | "expired"
@@ -1453,6 +1454,7 @@ export function AdminDashboard() {
                       <TableHead>Order ID</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Email</TableHead>
+                      <TableHead>Telegram</TableHead>
                       <TableHead>Plan</TableHead>
                       <TableHead>Amount</TableHead>
                       <TableHead>Network</TableHead>
@@ -1488,6 +1490,18 @@ export function AdminDashboard() {
                                 <Copy className="h-3 w-3" />
                               </button>
                             </div>
+                          </TableCell>
+                          <TableCell>
+                            {order.telegramUsername ? (
+                              <div className="flex items-center gap-1">
+                                <span className="max-w-[120px] truncate text-sm">@{order.telegramUsername}</span>
+                                <button onClick={() => copyToClipboard(`@${order.telegramUsername}`, order.orderId + "-telegram")} className="shrink-0 text-muted-foreground hover:text-foreground">
+                                  <Copy className="h-3 w-3" />
+                                </button>
+                              </div>
+                            ) : (
+                              <span className="text-xs text-muted-foreground">—</span>
+                            )}
                           </TableCell>
                           <TableCell>
                             <span className="rounded-full bg-primary/10 px-2 py-0.5 text-xs font-medium text-primary capitalize">

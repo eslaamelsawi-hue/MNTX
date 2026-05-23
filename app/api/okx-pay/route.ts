@@ -57,7 +57,7 @@ function generateSignature(
 
 export async function POST(request: Request) {
   try {
-    const { plan, email, couponCode } = await request.json()
+    const { plan, email, telegram, couponCode } = await request.json()
 
     const accessKey = process.env.OKX_ACCESS_KEY
     const secretKey = process.env.OKX_SECRET_KEY
@@ -120,6 +120,7 @@ export async function POST(request: Request) {
       plan,
       amount: finalAmountStr,
       email,
+      telegramUsername: typeof telegram === "string" && telegram.trim() ? telegram.trim().replace(/^@/, "") : undefined,
       address: entry.addr,
       chain: entry.chain,
       status: "pending",

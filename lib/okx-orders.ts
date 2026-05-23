@@ -5,6 +5,7 @@ export type OKXOrder = {
   plan: string
   amount: string
   email: string
+  telegramUsername?: string
   address: string
   chain: string
   status: "pending" | "paid" | "expired"
@@ -20,6 +21,7 @@ export async function createOrder(order: OKXOrder): Promise<void> {
     plan: order.plan,
     amount: order.amount,
     email: order.email,
+    telegram_username: order.telegramUsername || null,
     address: order.address,
     chain: order.chain,
     status: order.status,
@@ -40,6 +42,7 @@ export async function getOrder(orderId: string): Promise<OKXOrder | null> {
     plan: data.plan,
     amount: data.amount,
     email: data.email,
+    telegramUsername: data.telegram_username || undefined,
     address: data.address,
     chain: data.chain,
     status: data.status,
@@ -74,6 +77,7 @@ export async function getPendingOrders(): Promise<OKXOrder[]> {
     plan: d.plan,
     amount: d.amount,
     email: d.email,
+    telegramUsername: d.telegram_username || undefined,
     address: d.address,
     chain: d.chain,
     status: d.status,

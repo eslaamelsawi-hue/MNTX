@@ -293,11 +293,13 @@ export function ExtendMentorship() {
                   <NowPaymentsButton
                     plan={selectedPlan ?? ""}
                     prefillEmail={email}
+                    prefillTelegram={telegram}
                     className="w-full text-base bg-transparent border border-primary/30 text-foreground hover:bg-primary hover:text-primary-foreground"
                   />
                   <OKXPayButton
                     plan={selectedPlan ?? ""}
                     prefillEmail={email}
+                    prefillTelegram={telegram}
                     className="w-full text-base bg-transparent border border-primary/30 text-foreground hover:bg-primary hover:text-primary-foreground"
                   />
                 </>

@@ -74,16 +74,19 @@ type OKXPayData = {
 function OKXPayModal({
   plan,
   prefillEmail,
+  prefillTelegram,
   couponCode,
   onClose,
 }: {
   plan: string
   prefillEmail?: string
+  prefillTelegram?: string
   couponCode?: string
   onClose: () => void
 }) {
   const locale = useLocale()
   const [email, setEmail] = useState(prefillEmail || "")
+  const [telegram, setTelegram] = useState(prefillTelegram || "")
   const [loading, setLoading] = useState(false)
   const [verifying, setVerifying] = useState(false)
   const [payInfo, setPayInfo] = useState<OKXPayData | null>(null)
@@ -98,7 +101,7 @@ function OKXPayModal({
     fetch("/api/okx-pay", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan, email: prefillEmail, couponCode }),
+      body: JSON.stringify({ plan, email: prefillEmail, telegram, couponCode }),
     })
       .then((r) => r.json())
       .then((data) => {
@@ -122,7 +125,7 @@ function OKXPayModal({
       const res = await fetch("/api/okx-pay", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, email, couponCode }),
+        body: JSON.stringify({ plan, email, telegram, couponCode }),
       })
       const data = await res.json()
       if (data.address) setPayInfo(data)
@@ -163,6 +166,13 @@ function OKXPayModal({
               placeholder="your@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
+            />
+            <input
+              type="text"
+              placeholder="Telegram username (optional)"
+              value={telegram}
+              onChange={(e) => setTelegram(e.target.value)}
               className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
             />
             <Button type="button" className="mb-2 w-full bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" onClick={handleGetDetails}>
@@ -231,18 +241,20 @@ export function OKXPayButton({
   plan,
   className,
   prefillEmail,
+  prefillTelegram,
   couponCode,
 }: {
   plan: string
   className?: string
   prefillEmail?: string
+  prefillTelegram?: string
   couponCode?: string
 }) {
   const locale = useLocale()
   const [open, setOpen] = useState(false)
   return (
     <>
-      {open && <OKXPayModal plan={plan} prefillEmail={prefillEmail} couponCode={couponCode} onClose={() => setOpen(false)} />}
+      {open && <OKXPayModal plan={plan} prefillEmail={prefillEmail} prefillTelegram={prefillTelegram} couponCode={couponCode} onClose={() => setOpen(false)} />}
       <Button type="button" className={className} size="lg" onClick={() => setOpen(true)}>
         <svg className="mr-2 h-5 w-5" viewBox="0 0 32 32" fill="none" aria-hidden="true">
           <rect width="32" height="32" rx="6" fill="#000"/>
@@ -260,16 +272,19 @@ export function NowPaymentsButton({
   plan,
   className,
   prefillEmail,
+  prefillTelegram,
   couponCode,
 }: {
   plan: string
   className?: string
   prefillEmail?: string
+  prefillTelegram?: string
   couponCode?: string
 }) {
   const locale = useLocale()
   const [open, setOpen] = useState(false)
   const [email, setEmail] = useState(prefillEmail || "")
+  const [telegram, setTelegram] = useState(prefillTelegram || "")
   const [loading, setLoading] = useState(false)
 
   const handlePay = async (emailToUse: string) => {
@@ -278,7 +293,7 @@ export function NowPaymentsButton({
       const res = await fetch("/api/nowpayments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, email: emailToUse, couponCode }),
+        body: JSON.stringify({ plan, email: emailToUse, telegram, couponCode }),
       })
       const data = await res.json()
       if (data.url) window.location.href = data.url
@@ -304,6 +319,13 @@ export function NowPaymentsButton({
               placeholder="your@email.com"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
+              className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
+            />
+            <input
+              type="text"
+              placeholder="Telegram username (optional)"
+              value={telegram}
+              onChange={(e) => setTelegram(e.target.value)}
               className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
             />
             <Button type="button" className="mb-2 w-full bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" onClick={() => handlePay(email)} disabled={loading}>
