@@ -1,12 +1,12 @@
 import "server-only"
 import { createAdminClient } from "@/lib/supabase/admin"
 
-// Hours granted per extend plan (4 hours/month)
+// Hours granted per extend plan (1 session = 1 hour)
 export const EXTEND_PLAN_HOURS: Record<string, number> = {
-  "extend-1m": 4,
-  "extend-2m": 8,
-  "extend-3m": 12,
-  "extend-6m": 24,
+  "extend-1m": 2,
+  "extend-2m": 4,
+  "extend-3m": 10,
+  "extend-6m": 20,
 }
 
 /**

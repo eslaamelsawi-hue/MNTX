@@ -23,28 +23,28 @@ const plans = [
     labelKey: "plan1Label",
     priceLabel: "$199",
     badgeKey: null,
-    featureKeys: ["featureZoom", "featureCommunity", "featureStrategy", "featureTrade"],
+    featureKeys: ["featureSessions1", "featureCommunity", "featureStrategy", "featureTrade"],
   },
   {
     id: "extend-2m",
     labelKey: "plan2Label",
     priceLabel: "$379",
     badgeKey: null,
-    featureKeys: ["featureZoom", "featureCommunity", "featureStrategy", "featureTrade"],
+    featureKeys: ["featureSessions2", "featureCommunity", "featureStrategy", "featureTrade"],
   },
   {
     id: "extend-3m",
     labelKey: "plan3Label",
     priceLabel: "$699",
     badgeKey: "badgePopular",
-    featureKeys: ["featureZoom", "featureCommunity", "featureStrategy", "featureTrade", "featureProgress"],
+    featureKeys: ["featureSessions3", "featureCommunity", "featureStrategy", "featureTrade", "featureProgress"],
   },
   {
     id: "extend-6m",
     labelKey: "plan4Label",
     priceLabel: "$1,499",
     badgeKey: "badgeBestValue",
-    featureKeys: ["featureZoom", "featureCommunity", "featureStrategy", "featureTrade", "featureProgress", "featurePriority"],
+    featureKeys: ["featureSessions6", "featureCommunity", "featureStrategy", "featureTrade", "featureProgress", "featurePriority"],
   },
 ]
 
