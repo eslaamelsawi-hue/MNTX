@@ -50,37 +50,39 @@ export async function POST(request: NextRequest) {
   }
 
   // Enforce max 2 sessions per calendar week (Monday-Sunday) per user.
+  // Two-step query: first get slot IDs in the target week, then count matching bookings.
+  // (Filtering on a joined table via .gte("related.col") is unreliable in PostgREST.)
   const slotDate = new Date(`${slot.date}T00:00:00Z`);
-  const dayOfWeek = slotDate.getUTCDay();
-  const daysSinceMonday = (dayOfWeek + 6) % 7;
+  const daysSinceMonday = (slotDate.getUTCDay() + 6) % 7;
   const weekStartDate = new Date(slotDate);
   weekStartDate.setUTCDate(slotDate.getUTCDate() - daysSinceMonday);
   const weekEndDate = new Date(weekStartDate);
   weekEndDate.setUTCDate(weekStartDate.getUTCDate() + 6);
-
   const weekStart = weekStartDate.toISOString().split("T")[0];
   const weekEnd = weekEndDate.toISOString().split("T")[0];
 
-  const { data: weeklyBookings, error: weeklyBookingsError } = await adminDb
-    .from("bookings")
-    .select("id, availability_slots!inner(date)")
-    .eq("client_email", normalizedEmail)
-    .in("status", ["confirmed", "completed"])
-    .gte("availability_slots.date", weekStart)
-    .lte("availability_slots.date", weekEnd);
+  const { data: slotsInWeek } = await adminDb
+    .from("availability_slots")
+    .select("id")
+    .gte("date", weekStart)
+    .lte("date", weekEnd);
 
-  if (weeklyBookingsError) {
-    return NextResponse.json(
-      { error: weeklyBookingsError.message },
-      { status: 500 }
-    );
-  }
+  const weekSlotIds = (slotsInWeek || []).map((s) => s.id);
 
-  if ((weeklyBookings?.length || 0) >= 2) {
-    return NextResponse.json(
-      { error: "weeklyLimitReached" },
-      { status: 403 }
-    );
+  if (weekSlotIds.length > 0) {
+    const { count: weeklyCount } = await adminDb
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("client_email", normalizedEmail)
+      .in("status", ["confirmed", "completed"])
+      .in("slot_id", weekSlotIds);
+
+    if ((weeklyCount || 0) >= 2) {
+      return NextResponse.json(
+        { error: "weeklyLimitReached" },
+        { status: 403 }
+      );
+    }
   }
 
   // Create Zoom meeting
@@ -135,6 +137,10 @@ export async function POST(request: NextRequest) {
       .from("availability_slots")
       .update({ is_booked: false, updated_at: new Date().toISOString() })
       .eq("id", slot_id);
+    // DB trigger raises this when the weekly limit is exceeded at the DB level
+    if (bookingError.message?.includes("weeklyLimitReached")) {
+      return NextResponse.json({ error: "weeklyLimitReached" }, { status: 403 });
+    }
     return NextResponse.json(
       { error: bookingError.message },
       { status: 500 }
@@ -234,7 +240,7 @@ export async function POST(request: NextRequest) {
     console.error("Notion event creation failed:", e);
   }
 
-  return NextResponse.json({ booking, zoom: zoomData });
+  return NextResponse.json({ booking, zoom: zoomData, zoom_join_url: zoomData?.join_url || booking.zoom_join_url || null });
 }
 
 export async function GET(request: NextRequest) {

@@ -22,26 +22,33 @@ export async function POST(req: NextRequest) {
 
   if (slot_date) {
     const slotDate = new Date(`${slot_date}T00:00:00Z`)
-    const dayOfWeek = slotDate.getUTCDay()
-    const daysSinceMonday = (dayOfWeek + 6) % 7
+    const daysSinceMonday = (slotDate.getUTCDay() + 6) % 7
     const weekStartDate = new Date(slotDate)
     weekStartDate.setUTCDate(slotDate.getUTCDate() - daysSinceMonday)
     const weekEndDate = new Date(weekStartDate)
     weekEndDate.setUTCDate(weekStartDate.getUTCDate() + 6)
-
     const weekStart = weekStartDate.toISOString().split("T")[0]
     const weekEnd = weekEndDate.toISOString().split("T")[0]
 
-    const { data: weeklyBookings } = await supabase
-      .from("bookings")
-      .select("id, availability_slots!inner(date)")
-      .eq("client_email", normalizedEmail)
-      .in("status", ["confirmed", "completed"])
-      .gte("availability_slots.date", weekStart)
-      .lte("availability_slots.date", weekEnd)
+    const { data: slotsInWeek } = await supabase
+      .from("availability_slots")
+      .select("id")
+      .gte("date", weekStart)
+      .lte("date", weekEnd)
 
-    if ((weeklyBookings?.length || 0) >= 2) {
-      return NextResponse.json({ allowed: false, remaining_hours: sub.remaining_hours, weekly_limit_reached: true })
+    const weekSlotIds = (slotsInWeek || []).map((s: { id: string }) => s.id)
+
+    if (weekSlotIds.length > 0) {
+      const { count: weeklyCount } = await supabase
+        .from("bookings")
+        .select("id", { count: "exact", head: true })
+        .eq("client_email", normalizedEmail)
+        .in("status", ["confirmed", "completed"])
+        .in("slot_id", weekSlotIds)
+
+      if ((weeklyCount || 0) >= 2) {
+        return NextResponse.json({ allowed: false, remaining_hours: sub.remaining_hours, weekly_limit_reached: true })
+      }
     }
   }
 
