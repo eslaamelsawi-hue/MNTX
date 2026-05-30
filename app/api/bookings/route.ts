@@ -6,6 +6,7 @@ export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const body = await request.json();
   const { slot_id, client_name, client_email, client_phone, client_message, duration } = body;
+  const normalizedEmail = client_email?.toLowerCase().trim();
 
   if (!slot_id || !client_name || !client_email || !duration) {
     return NextResponse.json(
@@ -34,7 +35,7 @@ export async function POST(request: NextRequest) {
   const { data: activeSub } = await adminDb
     .from("user_subscriptions")
     .select("id, remaining_hours")
-    .eq("client_email", client_email.toLowerCase().trim())
+    .eq("client_email", normalizedEmail)
     .eq("status", "active")
     .order("created_at", { ascending: false })
     .limit(1)
@@ -44,6 +45,40 @@ export async function POST(request: NextRequest) {
   if (!activeSub || activeSub.remaining_hours < hoursNeeded) {
     return NextResponse.json(
       { error: "noHoursRemaining" },
+      { status: 403 }
+    );
+  }
+
+  // Enforce max 2 sessions per calendar week (Monday-Sunday) per user.
+  const slotDate = new Date(`${slot.date}T00:00:00Z`);
+  const dayOfWeek = slotDate.getUTCDay();
+  const daysSinceMonday = (dayOfWeek + 6) % 7;
+  const weekStartDate = new Date(slotDate);
+  weekStartDate.setUTCDate(slotDate.getUTCDate() - daysSinceMonday);
+  const weekEndDate = new Date(weekStartDate);
+  weekEndDate.setUTCDate(weekStartDate.getUTCDate() + 6);
+
+  const weekStart = weekStartDate.toISOString().split("T")[0];
+  const weekEnd = weekEndDate.toISOString().split("T")[0];
+
+  const { data: weeklyBookings, error: weeklyBookingsError } = await adminDb
+    .from("bookings")
+    .select("id, availability_slots!inner(date)")
+    .eq("client_email", normalizedEmail)
+    .in("status", ["confirmed", "completed"])
+    .gte("availability_slots.date", weekStart)
+    .lte("availability_slots.date", weekEnd);
+
+  if (weeklyBookingsError) {
+    return NextResponse.json(
+      { error: weeklyBookingsError.message },
+      { status: 500 }
+    );
+  }
+
+  if ((weeklyBookings?.length || 0) >= 2) {
+    return NextResponse.json(
+      { error: "weeklyLimitReached" },
       { status: 403 }
     );
   }
@@ -113,7 +148,7 @@ export async function POST(request: NextRequest) {
     const { data: activeSub } = await adminDb
       .from("user_subscriptions")
       .select("id, used_hours")
-      .eq("client_email", client_email.toLowerCase().trim())
+      .eq("client_email", normalizedEmail)
       .eq("status", "active")
       .order("created_at", { ascending: false })
       .limit(1)

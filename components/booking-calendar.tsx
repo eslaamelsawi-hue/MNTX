@@ -163,7 +163,14 @@ export default function BookingCalendar() {
       const data = await res.json()
 
       if (!res.ok) {
-        setError(data.error === "noHoursRemaining" ? t("noHoursError") : (data.error || t("errorBooking")))
+        const mappedError =
+          data.error === "noHoursRemaining"
+            ? t("noHoursError")
+            : data.error === "weeklyLimitReached"
+              ? t("weeklyLimitError")
+              : data.error || t("errorBooking")
+
+        setError(mappedError)
         return
       }
 

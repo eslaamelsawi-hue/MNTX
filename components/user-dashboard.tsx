@@ -45,7 +45,7 @@ const translations: Record<string, Record<string, string>> = {
     min: "min",
     subscriptions: "Your Subscriptions",
     bookSession: "Book Your Session",
-    sessionNotice: "Each session is 1 hour per week (4 hours/month). Taking 2 sessions/week or exceeding 1 hour counts as multiple sessions.",
+    sessionNotice: "Each session is 1 hour per week (4 hours/month). Maximum 2 sessions per week; taking 2 sessions/week or exceeding 1 hour counts as multiple sessions.",
   },
   ar: {
     title: "\u0644\u0648\u062d\u0629 \u0627\u0644\u062a\u062d\u0643\u0645",
