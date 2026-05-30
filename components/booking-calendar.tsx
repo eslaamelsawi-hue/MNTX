@@ -57,27 +57,30 @@ export default function BookingCalendar() {
   const [emailChecked, setEmailChecked] = useState(false)
   const [emailAllowed, setEmailAllowed] = useState(false)
   const [remainingHours, setRemainingHours] = useState(0)
+  const [weeklyLimitReached, setWeeklyLimitReached] = useState(false)
   const [verifyingEmail, setVerifyingEmail] = useState(false)
 
   const currentStepIndex = STEPS.indexOf(step)
 
   const verifyEmail = async (email: string) => {
-    if (!email || !email.includes("@")) { setEmailChecked(false); setEmailAllowed(false); return }
+    if (!email || !email.includes("@")) { setEmailChecked(false); setEmailAllowed(false); setWeeklyLimitReached(false); return }
     setVerifyingEmail(true)
     try {
       const res = await fetch("/api/check-hours", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() }),
+        body: JSON.stringify({ email: email.trim(), slot_date: selectedSlot?.date }),
       })
       const data = await res.json()
       setEmailChecked(true)
       setEmailAllowed(!!data.allowed)
       setRemainingHours(data.remaining_hours || 0)
+      setWeeklyLimitReached(!!data.weekly_limit_reached)
     } catch {
       setEmailChecked(true)
       setEmailAllowed(false)
       setRemainingHours(0)
+      setWeeklyLimitReached(false)
     }
     setVerifyingEmail(false)
   }
@@ -198,6 +201,7 @@ export default function BookingCalendar() {
     setEmailChecked(false)
     setEmailAllowed(false)
     setRemainingHours(0)
+    setWeeklyLimitReached(false)
     const now = new Date()
     fetchMonthSlots(format(now, "yyyy-MM"))
   }
@@ -432,7 +436,7 @@ export default function BookingCalendar() {
                           type="email"
                           required
                           value={formData.client_email}
-                          onChange={(e) => { setFormData((p) => ({ ...p, client_email: e.target.value })); setEmailChecked(false); setEmailAllowed(false) }}
+                          onChange={(e) => { setFormData((p) => ({ ...p, client_email: e.target.value })); setEmailChecked(false); setEmailAllowed(false); setWeeklyLimitReached(false) }}
                           onBlur={(e) => verifyEmail(e.target.value)}
                           placeholder={t("emailPlaceholder")}
                           className="pl-10 h-11 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors"
@@ -444,7 +448,7 @@ export default function BookingCalendar() {
                   {/* Hours verification */}
                   {verifyingEmail && <div className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-3.5 w-3.5 animate-spin" />{t("verifyingEmail")}</div>}
                   {emailChecked && !verifyingEmail && emailAllowed && <div className="flex items-center gap-2 rounded-xl bg-green-500/10 border border-green-500/20 px-4 py-3"><CheckCircle2 className="h-4 w-4 text-green-500" /><p className="text-sm text-green-600 dark:text-green-400">{t("hoursAvailable", { hours: remainingHours })}</p></div>}
-                  {emailChecked && !verifyingEmail && !emailAllowed && <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-4 py-3"><p className="text-sm text-destructive">{t("noHoursError")}</p></div>}
+                  {emailChecked && !verifyingEmail && !emailAllowed && <div className="rounded-xl bg-destructive/10 border border-destructive/20 px-4 py-3"><p className="text-sm text-destructive">{weeklyLimitReached ? t("weeklyLimitError") : t("noHoursError")}</p></div>}
 
                   {/* Phone */}
                   <div className="space-y-2">
