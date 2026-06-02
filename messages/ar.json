@@ -481,7 +481,9 @@
     "verifyingEmail": "جاري التحقق من اشتراكك...",
     "hoursAvailable": "لديك {hours} ساعات إرشاد متبقية.",
     "noHoursError": "ليس لديك ساعات إرشاد. يرجى شراء خطة لحجز الجلسات.",
-    "weeklyLimitError": "يمكنك حجز جلستين كحد أقصى في الأسبوع."
+    "weeklyLimitError": "يمكنك حجز جلستين كحد أقصى في الأسبوع.",
+    "prevDay": "اليوم السابق بتوقيتك",
+    "nextDay": "اليوم التالي بتوقيتك"
   },
   "fundedChallenge": {
     "badge": "إتقان PropFirm",

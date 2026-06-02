@@ -36,6 +36,8 @@ import {
   DollarSign,
   Mail,
   Copy,
+  Settings,
+  Save,
 } from "lucide-react"
 
 type Slot = {
@@ -156,6 +158,53 @@ export function AdminDashboard() {
     expires_at: "",
   })
   const [couponSaving, setCouponSaving] = useState(false)
+
+  // Settings state
+  const [weeklyLimit, setWeeklyLimit] = useState<string>("2")
+  const [weeklyLimitInput, setWeeklyLimitInput] = useState<string>("2")
+  const [settingsSaving, setSettingsSaving] = useState(false)
+  const [settingsMessage, setSettingsMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+
+  const fetchSettings = useCallback(async () => {
+    try {
+      const res = await fetch("/api/admin/settings")
+      const data = await res.json()
+      if (data.settings?.weekly_booking_limit) {
+        setWeeklyLimit(data.settings.weekly_booking_limit)
+        setWeeklyLimitInput(data.settings.weekly_booking_limit)
+      }
+    } catch (e) {
+      console.error("Failed to fetch settings:", e)
+    }
+  }, [])
+
+  const handleSaveWeeklyLimit = async () => {
+    const num = parseInt(weeklyLimitInput)
+    if (isNaN(num) || num < 1 || num > 20) {
+      setSettingsMessage({ type: "error", text: "Limit must be a number between 1 and 20." })
+      return
+    }
+    setSettingsSaving(true)
+    setSettingsMessage(null)
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "weekly_booking_limit", value: num }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setWeeklyLimit(String(num))
+        setSettingsMessage({ type: "success", text: "Weekly limit updated successfully." })
+      } else {
+        setSettingsMessage({ type: "error", text: data.error || "Failed to save." })
+      }
+    } catch {
+      setSettingsMessage({ type: "error", text: "Something went wrong." })
+    }
+    setSettingsSaving(false)
+    setTimeout(() => setSettingsMessage(null), 4000)
+  }
 
   // Helper function to format date in local timezone (not UTC)
   // Helper function to format date in Cairo timezone
@@ -298,7 +347,8 @@ export function AdminDashboard() {
     fetchArticles()
     fetchOrders()
     fetchCoupons()
-  }, [fetchBookings, fetchSlots, fetchOrders])
+    fetchSettings()
+  }, [fetchBookings, fetchSlots, fetchOrders, fetchSettings])
 
   const formatTime = (time: string) => {
     const [h, m] = time.split(":")
@@ -732,6 +782,10 @@ export function AdminDashboard() {
             <TabsTrigger value="orders">Orders</TabsTrigger>
             <TabsTrigger value="coupons">Coupons</TabsTrigger>
             <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
+            <TabsTrigger value="settings">
+              <Settings className="mr-1.5 h-3.5 w-3.5" />
+              Settings
+            </TabsTrigger>
           </TabsList>
 
           {/* Bookings Tab */}
@@ -1832,6 +1886,68 @@ export function AdminDashboard() {
           {/* Subscriptions Tab */}
           <TabsContent value="subscriptions" className="space-y-4">
             <AdminSubscriptions />
+          </TabsContent>
+
+          {/* Settings Tab */}
+          <TabsContent value="settings" className="space-y-6">
+            <h2 className="text-xl font-semibold text-foreground">Settings</h2>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <CalendarDays className="h-5 w-5 text-primary" />
+                  Booking Rules
+                </CardTitle>
+                <CardDescription>
+                  Control how many sessions clients can book per week.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="weekly-limit">Maximum sessions per week</Label>
+                  <p className="text-xs text-muted-foreground">
+                    Current limit: <span className="font-semibold text-foreground">{weeklyLimit}</span> session{parseInt(weeklyLimit) !== 1 ? "s" : ""} per week.
+                    Changes take effect immediately for all new bookings.
+                  </p>
+                  <div className="flex items-center gap-3 max-w-xs">
+                    <Input
+                      id="weekly-limit"
+                      type="number"
+                      min={1}
+                      max={20}
+                      value={weeklyLimitInput}
+                      onChange={(e) => setWeeklyLimitInput(e.target.value)}
+                      className="w-24"
+                    />
+                    <Button
+                      onClick={handleSaveWeeklyLimit}
+                      disabled={settingsSaving || weeklyLimitInput === weeklyLimit}
+                      size="sm"
+                    >
+                      {settingsSaving ? (
+                        <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                      ) : (
+                        <Save className="mr-2 h-4 w-4" />
+                      )}
+                      Save
+                    </Button>
+                  </div>
+                </div>
+
+                {settingsMessage && (
+                  <div className={`flex items-center gap-2 rounded-lg px-4 py-3 text-sm ${
+                    settingsMessage.type === "success"
+                      ? "bg-green-500/10 border border-green-500/20 text-green-600 dark:text-green-400"
+                      : "bg-destructive/10 border border-destructive/20 text-destructive"
+                  }`}>
+                    {settingsMessage.type === "success"
+                      ? <CheckCircle2 className="h-4 w-4 shrink-0" />
+                      : <XCircle className="h-4 w-4 shrink-0" />}
+                    {settingsMessage.text}
+                  </div>
+                )}
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>

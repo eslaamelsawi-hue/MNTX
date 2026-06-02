@@ -30,6 +30,47 @@ type Step = "calendar" | "slots" | "form" | "success"
 
 const STEPS: Step[] = ["calendar", "slots", "form", "success"]
 
+// Convert a Cairo-local time string to the visitor's timezone.
+// Slots are stored as Africa/Cairo local times (UTC+2, no DST).
+function cairoToLocal(
+  slotDate: string,
+  timeStr: string,
+  userTz: string
+): { displayTime: string; tzAbbr: string; dayOffset: number } {
+  // Compute Cairo's UTC offset in ms for this date
+  const probe = new Date(`${slotDate}T12:00:00Z`)
+  const utcMs = new Date(probe.toLocaleString("en-US", { timeZone: "UTC" })).getTime()
+  const cairoMs = new Date(probe.toLocaleString("en-US", { timeZone: "Africa/Cairo" })).getTime()
+  const cairoOffsetMs = cairoMs - utcMs
+
+  // Treat the Cairo time as UTC, then subtract Cairo's offset → true UTC
+  const normalizedTime = timeStr.length === 5 ? `${timeStr}:00` : timeStr
+  const cairoAsUtc = new Date(`${slotDate}T${normalizedTime}Z`)
+  const trueUtc = new Date(cairoAsUtc.getTime() - cairoOffsetMs)
+
+  const displayTime = new Intl.DateTimeFormat("en-US", {
+    timeZone: userTz,
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: false,
+  }).format(trueUtc)
+
+  const tzAbbr = new Intl.DateTimeFormat("en-US", {
+    timeZone: userTz,
+    timeZoneName: "short",
+  }).format(trueUtc).split(", ").pop() ?? userTz
+
+  const localDate = new Intl.DateTimeFormat("en-CA", {
+    timeZone: userTz,
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+  }).format(trueUtc)
+
+  const dayOffset = localDate < slotDate ? -1 : localDate > slotDate ? 1 : 0
+  return { displayTime, tzAbbr, dayOffset }
+}
+
 export default function BookingCalendar() {
   const t = useTranslations("booking")
 
@@ -59,6 +100,11 @@ export default function BookingCalendar() {
   const [remainingHours, setRemainingHours] = useState(0)
   const [weeklyLimitReached, setWeeklyLimitReached] = useState(false)
   const [verifyingEmail, setVerifyingEmail] = useState(false)
+  const [userTimezone, setUserTimezone] = useState("Africa/Cairo")
+
+  useEffect(() => {
+    setUserTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone)
+  }, [])
 
   const currentStepIndex = STEPS.indexOf(step)
 
@@ -323,6 +369,8 @@ export default function BookingCalendar() {
                   <h2 className="font-semibold text-lg">{t("availableSlots")}</h2>
                   <p className="text-xs text-muted-foreground">
                     {format(selectedDate, "EEEE, MMM d, yyyy")}
+                    {" · "}
+                    {cairoToLocal(format(selectedDate, "yyyy-MM-dd"), "12:00", userTimezone).tzAbbr}
                   </p>
                 </div>
               </div>
@@ -342,29 +390,40 @@ export default function BookingCalendar() {
                   </div>
                 ) : (
                   <div className="grid gap-2.5">
-                    {slots.map((slot) => (
-                      <button
-                        key={slot.id}
-                        type="button"
-                        onClick={() => handleSlotSelect(slot)}
-                        className="group flex items-center justify-between rounded-xl border border-border/50 bg-background/50 px-4 py-3.5 transition-all hover:border-primary/40 hover:bg-primary/5 hover:shadow-md"
-                      >
-                        <span className="flex items-center gap-3">
-                          <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted group-hover:bg-primary/10 transition-colors">
-                            <Clock className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
-                          </div>
-                          <span className="font-medium">
-                            {slot.start_time.slice(0, 5)} {"\u2013"} {slot.end_time.slice(0, 5)}
+                    {slots.map((slot) => {
+                      const localStart = cairoToLocal(slot.date, slot.start_time, userTimezone)
+                      const localEnd = cairoToLocal(slot.date, slot.end_time, userTimezone)
+                      return (
+                        <button
+                          key={slot.id}
+                          type="button"
+                          onClick={() => handleSlotSelect(slot)}
+                          className="group flex items-center justify-between rounded-xl border border-border/50 bg-background/50 px-4 py-3.5 transition-all hover:border-primary/40 hover:bg-primary/5 hover:shadow-md"
+                        >
+                          <span className="flex items-center gap-3">
+                            <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-muted group-hover:bg-primary/10 transition-colors">
+                              <Clock className="h-4 w-4 text-muted-foreground group-hover:text-primary transition-colors" />
+                            </div>
+                            <span className="flex flex-col">
+                              <span className="font-medium">
+                                {localStart.displayTime} {"\u2013"} {localEnd.displayTime}
+                              </span>
+                              {localStart.dayOffset !== 0 && (
+                                <span className="text-xs text-amber-500">
+                                  {localStart.dayOffset < 0 ? t("prevDay") : t("nextDay")}
+                                </span>
+                              )}
+                            </span>
                           </span>
-                        </span>
-                        <div className="flex items-center gap-2">
-                          <Badge variant="secondary" className="font-normal">
-                            {slot.duration} {t("minutes")}
-                          </Badge>
-                          <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
-                        </div>
-                      </button>
-                    ))}
+                          <div className="flex items-center gap-2">
+                            <Badge variant="secondary" className="font-normal">
+                              {slot.duration} {t("minutes")}
+                            </Badge>
+                            <ArrowRight className="h-4 w-4 text-muted-foreground opacity-0 -translate-x-1 group-hover:opacity-100 group-hover:translate-x-0 transition-all" />
+                          </div>
+                        </button>
+                      )
+                    })}
                   </div>
                 )}
               </div>
@@ -391,7 +450,12 @@ export default function BookingCalendar() {
                     <div>
                       <p className="text-sm font-semibold">{t("yourDetails")}</p>
                       <p className="text-xs text-muted-foreground">
-                        {format(selectedDate, "EEE, MMM d")} {"\u00b7"} {selectedSlot.start_time.slice(0, 5)} {"\u2013"} {selectedSlot.end_time.slice(0, 5)}
+                        {format(selectedDate, "EEE, MMM d")} {"\u00b7"}{" "}
+                        {cairoToLocal(selectedSlot.date, selectedSlot.start_time, userTimezone).displayTime}
+                        {" \u2013 "}
+                        {cairoToLocal(selectedSlot.date, selectedSlot.end_time, userTimezone).displayTime}
+                        {" \u00b7 "}
+                        {cairoToLocal(selectedSlot.date, selectedSlot.start_time, userTimezone).tzAbbr}
                       </p>
                     </div>
                   </div>
@@ -547,7 +611,13 @@ export default function BookingCalendar() {
                   </div>
                   <div>
                     <p className="text-xs text-muted-foreground">{t("time")}</p>
-                    <p className="font-medium">{confirmationData.time}</p>
+                    <p className="font-medium">
+                      {cairoToLocal(confirmationData.date, confirmationData.time, userTimezone).displayTime}
+                      {" "}
+                      <span className="text-xs text-muted-foreground font-normal">
+                        {cairoToLocal(confirmationData.date, confirmationData.time, userTimezone).tzAbbr}
+                      </span>
+                    </p>
                   </div>
                 </div>
                 {confirmationData.zoomUrl && (

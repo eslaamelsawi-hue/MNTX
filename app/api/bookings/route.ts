@@ -49,7 +49,15 @@ export async function POST(request: NextRequest) {
     );
   }
 
-  // Enforce max 2 sessions per calendar week (Monday-Sunday) per user.
+  // Read the weekly limit from admin_settings (falls back to 2 if not configured).
+  const { data: limitSetting } = await adminDb
+    .from("admin_settings")
+    .select("value")
+    .eq("key", "weekly_booking_limit")
+    .single();
+  const weeklyLimit = parseInt(limitSetting?.value || "2") || 2;
+
+  // Enforce the weekly session limit.
   // Two-step query: first get slot IDs in the target week, then count matching bookings.
   // (Filtering on a joined table via .gte("related.col") is unreliable in PostgREST.)
   const slotDate = new Date(`${slot.date}T00:00:00Z`);
@@ -77,7 +85,7 @@ export async function POST(request: NextRequest) {
       .in("status", ["confirmed", "completed"])
       .in("slot_id", weekSlotIds);
 
-    if ((weeklyCount || 0) >= 2) {
+    if ((weeklyCount || 0) >= weeklyLimit) {
       return NextResponse.json(
         { error: "weeklyLimitReached" },
         { status: 403 }

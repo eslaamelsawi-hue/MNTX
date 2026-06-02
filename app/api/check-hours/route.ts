@@ -21,6 +21,13 @@ export async function POST(req: NextRequest) {
   }
 
   if (slot_date) {
+    const { data: limitSetting } = await supabase
+      .from("admin_settings")
+      .select("value")
+      .eq("key", "weekly_booking_limit")
+      .single()
+    const weeklyLimit = parseInt(limitSetting?.value || "2") || 2
+
     const slotDate = new Date(`${slot_date}T00:00:00Z`)
     const daysSinceMonday = (slotDate.getUTCDay() + 6) % 7
     const weekStartDate = new Date(slotDate)
@@ -46,7 +53,7 @@ export async function POST(req: NextRequest) {
         .in("status", ["confirmed", "completed"])
         .in("slot_id", weekSlotIds)
 
-      if ((weeklyCount || 0) >= 2) {
+      if ((weeklyCount || 0) >= weeklyLimit) {
         return NextResponse.json({ allowed: false, remaining_hours: sub.remaining_hours, weekly_limit_reached: true })
       }
     }

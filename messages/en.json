@@ -480,7 +480,9 @@
     "verifyingEmail": "Verifying your subscription...",
     "hoursAvailable": "You have {hours} mentorship hours remaining.",
     "noHoursError": "You don't have mentorship hours. Please purchase a plan to book sessions.",
-    "weeklyLimitError": "You can book a maximum of 2 sessions per week."
+    "weeklyLimitError": "You can book a maximum of 2 sessions per week.",
+    "prevDay": "previous day in your timezone",
+    "nextDay": "next day in your timezone"
   },
   "fundedChallenge": {
     "badge": "Prop Firm Mastery",
