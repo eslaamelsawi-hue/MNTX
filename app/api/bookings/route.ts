@@ -5,7 +5,7 @@ import { NextRequest, NextResponse } from "next/server";
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
   const body = await request.json();
-  const { slot_id, client_name, client_email, client_phone, client_message, duration } = body;
+  const { slot_id, client_name, client_email, client_phone, client_message, duration, client_timezone } = body;
   const normalizedEmail = client_email?.toLowerCase().trim();
 
   if (!slot_id || !client_name || !client_email || !duration) {
@@ -135,6 +135,7 @@ export async function POST(request: NextRequest) {
       zoom_meeting_id: zoomData?.id?.toString() || null,
       zoom_join_url: zoomData?.join_url || null,
       zoom_start_url: zoomData?.start_url || null,
+      client_timezone: client_timezone || null,
     })
     .select()
     .single();
@@ -216,6 +217,7 @@ export async function POST(request: NextRequest) {
         start_time: slot.start_time,
         duration,
         zoom_join_url: zoomData?.join_url || null,
+        client_timezone: client_timezone || null,
       }),
     });
     

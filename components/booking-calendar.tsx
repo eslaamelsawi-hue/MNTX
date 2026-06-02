@@ -206,6 +206,7 @@ export default function BookingCalendar() {
           client_phone: formData.client_phone.trim() || undefined,
           client_message: formData.client_message.trim() || undefined,
           duration: selectedSlot.duration,
+          client_timezone: userTimezone,
         }),
       })
 
