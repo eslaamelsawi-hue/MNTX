@@ -2,7 +2,7 @@
 
 import { Navbar } from "@/components/navbar"
 import { Footer } from "@/components/footer"
-import { ClientDashboard } from "@/components/client-dashboard-v2"
+import { ClientDashboard } from "@/components/client-dashboard"
 
 export default function DashboardPage() {
   return (
