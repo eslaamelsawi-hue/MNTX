@@ -24,7 +24,7 @@ export async function POST(req: NextRequest) {
 
   const { data: bookings, error: bookError } = await supabase
     .from("bookings")
-    .select("id, client_name, duration, status, created_at, zoom_join_url, client_timezone, availability_slots(date, start_time, end_time)")
+    .select("id, client_name, duration, status, created_at, zoom_join_url, availability_slots(date, start_time, end_time)")
     .eq("client_email", normalizedEmail)
     .order("created_at", { ascending: false })
 
