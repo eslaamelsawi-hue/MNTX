@@ -233,7 +233,12 @@ function SessionStatusBadge({ status, l }: { status: string; l: Record<string, s
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function ClientDashboard() {
-  const locale = useLocale() as "en" | "ar"
+  let locale: "en" | "ar" = "en"
+  try {
+    locale = useLocale() as "en" | "ar"
+  } catch {
+    locale = "en"
+  }
   const l = t[locale] ?? t.en
   const isRtl = locale === "ar"
 
