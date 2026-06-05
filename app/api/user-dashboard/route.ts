@@ -15,7 +15,12 @@ export async function POST(req: NextRequest) {
     .eq("client_email", normalizedEmail)
     .order("created_at", { ascending: false })
 
-  if (subError) return NextResponse.json({ error: subError.message }, { status: 500 })
+  if (subError) {
+    console.error("Subscription error:", subError)
+    return NextResponse.json({ error: subError.message }, { status: 500 })
+  }
+
+  console.log(`Query for email "${normalizedEmail}" returned:`, subscriptions?.length ?? 0, "subscriptions")
 
   const { data: bookings, error: bookError } = await supabase
     .from("bookings")

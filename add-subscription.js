@@ -35,4 +35,5 @@ async function addSubscription(email) {
   console.log("Hours:", data.total_hours)
 }
 
-addSubscription("eslaamelsawi@gmail.com").catch(console.error)
+const email = process.argv[2] || "eslaamelsawi@gmail.com"
+addSubscription(email).catch(console.error)
