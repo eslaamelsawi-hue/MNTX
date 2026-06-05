@@ -9,7 +9,6 @@ export async function POST(req: NextRequest) {
   const supabase = createAdminClient()
   const normalizedEmail = email.toLowerCase().trim()
 
-  // Get active subscriptions
   const { data: subscriptions, error: subError } = await supabase
     .from("user_subscriptions")
     .select("*")
@@ -18,22 +17,25 @@ export async function POST(req: NextRequest) {
 
   if (subError) return NextResponse.json({ error: subError.message }, { status: 500 })
 
-  // Get booking history
   const { data: bookings, error: bookError } = await supabase
     .from("bookings")
-    .select("id, client_name, duration, status, created_at, availability_slots(date, start_time, end_time)")
+    .select("id, client_name, duration, status, created_at, zoom_join_url, client_timezone, availability_slots(date, start_time, end_time)")
     .eq("client_email", normalizedEmail)
     .order("created_at", { ascending: false })
 
   if (bookError) return NextResponse.json({ error: bookError.message }, { status: 500 })
 
+  const { data: settingsRows } = await supabase
+    .from("admin_settings")
+    .select("key, value")
+    .in("key", ["weekly_zoom_link", "discord_invite", "telegram_group"])
+
+  const settings: Record<string, string> = {}
+  settingsRows?.forEach((s) => { settings[s.key] = s.value })
+
   if (!subscriptions || subscriptions.length === 0) {
-    return NextResponse.json({ found: false, message: "No subscription found for this email" })
+    return NextResponse.json({ found: false })
   }
 
-  return NextResponse.json({ found: true, subscriptions, bookings: bookings || [] })
+  return NextResponse.json({ found: true, subscriptions, bookings: bookings || [], settings })
 }
-
-
-
-
