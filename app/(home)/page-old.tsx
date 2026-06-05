@@ -2,8 +2,6 @@
 
 import { ClientDashboard } from "@/components/client-dashboard"
 
-export const revalidate = 0
-
 export default function RootPage() {
   return (
     <main>
