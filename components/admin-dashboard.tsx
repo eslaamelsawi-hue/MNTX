@@ -2450,19 +2450,47 @@ export function AdminDashboard() {
                       <p className="text-sm text-muted-foreground">No conversations yet</p>
                     ) : (
                       mentorConversations.map((conv) => (
-                        <Button
+                        <div
                           key={conv.id}
-                          variant={selectedConversation?.id === conv.id ? "default" : "outline"}
-                          className="w-full justify-start text-left h-auto p-2"
-                          onClick={() => setSelectedConversation(conv)}
+                          className={`flex items-center gap-2 p-2 rounded-lg border ${
+                            selectedConversation?.id === conv.id
+                              ? "border-primary bg-primary/10"
+                              : "border-slate-700 hover:border-slate-600"
+                          }`}
                         >
-                          <div className="flex flex-col w-full">
-                            <span className="font-medium text-xs truncate">{conv.student_email}</span>
-                            <span className="text-xs opacity-70 truncate">
-                              {conv.updated_at ? new Date(conv.updated_at).toLocaleDateString() : ""}
-                            </span>
-                          </div>
-                        </Button>
+                          <Button
+                            variant="ghost"
+                            className="flex-1 justify-start text-left h-auto p-0"
+                            onClick={() => setSelectedConversation(conv)}
+                          >
+                            <div className="flex flex-col w-full">
+                              <span className="font-medium text-xs truncate">{conv.student_email}</span>
+                              <span className="text-xs opacity-70 truncate">
+                                {conv.updated_at ? new Date(conv.updated_at).toLocaleDateString() : ""}
+                              </span>
+                            </div>
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={async () => {
+                              if (confirm(`Delete conversation with ${conv.student_email}?`)) {
+                                try {
+                                  await fetch(`/api/messages/direct/delete?conversation_id=${conv.id}`, {
+                                    method: "DELETE",
+                                  })
+                                  setSelectedConversation(null)
+                                  await fetchMentorConversations()
+                                } catch (e) {
+                                  console.error("Failed to delete conversation:", e)
+                                }
+                              }
+                            }}
+                            className="text-red-400 hover:text-red-300 hover:bg-red-500/20"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       ))
                     )}
                   </CardContent>
