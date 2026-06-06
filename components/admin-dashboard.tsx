@@ -1329,15 +1329,6 @@ export function AdminDashboard() {
                           min={1}
                         />
                       </div>
-                      <div className="space-y-2">
-                        <Label>Zoom Meeting Link</Label>
-                        <Input
-                          type="url"
-                          value={groupSessionForm.zoom_join_url}
-                          onChange={(e) => setGroupSessionForm({ ...groupSessionForm, zoom_join_url: e.target.value })}
-                          placeholder="https://zoom.us/j/..."
-                        />
-                      </div>
                       <Button className="w-full" onClick={handleSaveGroupSession}>
                         {editingGroupSession ? "Update Session" : "Create Session"}
                       </Button>

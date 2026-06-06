@@ -1,26 +1,60 @@
 import { NextRequest, NextResponse } from "next/server"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 async function getZoomAccessToken() {
-  const auth = Buffer.from(
-    `${process.env.ZOOM_CLIENT_ID}:${process.env.ZOOM_CLIENT_SECRET}`
-  ).toString("base64")
+  const supabase = createAdminClient()
 
-  const response = await fetch("https://zoom.us/oauth/token", {
-    method: "POST",
-    headers: {
-      Authorization: `Basic ${auth}`,
-      "Content-Type": "application/x-www-form-urlencoded",
-    },
-    body: "grant_type=client_credentials&account_id=" + process.env.ZOOM_ACCOUNT_ID,
-  })
+  // Get token from database
+  const { data, error } = await supabase
+    .from("zoom_oauth_token")
+    .select("*")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single()
 
-  if (!response.ok) {
-    const errorData = await response.json()
-    console.error("Zoom token error:", errorData, response.status)
-    throw new Error(`Failed to get Zoom access token: ${JSON.stringify(errorData)}`)
+  if (error || !data?.access_token) {
+    throw new Error("No Zoom OAuth token found. Please authorize Zoom first.")
   }
 
-  const data = await response.json()
+  // Check if token is expired
+  if (data.expires_at && new Date(data.expires_at) < new Date()) {
+    // Token expired, refresh it
+    if (!data.refresh_token) {
+      throw new Error("Token expired and no refresh token available")
+    }
+
+    const refreshResponse = await fetch("https://zoom.us/oauth/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization: `Basic ${Buffer.from(`${process.env.ZOOM_OAUTH_CLIENT_ID}:${process.env.ZOOM_OAUTH_CLIENT_SECRET}`).toString("base64")}`,
+      },
+      body: new URLSearchParams({
+        grant_type: "refresh_token",
+        refresh_token: data.refresh_token,
+      }).toString(),
+    })
+
+    if (!refreshResponse.ok) {
+      throw new Error("Failed to refresh Zoom token")
+    }
+
+    const newTokenData = await refreshResponse.json()
+    const expiresAt = new Date(Date.now() + newTokenData.expires_in * 1000)
+
+    // Update token in database
+    await supabase
+      .from("zoom_oauth_token")
+      .update({
+        access_token: newTokenData.access_token,
+        refresh_token: newTokenData.refresh_token,
+        expires_at: expiresAt,
+      })
+      .eq("id", data.id)
+
+    return newTokenData.access_token
+  }
+
   return data.access_token
 }
 
@@ -35,36 +69,8 @@ export async function POST(req: NextRequest) {
 
     const accessToken = await getZoomAccessToken()
 
-    // Get account owner user ID
-    console.log("Fetching account users...")
-    const usersResponse = await fetch(
-      `https://api.zoom.us/v2/accounts/${process.env.ZOOM_ACCOUNT_ID}/users?page_size=1`,
-      {
-        method: "GET",
-        headers: {
-          Authorization: `Bearer ${accessToken}`,
-        },
-      }
-    )
-
-    if (!usersResponse.ok) {
-      const error = await usersResponse.json()
-      console.error("Failed to get users:", error)
-      throw new Error(`Failed to get account users: ${JSON.stringify(error)}`)
-    }
-
-    const usersData = await usersResponse.json()
-    const userId = usersData.users?.[0]?.id
-
-    if (!userId) {
-      throw new Error("No users found in Zoom account")
-    }
-
-    console.log("Using user ID:", userId)
-
-    // Create meeting for this user
     const zoomResponse = await fetch(
-      `https://api.zoom.us/v2/users/${userId}/meetings`,
+      `https://api.zoom.us/v2/users/me/meetings`,
       {
         method: "POST",
         headers: {
