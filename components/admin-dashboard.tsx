@@ -367,6 +367,7 @@ export function AdminDashboard() {
   useEffect(() => {
     fetchBookings()
     fetchSlots()
+    fetchGroupSessions()
     fetchArticles()
     fetchOrders()
     fetchCoupons()
