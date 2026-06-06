@@ -48,8 +48,16 @@ export function DMChat({ userEmail, mentorId, isMentor = false, mentorEmail }: {
 
     const senderEmail = isMentor && mentorEmail ? mentorEmail : userEmail
 
+    console.log("Sending message:", {
+      isMentor,
+      mentorEmail,
+      userEmail,
+      senderEmail,
+      conversation_id: conversation.id,
+    })
+
     try {
-      await fetch("/api/messages/direct", {
+      const res = await fetch("/api/messages/direct", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
@@ -58,6 +66,8 @@ export function DMChat({ userEmail, mentorId, isMentor = false, mentorEmail }: {
           message: newMessage,
         }),
       })
+      const data = await res.json()
+      console.log("Message sent response:", data)
       setNewMessage("")
       await fetchMessages()
     } catch (e) {

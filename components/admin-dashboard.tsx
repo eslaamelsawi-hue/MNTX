@@ -219,7 +219,8 @@ export function AdminDashboard() {
         if (mEmail) {
           setMentorEmail(mEmail)
         }
-        console.log("Mentor detected:", mId, mName)
+        console.log("Mentor detected:", { mId, mName, mEmail })
+        console.log("LocalStorage mentor_email:", localStorage.getItem("mentor_email"))
       }
     }
   }, [])
