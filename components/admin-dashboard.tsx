@@ -13,6 +13,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { AdminSubscriptions } from "@/components/admin-subscriptions"
 import { DMChat } from "@/components/chat/dm-chat"
 import { SupportChat } from "@/components/chat/support-chat"
+import { MentorSupport } from "@/components/chat/mentor-support"
 import { Textarea } from "@/components/ui/textarea"
 import {
   Calendar as CalendarIcon,
@@ -221,6 +222,8 @@ export function AdminDashboard() {
   useEffect(() => {
     if (isMentor && mentorId) {
       fetchMentorConversations()
+      const interval = setInterval(fetchMentorConversations, 5000)
+      return () => clearInterval(interval)
     }
   }, [isMentor, mentorId])
 
@@ -2473,12 +2476,9 @@ export function AdminDashboard() {
           )}
 
           {/* Mentor Support Tickets Tab */}
-          {isMentor && mentorName && (
+          {isMentor && (
             <TabsContent value="support" className="space-y-4">
-              <SupportChat
-                userEmail={mentorId}
-                userName={mentorName}
-              />
+              <MentorSupport />
             </TabsContent>
           )}
         </Tabs>
