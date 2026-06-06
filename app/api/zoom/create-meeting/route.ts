@@ -15,7 +15,9 @@ async function getZoomAccessToken() {
   })
 
   if (!response.ok) {
-    throw new Error("Failed to get Zoom access token")
+    const errorData = await response.json()
+    console.error("Zoom token error:", errorData, response.status)
+    throw new Error(`Failed to get Zoom access token: ${JSON.stringify(errorData)}`)
   }
 
   const data = await response.json()
@@ -60,14 +62,15 @@ export async function POST(req: NextRequest) {
 
     if (!zoomResponse.ok) {
       const error = await zoomResponse.json()
-      console.error("Zoom API error:", error)
+      console.error("Zoom API error:", error, zoomResponse.status)
       return NextResponse.json(
-        { error: "Failed to create Zoom meeting" },
+        { error: "Failed to create Zoom meeting", details: error },
         { status: 500 }
       )
     }
 
     const zoomData = await zoomResponse.json()
+    console.log("Zoom meeting created successfully:", { id: zoomData.id, join_url: zoomData.join_url })
 
     return NextResponse.json({
       zoom_meeting_id: zoomData.id,
@@ -77,7 +80,7 @@ export async function POST(req: NextRequest) {
   } catch (error) {
     console.error("Error creating Zoom meeting:", error)
     return NextResponse.json(
-      { error: "Failed to create Zoom meeting" },
+      { error: "Failed to create Zoom meeting", details: String(error) },
       { status: 500 }
     )
   }
