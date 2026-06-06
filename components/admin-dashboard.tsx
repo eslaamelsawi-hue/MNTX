@@ -148,6 +148,12 @@ export function AdminDashboard() {
   const [loadingCoupons, setLoadingCoupons] = useState(true)
   const [couponDialogOpen, setCouponDialogOpen] = useState(false)
   const [editingCoupon, setEditingCoupon] = useState<Coupon | null>(null)
+
+  // Community settings state
+  const [discordInvite, setDiscordInvite] = useState("")
+  const [telegramGroup, setTelegramGroup] = useState("")
+  const [weeklyZoomLink, setWeeklyZoomLink] = useState("")
+  const [communitySettingsSaving, setCommunitySetting sSaving] = useState(false)
   const [couponForm, setCouponForm] = useState({
     code: "",
     discount_type: "percent" as "percent" | "fixed",
@@ -1946,6 +1952,85 @@ export function AdminDashboard() {
                     {settingsMessage.text}
                   </div>
                 )}
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5 text-primary" />
+                  Community Links
+                </CardTitle>
+                <CardDescription>
+                  Configure Discord, Telegram, and Weekly Zoom links for your community.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="discord">Discord Invite Link</Label>
+                  <Input
+                    id="discord"
+                    type="url"
+                    placeholder="https://discord.gg/..."
+                    value={discordInvite}
+                    onChange={(e) => setDiscordInvite(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="telegram">Telegram Group Link</Label>
+                  <Input
+                    id="telegram"
+                    type="url"
+                    placeholder="https://t.me/..."
+                    value={telegramGroup}
+                    onChange={(e) => setTelegramGroup(e.target.value)}
+                  />
+                </div>
+
+                <div className="space-y-2">
+                  <Label htmlFor="zoom">Weekly Zoom Link</Label>
+                  <Input
+                    id="zoom"
+                    type="url"
+                    placeholder="https://zoom.us/j/..."
+                    value={weeklyZoomLink}
+                    onChange={(e) => setWeeklyZoomLink(e.target.value)}
+                  />
+                </div>
+
+                <Button
+                  onClick={async () => {
+                    setCommunitySetting sSaving(true)
+                    try {
+                      const updates = [
+                        ...(discordInvite ? [{ key: "discord_invite", value: discordInvite }] : []),
+                        ...(telegramGroup ? [{ key: "telegram_group", value: telegramGroup }] : []),
+                        ...(weeklyZoomLink ? [{ key: "weekly_zoom_link", value: weeklyZoomLink }] : []),
+                      ]
+
+                      for (const update of updates) {
+                        await fetch("/api/admin/settings", {
+                          method: "POST",
+                          headers: { "Content-Type": "application/json" },
+                          body: JSON.stringify(update)
+                        })
+                      }
+                      alert("Community links updated successfully!")
+                    } catch (e) {
+                      alert("Failed to save settings")
+                    }
+                    setCommunitySetting sSaving(false)
+                  }}
+                  disabled={communitySettingsSaving}
+                >
+                  {communitySettingsSaving ? (
+                    <RefreshCw className="mr-2 h-4 w-4 animate-spin" />
+                  ) : (
+                    <Save className="mr-2 h-4 w-4" />
+                  )}
+                  Save Community Links
+                </Button>
               </CardContent>
             </Card>
           </TabsContent>
