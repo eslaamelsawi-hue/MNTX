@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       path: "/",
     });
 
-    return NextResponse.json({ success: true, type: "mentor", mentorId: mentor.id, mentorName: mentor.name });
+    return NextResponse.json({ success: true, type: "mentor", mentorId: mentor.id, mentorName: mentor.name, mentorEmail: mentor.email });
   }
 
   return NextResponse.json({ error: "Password or mentor email is required" }, { status: 400 });
