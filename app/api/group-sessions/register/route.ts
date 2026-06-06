@@ -72,9 +72,9 @@ export async function POST(req: NextRequest) {
       },
     })
 
-    const sessionDateTime = new Date(`${session_date}T${start_time}`)
+    const sessionDateTime = new Date(`${session.session_date}T${session.start_time}`)
     const formattedDate = sessionDateTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
-    const formattedTime = `${start_time} - ${end_time}`
+    const formattedTime = `${session.start_time.slice(0, 5)} - ${session.end_time.slice(0, 5)}`
 
     const htmlContent = `
       <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
@@ -88,7 +88,7 @@ export async function POST(req: NextRequest) {
           <p style="color: #555;">You've successfully registered for:</p>
 
           <div style="background: white; border-left: 4px solid #3b82f6; padding: 20px; margin: 20px 0; border-radius: 5px;">
-            <h2 style="color: #1e1e2e; margin-top: 0;">${session_title}</h2>
+            <h2 style="color: #1e1e2e; margin-top: 0;">${session.title}</h2>
 
             <div style="color: #555; margin: 10px 0;">
               <p style="margin: 5px 0;"><strong>📅 Date:</strong> ${formattedDate}</p>
@@ -96,9 +96,9 @@ export async function POST(req: NextRequest) {
             </div>
           </div>
 
-          ${zoom_url ? `
+          ${session.zoom_join_url ? `
           <div style="text-align: center; margin: 30px 0;">
-            <a href="${zoom_url}" style="background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
+            <a href="${session.zoom_join_url}" style="background: #10b981; color: white; padding: 12px 30px; text-decoration: none; border-radius: 5px; font-weight: bold; display: inline-block;">
               📹 Join Zoom Meeting
             </a>
           </div>
@@ -131,7 +131,7 @@ export async function POST(req: NextRequest) {
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: client_email,
-      subject: `✓ Registered: ${session_title}`,
+      subject: `✓ Registered: ${session.title}`,
       html: htmlContent,
     })
   } catch (emailError) {
@@ -154,10 +154,10 @@ export async function POST(req: NextRequest) {
     await transporter.sendMail({
       from: process.env.EMAIL_USER,
       to: adminEmail,
-      subject: `New Registration: ${session_title}`,
+      subject: `New Registration: ${session.title}`,
       html: `
-        <p><strong>${client_name}</strong> (${client_email}) just registered for <strong>${session_title}</strong></p>
-        <p>Date: ${session_date} at ${start_time}</p>
+        <p><strong>${client_name}</strong> (${client_email}) just registered for <strong>${session.title}</strong></p>
+        <p>Date: ${session.session_date} at ${session.start_time}</p>
       `,
     })
   } catch (adminEmailError) {
