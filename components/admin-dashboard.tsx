@@ -1359,7 +1359,7 @@ export function AdminDashboard() {
                           {session.description && <p className="text-sm text-muted-foreground mb-2">{session.description}</p>}
                           <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
                             <span className="flex items-center gap-1">
-                              <Calendar className="w-4 h-4" />
+                              <CalendarDays className="w-4 h-4" />
                               {formatDate(session.session_date)}
                             </span>
                             <span className="flex items-center gap-1">
