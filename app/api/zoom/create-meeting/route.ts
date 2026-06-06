@@ -81,7 +81,7 @@ export async function POST(req: NextRequest) {
           topic,
           start_time,
           duration,
-          timezone: "UTC",
+          timezone: "Africa/Cairo",
           type: 2,
           settings: {
             host_video: true,
