@@ -48,6 +48,18 @@ type BookingRecord = {
 
 type Settings = Record<string, string>
 
+type GroupSession = {
+  id: string
+  title: string
+  description: string | null
+  session_date: string
+  start_time: string
+  end_time: string
+  max_participants: number | null
+  zoom_join_url: string | null
+  status: string
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function isUpcoming(b: BookingRecord): boolean {
@@ -249,6 +261,8 @@ export function ClientDashboard() {
   const [bookings, setBookings] = useState<BookingRecord[]>([])
   const [settings, setSettings] = useState<Settings>({})
   const [looked, setLooked] = useState(false)
+  const [groupSessions, setGroupSessions] = useState<GroupSession[]>([])
+  const [registeredSessionIds, setRegisteredSessionIds] = useState<Set<string>>(new Set())
 
   const handleLookup = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -256,16 +270,22 @@ export function ClientDashboard() {
     setLoading(true)
     setError("")
     try {
-      const res = await fetch("/api/user-dashboard", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim() }),
-      })
-      const data = await res.json()
-      if (data.found) {
-        setSubscriptions(data.subscriptions)
-        setBookings(data.bookings)
-        setSettings(data.settings ?? {})
+      const [dashRes, sessionsRes] = await Promise.all([
+        fetch("/api/user-dashboard", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim() }),
+        }),
+        fetch("/api/group-sessions")
+      ])
+      const dashData = await dashRes.json()
+      const sessionsData = await sessionsRes.json()
+
+      if (dashData.found) {
+        setSubscriptions(dashData.subscriptions)
+        setBookings(dashData.bookings)
+        setSettings(dashData.settings ?? {})
+        setGroupSessions(sessionsData.sessions ?? [])
       } else {
         setSubscriptions([])
         setBookings([])
@@ -885,32 +905,75 @@ export function ClientDashboard() {
         </TabsContent>
 
         {/* ── Weekly Zoom ── */}
-        <TabsContent value="weekly-zoom">
-          <Card className="border-border bg-card">
-            <CardContent className="pt-6 space-y-5">
-              <div className="flex h-14 w-14 items-center justify-center rounded-2xl bg-blue-500/10">
-                <Video className="h-7 w-7 text-blue-400" />
-              </div>
-              <div>
-                <h3 className="text-xl font-semibold">{l.weeklyZoomTitle}</h3>
-                <p className="mt-2 text-muted-foreground leading-relaxed">{l.weeklyZoomDesc}</p>
-              </div>
-
-              {settings.weekly_zoom_link ? (
-                <a href={settings.weekly_zoom_link} target="_blank" rel="noopener noreferrer" className="block">
-                  <Button size="lg" className="gap-2 w-full sm:w-auto">
-                    <Video className="h-4 w-4" />{l.weeklyZoomBtn}
-                    <ExternalLink className="h-3.5 w-3.5 opacity-70" />
-                  </Button>
-                </a>
-              ) : (
-                <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-4 text-sm text-yellow-300">
-                  <AlertCircle className="mr-2 inline h-4 w-4" />
-                  {l.noZoomLink}
-                </div>
-              )}
-            </CardContent>
-          </Card>
+        <TabsContent value="weekly-zoom" className="space-y-4">
+          <h3 className="text-lg font-semibold">{l.weeklyZoomTitle}</h3>
+          {groupSessions.length === 0 ? (
+            <Card className="border-border bg-card">
+              <CardContent className="py-12 text-center">
+                <Video className="mx-auto mb-3 h-10 w-10 text-muted-foreground opacity-50" />
+                <p className="text-muted-foreground">No upcoming group sessions</p>
+              </CardContent>
+            </Card>
+          ) : (
+            <div className="space-y-3">
+              {groupSessions.map((session) => (
+                <Card key={session.id} className="border-border bg-card">
+                  <CardContent className="p-4">
+                    <div className="flex items-start justify-between gap-4">
+                      <div className="flex-1">
+                        <h4 className="font-semibold text-foreground mb-1">{session.title}</h4>
+                        {session.description && <p className="text-sm text-muted-foreground mb-2">{session.description}</p>}
+                        <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                          <span className="flex items-center gap-1">
+                            <Calendar className="w-4 h-4" />
+                            {new Date(session.session_date).toLocaleDateString()}
+                          </span>
+                          <span className="flex items-center gap-1">
+                            <Clock className="w-4 h-4" />
+                            {session.start_time.slice(0, 5)} - {session.end_time.slice(0, 5)}
+                          </span>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 shrink-0">
+                        {session.zoom_join_url && (
+                          <a href={session.zoom_join_url} target="_blank" rel="noopener noreferrer">
+                            <Button size="sm" className="gap-1">
+                              <Video className="w-3.5 h-3.5" />
+                              Join
+                            </Button>
+                          </a>
+                        )}
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          onClick={async () => {
+                            try {
+                              await fetch("/api/group-sessions/register", {
+                                method: "POST",
+                                headers: { "Content-Type": "application/json" },
+                                body: JSON.stringify({
+                                  session_id: session.id,
+                                  client_email: email,
+                                  client_name: activeSub?.client_name || email.split("@")[0]
+                                })
+                              })
+                              setRegisteredSessionIds(new Set([...registeredSessionIds, session.id]))
+                              alert("Registered for session!")
+                            } catch {
+                              alert("Failed to register")
+                            }
+                          }}
+                          disabled={registeredSessionIds.has(session.id)}
+                        >
+                          {registeredSessionIds.has(session.id) ? "Registered" : "Register"}
+                        </Button>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
         </TabsContent>
       </Tabs>
     </div>
