@@ -372,7 +372,7 @@ export function AdminDashboard() {
     fetchOrders()
     fetchCoupons()
     fetchSettings()
-  }, [fetchBookings, fetchSlots, fetchOrders, fetchSettings])
+  }, [])
 
   const formatTime = (time: string) => {
     const [h, m] = time.split(":")
