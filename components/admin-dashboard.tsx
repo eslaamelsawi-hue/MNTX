@@ -212,17 +212,18 @@ export function AdminDashboard() {
 
     if (token) {
       try {
-        const decoded = Buffer.from(token, "base64").toString("utf-8")
+        const decoded = atob(token)
+        console.log("Decoded session token:", decoded)
         if (decoded.startsWith("mentor:")) {
           const parts = decoded.split(":")
           const mId = parts[1]
           setIsMentor(true)
           setMentorId(mId)
-          // Fetch mentor name from session storage or local storage if available
           const storedName = localStorage.getItem("mentor_name")
           if (storedName) {
             setMentorName(storedName)
           }
+          console.log("Mentor detected:", mId, storedName)
         }
       } catch (e) {
         console.error("Failed to decode session:", e)
