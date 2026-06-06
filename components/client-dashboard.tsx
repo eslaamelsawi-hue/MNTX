@@ -379,46 +379,68 @@ export function ClientDashboard() {
 
   if (!looked || subscriptions.length === 0) {
     return (
-      <div className="mx-auto max-w-lg px-4 py-20" dir={isRtl ? "rtl" : "ltr"}>
-        <div className="mb-10 text-center">
-          <div className="mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-primary/10">
-            <LayoutDashboard className="h-8 w-8 text-primary" />
+      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col items-center justify-center px-4 py-20" dir={isRtl ? "rtl" : "ltr"}>
+        <div className="w-full max-w-md">
+          {/* Icon & Title */}
+          <div className="text-center mb-12">
+            <div className="mx-auto mb-6 inline-flex items-center justify-center">
+              <div className="relative">
+                <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-orange-500 rounded-3xl blur-2xl opacity-20"></div>
+                <div className="relative h-20 w-20 flex items-center justify-center rounded-3xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 backdrop-blur">
+                  <LayoutDashboard className="h-10 w-10 text-amber-400" />
+                </div>
+              </div>
+            </div>
+            <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">{l.title}</h1>
+            <p className="text-slate-400 text-lg">{l.subtitle}</p>
           </div>
-          <h1 className="mb-2 text-3xl font-bold">{l.title}</h1>
-          <p className="text-muted-foreground">{l.subtitle}</p>
+
+          {/* Form Card */}
+          <Card className="border-slate-700/50 bg-slate-800/40 backdrop-blur-lg shadow-2xl">
+            <CardContent className="pt-8 pb-8">
+              <form onSubmit={handleLookup} className="space-y-5">
+                <div className="relative group">
+                  <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 to-orange-500/0 group-focus-within:from-amber-500/10 group-focus-within:to-orange-500/10 rounded-lg transition duration-300"></div>
+                  <div className="relative flex items-center">
+                    <Mail className="absolute left-4 h-5 w-5 text-slate-500 group-focus-within:text-amber-400 transition" />
+                    <Input
+                      type="email"
+                      placeholder={l.emailPlaceholder}
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      className="pl-12 h-12 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg transition"
+                      required
+                    />
+                  </div>
+                </div>
+                <Button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold text-base rounded-lg transition duration-300 shadow-lg hover:shadow-amber-500/20"
+                >
+                  {loading ? (
+                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{l.loading}</>
+                  ) : (
+                    l.lookup
+                  )}
+                </Button>
+              </form>
+            </CardContent>
+          </Card>
+
+          {/* Error Message */}
+          {error && (
+            <div className="mt-6 flex items-start gap-3 rounded-lg border border-red-500/30 bg-red-500/10 backdrop-blur p-4 text-sm text-red-400 animate-in fade-in">
+              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
+              <span>{error}</span>
+            </div>
+          )}
         </div>
 
-        <Card className="border-border bg-card">
-          <CardContent className="pt-6">
-            <form onSubmit={handleLookup} className="space-y-3">
-              <div className="relative">
-                <Mail className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-                <Input
-                  type="email"
-                  placeholder={l.emailPlaceholder}
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="pl-10"
-                  required
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? (
-                  <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{l.loading}</>
-                ) : (
-                  l.lookup
-                )}
-              </Button>
-            </form>
-          </CardContent>
-        </Card>
-
-        {error && (
-          <div className="mt-4 flex items-start gap-3 rounded-lg border border-red-500/30 bg-red-500/10 p-4 text-sm text-red-400">
-            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
-            {error}
-          </div>
-        )}
+        {/* Footer */}
+        <div className="absolute bottom-6 text-center text-xs text-slate-500">
+          Mentix Trading © 2026 All rights reserved.
+        </div>
       </div>
     )
   }
