@@ -35,8 +35,36 @@ export async function POST(req: NextRequest) {
 
     const accessToken = await getZoomAccessToken()
 
+    // Get account owner user ID
+    console.log("Fetching account users...")
+    const usersResponse = await fetch(
+      `https://api.zoom.us/v2/accounts/${process.env.ZOOM_ACCOUNT_ID}/users?page_size=1`,
+      {
+        method: "GET",
+        headers: {
+          Authorization: `Bearer ${accessToken}`,
+        },
+      }
+    )
+
+    if (!usersResponse.ok) {
+      const error = await usersResponse.json()
+      console.error("Failed to get users:", error)
+      throw new Error(`Failed to get account users: ${JSON.stringify(error)}`)
+    }
+
+    const usersData = await usersResponse.json()
+    const userId = usersData.users?.[0]?.id
+
+    if (!userId) {
+      throw new Error("No users found in Zoom account")
+    }
+
+    console.log("Using user ID:", userId)
+
+    // Create meeting for this user
     const zoomResponse = await fetch(
-      `https://api.zoom.us/v2/accounts/${process.env.ZOOM_ACCOUNT_ID}/meetings`,
+      `https://api.zoom.us/v2/users/${userId}/meetings`,
       {
         method: "POST",
         headers: {
