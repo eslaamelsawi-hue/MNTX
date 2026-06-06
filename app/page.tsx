@@ -1,7 +1,11 @@
 "use client"
 
-import { LandingPage } from "@/components/landing-page"
+import { ClientDashboard } from "@/components/client-dashboard"
 
 export default function RootPage() {
-  return <LandingPage />
+  return (
+    <main>
+      <ClientDashboard />
+    </main>
+  )
 }
