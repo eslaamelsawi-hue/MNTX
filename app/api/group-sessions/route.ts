@@ -51,8 +51,10 @@ export async function POST(req: NextRequest) {
         zoom_meeting_id = zoomData.zoom_meeting_id
         zoom_join_url = zoomData.zoom_join_url
         zoom_start_url = zoomData.zoom_start_url
+        console.log("Zoom meeting created:", { zoom_meeting_id, zoom_join_url })
       } else {
-        console.error("Failed to create Zoom meeting")
+        const errorData = await zoomRes.json()
+        console.error("Failed to create Zoom meeting:", errorData)
       }
     } catch (e) {
       console.error("Zoom meeting creation failed:", e)
