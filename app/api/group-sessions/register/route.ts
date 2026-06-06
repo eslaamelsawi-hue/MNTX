@@ -12,6 +12,17 @@ export async function POST(req: NextRequest) {
 
   const supabase = createAdminClient()
 
+  // Get session details
+  const { data: session, error: sessionError } = await supabase
+    .from("group_zoom_sessions")
+    .select("*")
+    .eq("id", session_id)
+    .single()
+
+  if (sessionError || !session) {
+    return NextResponse.json({ error: "Session not found" }, { status: 404 })
+  }
+
   // Check if already registered
   const { data: existing } = await supabase
     .from("group_session_registrations")
@@ -22,6 +33,18 @@ export async function POST(req: NextRequest) {
 
   if (existing) {
     return NextResponse.json({ error: "Already registered for this session" }, { status: 400 })
+  }
+
+  // Check capacity
+  if (session.max_participants) {
+    const { count } = await supabase
+      .from("group_session_registrations")
+      .select("id", { count: "exact" })
+      .eq("session_id", session_id)
+
+    if (count && count >= session.max_participants) {
+      return NextResponse.json({ error: "Session is full" }, { status: 400 })
+    }
   }
 
   // Register user
@@ -114,6 +137,31 @@ export async function POST(req: NextRequest) {
   } catch (emailError) {
     console.error("Failed to send email:", emailError)
     // Don't fail the registration if email fails
+  }
+
+  // Send admin notification
+  try {
+    const transporter = nodemailer.createTransport({
+      service: "gmail",
+      auth: {
+        user: process.env.EMAIL_USER,
+        pass: process.env.EMAIL_PASSWORD,
+      },
+    })
+
+    const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER
+
+    await transporter.sendMail({
+      from: process.env.EMAIL_USER,
+      to: adminEmail,
+      subject: `New Registration: ${session_title}`,
+      html: `
+        <p><strong>${client_name}</strong> (${client_email}) just registered for <strong>${session_title}</strong></p>
+        <p>Date: ${session_date} at ${start_time}</p>
+      `,
+    })
+  } catch (adminEmailError) {
+    console.error("Failed to send admin notification:", adminEmailError)
   }
 
   return NextResponse.json({ registration: data })

@@ -954,6 +954,12 @@ export function ClientDashboard() {
                               <Clock className="w-4 h-4 text-blue-400" />
                               <span className="font-medium">{session.start_time.slice(0, 5)} - {session.end_time.slice(0, 5)}</span>
                             </div>
+                            {session.max_participants && (
+                              <div className="flex items-center gap-2 text-slate-300">
+                                <Users className="w-4 h-4 text-blue-400" />
+                                <span className="font-medium">Max {session.max_participants}</span>
+                              </div>
+                            )}
                             {daysAway === 0 && <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Today</Badge>}
                             {daysAway === 1 && <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Tomorrow</Badge>}
                             {daysAway > 1 && <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">{daysAway} days</Badge>}

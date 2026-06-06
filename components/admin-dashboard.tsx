@@ -168,6 +168,9 @@ export function AdminDashboard() {
     end_time: "",
     max_participants: "",
   })
+  const [sessionRegistrations, setSessionRegistrations] = useState<any[]>([])
+  const [registrationsDialogOpen, setRegistrationsDialogOpen] = useState(false)
+  const [selectedSessionForRegistrations, setSelectedSessionForRegistrations] = useState<any>(null)
   const [couponForm, setCouponForm] = useState({
     code: "",
     discount_type: "percent" as "percent" | "fixed",
@@ -770,6 +773,30 @@ export function AdminDashboard() {
     }
   }
 
+  const fetchSessionRegistrations = async (sessionId: string) => {
+    try {
+      const res = await fetch(`/api/group-sessions/${sessionId}/registrations`)
+      const data = await res.json()
+      setSessionRegistrations(data.registrations || [])
+    } catch (e) {
+      console.error("Failed to fetch registrations:", e)
+    }
+  }
+
+  const handleMarkAttendance = async (registrationId: string, attended: boolean) => {
+    if (!selectedSessionForRegistrations) return
+    try {
+      await fetch(`/api/group-sessions/${selectedSessionForRegistrations.id}/attendance`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ registration_id: registrationId, attended })
+      })
+      fetchSessionRegistrations(selectedSessionForRegistrations.id)
+    } catch (e) {
+      console.error("Failed to update attendance:", e)
+    }
+  }
+
   const statusColor = (status: string) => {
     switch (status) {
       case "confirmed": return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
@@ -1346,6 +1373,55 @@ export function AdminDashboard() {
                           </div>
                         </div>
                         <div className="flex gap-1 ml-4">
+                          <Dialog open={registrationsDialogOpen && selectedSessionForRegistrations?.id === session.id} onOpenChange={(open) => {
+                            if (open) {
+                              setSelectedSessionForRegistrations(session)
+                              fetchSessionRegistrations(session.id)
+                            } else {
+                              setRegistrationsDialogOpen(false)
+                              setSelectedSessionForRegistrations(null)
+                            }
+                          }}>
+                            <DialogTrigger asChild>
+                              <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => {
+                                  setSelectedSessionForRegistrations(session)
+                                  setRegistrationsDialogOpen(true)
+                                  fetchSessionRegistrations(session.id)
+                                }}
+                              >
+                                <Users className="h-4 w-4 mr-1" /> Registrations
+                              </Button>
+                            </DialogTrigger>
+                            <DialogContent className="bg-card border-border max-w-2xl">
+                              <DialogHeader>
+                                <DialogTitle>Registrations for {selectedSessionForRegistrations?.title}</DialogTitle>
+                              </DialogHeader>
+                              <div className="space-y-3 max-h-96 overflow-y-auto">
+                                {sessionRegistrations.length === 0 ? (
+                                  <p className="text-muted-foreground text-center py-4">No registrations yet</p>
+                                ) : (
+                                  sessionRegistrations.map((reg) => (
+                                    <div key={reg.id} className="flex items-center justify-between p-3 bg-muted rounded-lg">
+                                      <div>
+                                        <p className="font-medium text-foreground">{reg.client_name}</p>
+                                        <p className="text-sm text-muted-foreground">{reg.client_email}</p>
+                                      </div>
+                                      <Button
+                                        size="sm"
+                                        variant={reg.attended ? "default" : "outline"}
+                                        onClick={() => handleMarkAttendance(reg.id, !reg.attended)}
+                                      >
+                                        {reg.attended ? "✓ Attended" : "Mark Attended"}
+                                      </Button>
+                                    </div>
+                                  ))
+                                )}
+                              </div>
+                            </DialogContent>
+                          </Dialog>
                           <Button
                             variant="ghost"
                             size="sm"
