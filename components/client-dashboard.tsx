@@ -961,7 +961,7 @@ export function ClientDashboard() {
           <div className="space-y-6">
             {email && (
               <>
-                <DMChat userEmail={email} mentorId="mentor-id" />
+                <DMChat userEmail={email} mentorId="1" />
                 <SupportChat userEmail={email} userName={subscriptions[0]?.client_name || "User"} />
               </>
             )}
