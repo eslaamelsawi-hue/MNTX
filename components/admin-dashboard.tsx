@@ -377,16 +377,14 @@ export function AdminDashboard() {
   // Lazy load tab data when tab is switched
   useEffect(() => {
     if (!loadedTabs.has(activeTab)) {
-      const newLoadedTabs = new Set(loadedTabs)
-      newLoadedTabs.add(activeTab)
-      setLoadedTabs(newLoadedTabs)
+      setLoadedTabs(prev => new Set([...prev, activeTab]))
 
       if (activeTab === "group-sessions") fetchGroupSessions()
       else if (activeTab === "articles") fetchArticles()
       else if (activeTab === "orders") fetchOrders()
       else if (activeTab === "coupons") fetchCoupons()
     }
-  }, [activeTab, loadedTabs])
+  }, [activeTab])
 
   const formatTime = (time: string) => {
     const [h, m] = time.split(":")
@@ -1271,8 +1269,7 @@ export function AdminDashboard() {
             )}
           </TabsContent>
 
-          {/* Group Sessions Tab - DISABLED TEMPORARILY */}
-          {/* <TabsContent value="group-sessions" className="space-y-6">
+          <TabsContent value="group-sessions" className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-foreground">Group Zoom Sessions</h2>
               <div className="flex gap-2">
