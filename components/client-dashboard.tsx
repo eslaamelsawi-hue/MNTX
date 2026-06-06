@@ -379,7 +379,7 @@ export function ClientDashboard() {
 
   if (!looked || subscriptions.length === 0) {
     return (
-      <div className="min-h-screen bg-black flex flex-col items-center justify-center px-4 py-20" dir={isRtl ? "rtl" : "ltr"}>
+      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 flex flex flex-col items-center justify-center px-4 py-20" dir={isRtl ? "rtl" : "ltr"}>
         <div className="w-full max-w-md">
           {/* Icon & Title */}
           <div className="text-center mb-12">
@@ -437,10 +437,6 @@ export function ClientDashboard() {
           )}
         </div>
 
-        {/* Footer */}
-        <div className="absolute bottom-6 text-center text-xs text-slate-500">
-          Mentix Trading © 2026 All rights reserved.
-        </div>
       </div>
     )
   }
