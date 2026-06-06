@@ -153,7 +153,7 @@ export function AdminDashboard() {
   const [discordInvite, setDiscordInvite] = useState("")
   const [telegramGroup, setTelegramGroup] = useState("")
   const [weeklyZoomLink, setWeeklyZoomLink] = useState("")
-  const [communitySettingsSaving, setCommunitySetting sSaving] = useState(false)
+  const [communitySettingsSaving, setCommunitySettingsSaving] = useState(false)
   const [couponForm, setCouponForm] = useState({
     code: "",
     discount_type: "percent" as "percent" | "fixed",
@@ -2001,7 +2001,7 @@ export function AdminDashboard() {
 
                 <Button
                   onClick={async () => {
-                    setCommunitySetting sSaving(true)
+                    setCommunitySettingsSaving(true)
                     try {
                       const updates = [
                         ...(discordInvite ? [{ key: "discord_invite", value: discordInvite }] : []),
@@ -2020,7 +2020,7 @@ export function AdminDashboard() {
                     } catch (e) {
                       alert("Failed to save settings")
                     }
-                    setCommunitySetting sSaving(false)
+                    setCommunitySettingsSaving(false)
                   }}
                   disabled={communitySettingsSaving}
                 >
