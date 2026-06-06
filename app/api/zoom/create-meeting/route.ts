@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     const accessToken = await getZoomAccessToken()
 
     const zoomResponse = await fetch(
-      `https://api.zoom.us/v2/users/me/meetings`,
+      `https://api.zoom.us/v2/users/${process.env.ZOOM_USER_ID}/meetings`,
       {
         method: "POST",
         headers: {
