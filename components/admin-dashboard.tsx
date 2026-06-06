@@ -880,7 +880,14 @@ export function AdminDashboard() {
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-2">
             <TrendingUp className="h-5 w-5 text-primary" />
-            <span className="text-lg font-bold text-foreground">Mentix Admin</span>
+            <span className="text-lg font-bold text-foreground">
+              {isMentor ? `Mentor Dashboard - ${mentorName}` : "Mentix Admin"}
+            </span>
+            {isMentor && (
+              <Badge variant="outline" className="ml-2 bg-blue-500/20 text-blue-300 border-blue-500/50">
+                Mentor
+              </Badge>
+            )}
           </div>
           <Button variant="ghost" size="sm" onClick={() => {
             document.cookie = "admin_session=; path=/; max-age=0"
