@@ -379,7 +379,7 @@ export function ClientDashboard() {
 
   if (!looked || subscriptions.length === 0) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-slate-950 via-slate-900 to-slate-950 flex flex-col items-center justify-center px-4 py-20" dir={isRtl ? "rtl" : "ltr"}>
+      <div className="min-h-screen bg-black flex flex-col items-center justify-center px-4 py-20" dir={isRtl ? "rtl" : "ltr"}>
         <div className="w-full max-w-md">
           {/* Icon & Title */}
           <div className="text-center mb-12">
