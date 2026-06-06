@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import nodemailer from "nodemailer"
+import { Resend } from "resend"
 
 export async function POST(req: NextRequest) {
   const supabase = createAdminClient()
@@ -20,14 +20,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  const transporter = nodemailer.createTransport({
-    service: "gmail",
-    auth: {
-      user: process.env.EMAIL_USER,
-      pass: process.env.EMAIL_PASSWORD,
-    },
-  })
-
+  const resend = new Resend(process.env.RESEND_API_KEY)
   let remindersSent = 0
 
   for (const session of sessions || []) {
@@ -44,8 +37,8 @@ export async function POST(req: NextRequest) {
 
       for (const reg of registrations || []) {
         try {
-          await transporter.sendMail({
-            from: process.env.EMAIL_USER,
+          await resend.emails.send({
+            from: "Mentix Trading <noreply@mentixtrading.com>",
             to: reg.client_email,
             subject: `⏰ Session Reminder: ${session.title} starts in ${minutesUntilSession} minutes!`,
             html: `

@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import nodemailer from "nodemailer"
+import { Resend } from "resend"
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
@@ -64,13 +64,7 @@ export async function POST(req: NextRequest) {
 
   // Send confirmation email
   try {
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
-      },
-    })
+    const resend = new Resend(process.env.RESEND_API_KEY)
 
     const sessionDateTime = new Date(`${session.session_date}T${session.start_time}`)
     const formattedDate = sessionDateTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
@@ -128,8 +122,8 @@ export async function POST(req: NextRequest) {
       </div>
     `
 
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
+    await resend.emails.send({
+      from: "Mentix Trading <noreply@mentixtrading.com>",
       to: client_email,
       subject: `✓ Registered: ${session.title}`,
       html: htmlContent,
@@ -141,25 +135,20 @@ export async function POST(req: NextRequest) {
 
   // Send admin notification
   try {
-    const transporter = nodemailer.createTransport({
-      service: "gmail",
-      auth: {
-        user: process.env.EMAIL_USER,
-        pass: process.env.EMAIL_PASSWORD,
-      },
-    })
+    const resend = new Resend(process.env.RESEND_API_KEY)
+    const adminEmail = process.env.ADMIN_EMAIL
 
-    const adminEmail = process.env.ADMIN_EMAIL || process.env.EMAIL_USER
-
-    await transporter.sendMail({
-      from: process.env.EMAIL_USER,
-      to: adminEmail,
-      subject: `New Registration: ${session.title}`,
-      html: `
-        <p><strong>${client_name}</strong> (${client_email}) just registered for <strong>${session.title}</strong></p>
-        <p>Date: ${session.session_date} at ${session.start_time}</p>
-      `,
-    })
+    if (adminEmail) {
+      await resend.emails.send({
+        from: "Mentix Trading <noreply@mentixtrading.com>",
+        to: adminEmail,
+        subject: `New Registration: ${session.title}`,
+        html: `
+          <p><strong>${client_name}</strong> (${client_email}) just registered for <strong>${session.title}</strong></p>
+          <p>Date: ${session.session_date} at ${session.start_time}</p>
+        `,
+      })
+    }
   } catch (adminEmailError) {
     console.error("Failed to send admin notification:", adminEmailError)
   }
