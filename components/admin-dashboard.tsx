@@ -2335,6 +2335,29 @@ export function AdminDashboard() {
                 </Button>
               </CardContent>
             </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <Video className="h-5 w-5 text-primary" />
+                  Zoom Integration
+                </CardTitle>
+                <CardDescription>
+                  Authorize Zoom to automatically create meetings for group sessions.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <p className="text-sm text-muted-foreground">
+                  Click the button below to authorize Zoom. You'll be redirected to Zoom to approve access.
+                </p>
+                <a href="/api/zoom/oauth/authorize">
+                  <Button className="w-full bg-blue-600 hover:bg-blue-700">
+                    <Video className="mr-2 h-4 w-4" />
+                    Authorize Zoom Account
+                  </Button>
+                </a>
+              </CardContent>
+            </Card>
           </TabsContent>
         </Tabs>
       </div>
