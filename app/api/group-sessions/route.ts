@@ -33,8 +33,9 @@ export async function POST(req: NextRequest) {
   // Create Zoom meeting if not provided
   if (!zoom_join_url) {
     try {
+      const baseUrl = process.env.NEXT_PUBLIC_SITE_URL || `https://${req.headers.get('host')}`
       const zoomRes = await fetch(
-        `${req.nextUrl.origin}/api/zoom/create-meeting`,
+        `${baseUrl}/api/zoom/create-meeting`,
         {
           method: "POST",
           headers: { "Content-Type": "application/json" },
