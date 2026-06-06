@@ -154,6 +154,20 @@ export function AdminDashboard() {
   const [telegramGroup, setTelegramGroup] = useState("")
   const [weeklyZoomLink, setWeeklyZoomLink] = useState("")
   const [communitySettingsSaving, setCommunitySettingsSaving] = useState(false)
+
+  // Group sessions state
+  const [groupSessions, setGroupSessions] = useState<any[]>([])
+  const [loadingGroupSessions, setLoadingGroupSessions] = useState(true)
+  const [groupSessionDialogOpen, setGroupSessionDialogOpen] = useState(false)
+  const [editingGroupSession, setEditingGroupSession] = useState<any>(null)
+  const [groupSessionForm, setGroupSessionForm] = useState({
+    title: "",
+    description: "",
+    session_date: "",
+    start_time: "",
+    end_time: "",
+    max_participants: "",
+  })
   const [couponForm, setCouponForm] = useState({
     code: "",
     discount_type: "percent" as "percent" | "fixed",
@@ -699,6 +713,63 @@ export function AdminDashboard() {
     }
   }
 
+  // ========== Group Sessions functions ==========
+  const fetchGroupSessions = async () => {
+    setLoadingGroupSessions(true)
+    try {
+      const res = await fetch("/api/group-sessions")
+      const data = await res.json()
+      if (data.sessions) setGroupSessions(data.sessions)
+    } catch (e) {
+      console.error("Failed to fetch group sessions:", e)
+    }
+    setLoadingGroupSessions(false)
+  }
+
+  const resetGroupSessionForm = () => {
+    setEditingGroupSession(null)
+    setGroupSessionForm({ title: "", description: "", session_date: "", start_time: "", end_time: "", max_participants: "" })
+    setGroupSessionDialogOpen(false)
+  }
+
+  const handleSaveGroupSession = async () => {
+    if (!groupSessionForm.title || !groupSessionForm.session_date || !groupSessionForm.start_time || !groupSessionForm.end_time) {
+      alert("Please fill in all required fields")
+      return
+    }
+
+    try {
+      const payload = {
+        ...groupSessionForm,
+        max_participants: groupSessionForm.max_participants ? parseInt(groupSessionForm.max_participants) : null,
+      }
+      const url = editingGroupSession ? `/api/group-sessions/${editingGroupSession.id}` : "/api/group-sessions"
+      const method = editingGroupSession ? "PATCH" : "POST"
+      const reqBody = editingGroupSession ? { id: editingGroupSession.id, ...payload } : payload
+      const res = await fetch(url, { method, headers: { "Content-Type": "application/json" }, body: JSON.stringify(reqBody) })
+      const data = await res.json()
+      if (!res.ok) {
+        alert("Failed to save session: " + (data.error ?? "Unknown error"))
+        return
+      }
+      resetGroupSessionForm()
+      fetchGroupSessions()
+    } catch (e) {
+      console.error("Failed to save session:", e)
+      alert("Failed to save session")
+    }
+  }
+
+  const handleDeleteGroupSession = async (id: string) => {
+    if (!confirm("Delete this group session?")) return
+    try {
+      await fetch(`/api/group-sessions/${id}`, { method: "DELETE" })
+      fetchGroupSessions()
+    } catch (e) {
+      console.error("Failed to delete session:", e)
+    }
+  }
+
   const statusColor = (status: string) => {
     switch (status) {
       case "confirmed": return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
@@ -784,6 +855,7 @@ export function AdminDashboard() {
           <TabsList className="bg-muted flex flex-wrap h-auto gap-1">
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="slots">Availability</TabsTrigger>
+            <TabsTrigger value="group-sessions">Group Sessions</TabsTrigger>
             <TabsTrigger value="articles">Gold Articles</TabsTrigger>
             <TabsTrigger value="orders">Orders</TabsTrigger>
             <TabsTrigger value="coupons">Coupons</TabsTrigger>
@@ -1154,6 +1226,158 @@ export function AdminDashboard() {
                   </Table>
                 </div>
               </Card>
+            )}
+          </TabsContent>
+
+          {/* Group Sessions Tab */}
+          <TabsContent value="group-sessions" className="space-y-6">
+            <div className="flex items-center justify-between">
+              <h2 className="text-xl font-semibold text-foreground">Group Zoom Sessions</h2>
+              <div className="flex gap-2">
+                <Button variant="outline" size="sm" onClick={fetchGroupSessions}>
+                  <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+                </Button>
+                <Dialog open={groupSessionDialogOpen} onOpenChange={setGroupSessionDialogOpen}>
+                  <DialogTrigger asChild>
+                    <Button size="sm" onClick={() => { setEditingGroupSession(null); setGroupSessionForm({ title: "", description: "", session_date: "", start_time: "", end_time: "", max_participants: "" }); }}>
+                      <Plus className="mr-2 h-4 w-4" /> New Session
+                    </Button>
+                  </DialogTrigger>
+                  <DialogContent className="bg-card border-border max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>{editingGroupSession ? "Edit Session" : "Create Group Session"}</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 py-4">
+                      <div className="space-y-2">
+                        <Label>Title *</Label>
+                        <Input
+                          value={groupSessionForm.title}
+                          onChange={(e) => setGroupSessionForm({ ...groupSessionForm, title: e.target.value })}
+                          placeholder="e.g., Weekly Trading Discussion"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Description</Label>
+                        <Textarea
+                          value={groupSessionForm.description}
+                          onChange={(e) => setGroupSessionForm({ ...groupSessionForm, description: e.target.value })}
+                          placeholder="Optional description"
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Date *</Label>
+                        <Input
+                          type="date"
+                          value={groupSessionForm.session_date}
+                          onChange={(e) => setGroupSessionForm({ ...groupSessionForm, session_date: e.target.value })}
+                          min={getTodayLocal()}
+                        />
+                      </div>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div className="space-y-2">
+                          <Label>Start Time *</Label>
+                          <Input
+                            type="time"
+                            value={groupSessionForm.start_time}
+                            onChange={(e) => setGroupSessionForm({ ...groupSessionForm, start_time: e.target.value })}
+                          />
+                        </div>
+                        <div className="space-y-2">
+                          <Label>End Time *</Label>
+                          <Input
+                            type="time"
+                            value={groupSessionForm.end_time}
+                            onChange={(e) => setGroupSessionForm({ ...groupSessionForm, end_time: e.target.value })}
+                          />
+                        </div>
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Max Participants</Label>
+                        <Input
+                          type="number"
+                          value={groupSessionForm.max_participants}
+                          onChange={(e) => setGroupSessionForm({ ...groupSessionForm, max_participants: e.target.value })}
+                          placeholder="Leave empty for unlimited"
+                          min={1}
+                        />
+                      </div>
+                      <Button className="w-full" onClick={handleSaveGroupSession}>
+                        {editingGroupSession ? "Update Session" : "Create Session"}
+                      </Button>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              </div>
+            </div>
+
+            {loadingGroupSessions ? (
+              <div className="flex items-center justify-center py-12">
+                <div className="h-8 w-8 animate-spin rounded-full border-2 border-primary border-t-transparent" />
+              </div>
+            ) : groupSessions.length === 0 ? (
+              <Card className="border-border bg-card">
+                <CardContent className="py-12 text-center">
+                  <Video className="mx-auto mb-3 h-10 w-10 text-muted-foreground opacity-50" />
+                  <p className="text-muted-foreground">No group sessions yet.</p>
+                </CardContent>
+              </Card>
+            ) : (
+              <div className="space-y-3">
+                {groupSessions.map((session) => (
+                  <Card key={session.id} className="border-border bg-card">
+                    <CardContent className="p-4">
+                      <div className="flex items-start justify-between">
+                        <div className="flex-1">
+                          <h4 className="font-semibold text-foreground mb-1">{session.title}</h4>
+                          {session.description && <p className="text-sm text-muted-foreground mb-2">{session.description}</p>}
+                          <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
+                            <span className="flex items-center gap-1">
+                              <Calendar className="w-4 h-4" />
+                              {formatDate(session.session_date)}
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Clock className="w-4 h-4" />
+                              {formatTime(session.start_time)} - {formatTime(session.end_time)}
+                            </span>
+                            {session.max_participants && <span>{session.max_participants} max</span>}
+                            <Badge variant="outline" className={session.status === "scheduled" ? "bg-blue-500/20 text-blue-400" : "bg-gray-500/20 text-gray-400"}>
+                              {session.status}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div className="flex gap-1 ml-4">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => {
+                              setEditingGroupSession(session)
+                              setGroupSessionForm({
+                                title: session.title,
+                                description: session.description || "",
+                                session_date: session.session_date,
+                                start_time: session.start_time,
+                                end_time: session.end_time,
+                                max_participants: session.max_participants ? String(session.max_participants) : "",
+                              })
+                              setGroupSessionDialogOpen(true)
+                            }}
+                          >
+                            <Edit className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="text-red-400 hover:text-red-300"
+                            onClick={() => handleDeleteGroupSession(session.id)}
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
+              </div>
             )}
           </TabsContent>
 
