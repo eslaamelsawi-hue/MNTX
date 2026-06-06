@@ -10,6 +10,7 @@ import { Lock, TrendingUp, Mail } from "lucide-react"
 export function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
   const [password, setPassword] = useState("")
   const [mentorEmail, setMentorEmail] = useState("")
+  const [mentorPassword, setMentorPassword] = useState("")
   const [error, setError] = useState("")
   const [loading, setLoading] = useState(false)
   const [loginType, setLoginType] = useState<"admin" | "mentor">("admin")
@@ -26,7 +27,7 @@ export function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
         body: JSON.stringify(
           loginType === "admin"
             ? { password }
-            : { mentorEmail }
+            : { mentorEmail, mentorPassword }
         ),
       })
 
@@ -104,18 +105,33 @@ export function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
                 />
               </div>
             ) : (
-              <div className="space-y-2">
-                <Label htmlFor="email" className="flex items-center gap-2">
-                  <Mail className="h-3.5 w-3.5" /> Email
-                </Label>
-                <Input
-                  id="email"
-                  type="email"
-                  placeholder="Enter your mentor email"
-                  value={mentorEmail}
-                  onChange={(e) => setMentorEmail(e.target.value)}
-                  required
-                />
+              <div className="space-y-4">
+                <div className="space-y-2">
+                  <Label htmlFor="email" className="flex items-center gap-2">
+                    <Mail className="h-3.5 w-3.5" /> Email
+                  </Label>
+                  <Input
+                    id="email"
+                    type="email"
+                    placeholder="Enter your mentor email"
+                    value={mentorEmail}
+                    onChange={(e) => setMentorEmail(e.target.value)}
+                    required
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="mentor-password" className="flex items-center gap-2">
+                    <Lock className="h-3.5 w-3.5" /> Password
+                  </Label>
+                  <Input
+                    id="mentor-password"
+                    type="password"
+                    placeholder="Enter your mentor password"
+                    value={mentorPassword}
+                    onChange={(e) => setMentorPassword(e.target.value)}
+                    required
+                  />
+                </div>
               </div>
             )}
 

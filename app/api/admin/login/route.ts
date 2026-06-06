@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 
 export async function POST(request: NextRequest) {
   const supabase = await createClient();
-  const { password, mentorEmail } = await request.json();
+  const { password, mentorEmail, mentorPassword } = await request.json();
 
   // Admin login with password
   if (password) {
@@ -35,19 +35,24 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, type: "admin" });
   }
 
-  // Mentor login with email
-  if (mentorEmail) {
+  // Mentor login with email and password
+  if (mentorEmail && mentorPassword) {
     const normalizedEmail = mentorEmail.toLowerCase().trim();
 
-    // Check if mentor exists in subscriptions table
-    const { data: mentor } = await supabase
-      .from("subscriptions")
-      .select("id, client_name")
-      .eq("client_email", normalizedEmail)
+    // Check if mentor exists in mentors table
+    const { data: mentor, error: mentorError } = await supabase
+      .from("mentors")
+      .select("id, email, password, name")
+      .eq("email", normalizedEmail)
       .single();
 
-    if (!mentor) {
+    if (mentorError || !mentor) {
       return NextResponse.json({ error: "Mentor not found" }, { status: 401 });
+    }
+
+    // Verify password
+    if (mentorPassword !== mentor.password) {
+      return NextResponse.json({ error: "Invalid password" }, { status: 401 });
     }
 
     const cookieStore = await cookies();
@@ -60,7 +65,7 @@ export async function POST(request: NextRequest) {
       path: "/",
     });
 
-    return NextResponse.json({ success: true, type: "mentor", mentorId: mentor.id, mentorName: mentor.client_name });
+    return NextResponse.json({ success: true, type: "mentor", mentorId: mentor.id, mentorName: mentor.name });
   }
 
   return NextResponse.json({ error: "Password or mentor email is required" }, { status: 400 });
