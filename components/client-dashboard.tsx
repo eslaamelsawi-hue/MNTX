@@ -264,28 +264,56 @@ export function ClientDashboard() {
   const [groupSessions, setGroupSessions] = useState<GroupSession[]>([])
   const [registeredSessionIds, setRegisteredSessionIds] = useState<Set<string>>(new Set())
 
+  // On component mount, restore from localStorage
+  useEffect(() => {
+    const savedEmail = localStorage.getItem("mentix_user_email")
+    const savedRegistrations = localStorage.getItem("mentix_registered_sessions")
+
+    if (savedEmail && savedRegistrations) {
+      setEmail(savedEmail)
+      setRegisteredSessionIds(new Set(JSON.parse(savedRegistrations)))
+
+      // Fetch fresh session data
+      fetch("/api/group-sessions")
+        .then(res => res.json())
+        .then(data => setGroupSessions(data.sessions ?? []))
+        .catch(e => console.error("Failed to fetch sessions:", e))
+    }
+  }, [])
+
   const handleLookup = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!email.trim()) return
     setLoading(true)
     setError("")
     try {
-      const [dashRes, sessionsRes] = await Promise.all([
+      const [dashRes, sessionsRes, regsRes] = await Promise.all([
         fetch("/api/user-dashboard", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ email: email.trim() }),
         }),
-        fetch("/api/group-sessions")
+        fetch("/api/group-sessions"),
+        fetch("/api/group-sessions/user-registrations", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ email: email.trim() }),
+        })
       ])
       const dashData = await dashRes.json()
       const sessionsData = await sessionsRes.json()
+      const regsData = await regsRes.json()
 
       if (dashData.found) {
         setSubscriptions(dashData.subscriptions)
         setBookings(dashData.bookings)
         setSettings(dashData.settings ?? {})
         setGroupSessions(sessionsData.sessions ?? [])
+        setRegisteredSessionIds(new Set(regsData.registeredSessionIds ?? []))
+
+        // Save to localStorage
+        localStorage.setItem("mentix_user_email", email.trim())
+        localStorage.setItem("mentix_registered_sessions", JSON.stringify(regsData.registeredSessionIds ?? []))
       } else {
         setSubscriptions([])
         setBookings([])
@@ -995,7 +1023,9 @@ export function ClientDashboard() {
                                 })
                                 const data = await res.json()
                                 if (!res.ok) throw new Error(data.error)
-                                setRegisteredSessionIds(new Set([...registeredSessionIds, session.id]))
+                                const newRegistrations = new Set([...registeredSessionIds, session.id])
+                                setRegisteredSessionIds(newRegistrations)
+                                localStorage.setItem("mentix_registered_sessions", JSON.stringify(Array.from(newRegistrations)))
                                 alert("✅ Registered! Confirmation email sent.")
                               } catch (e) {
                                 alert("❌ " + (e instanceof Error ? e.message : "Failed to register"))
