@@ -33,8 +33,12 @@ export function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
 
       if (res.ok) {
         const data = await res.json()
-        if (data.type === "mentor" && data.mentorName) {
+        if (data.type === "mentor") {
+          localStorage.setItem("login_type", "mentor")
+          localStorage.setItem("mentor_id", data.mentorId)
           localStorage.setItem("mentor_name", data.mentorName)
+        } else {
+          localStorage.setItem("login_type", "admin")
         }
         onSuccess()
       } else {

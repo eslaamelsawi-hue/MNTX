@@ -204,29 +204,16 @@ export function AdminDashboard() {
   const [newMentorMessage, setNewMentorMessage] = useState("")
 
   useEffect(() => {
-    // Check if logged in as mentor by checking session cookie
-    const token = document.cookie
-      .split("; ")
-      .find((row) => row.startsWith("admin_session="))
-      ?.split("=")[1]
-
-    if (token) {
-      try {
-        const decoded = atob(token)
-        console.log("Decoded session token:", decoded)
-        if (decoded.startsWith("mentor:")) {
-          const parts = decoded.split(":")
-          const mId = parts[1]
-          setIsMentor(true)
-          setMentorId(mId)
-          const storedName = localStorage.getItem("mentor_name")
-          if (storedName) {
-            setMentorName(storedName)
-          }
-          console.log("Mentor detected:", mId, storedName)
-        }
-      } catch (e) {
-        console.error("Failed to decode session:", e)
+    // Check login type from localStorage
+    const loginType = localStorage.getItem("login_type")
+    if (loginType === "mentor") {
+      const mId = localStorage.getItem("mentor_id")
+      const mName = localStorage.getItem("mentor_name")
+      if (mId && mName) {
+        setIsMentor(true)
+        setMentorId(mId)
+        setMentorName(mName)
+        console.log("Mentor detected:", mId, mName)
       }
     }
   }, [])
