@@ -167,6 +167,7 @@ export function AdminDashboard() {
     start_time: "",
     end_time: "",
     max_participants: "",
+    zoom_join_url: "",
   })
   const [sessionRegistrations, setSessionRegistrations] = useState<any[]>([])
   const [registrationsDialogOpen, setRegistrationsDialogOpen] = useState(false)
@@ -732,7 +733,7 @@ export function AdminDashboard() {
 
   const resetGroupSessionForm = () => {
     setEditingGroupSession(null)
-    setGroupSessionForm({ title: "", description: "", session_date: "", start_time: "", end_time: "", max_participants: "" })
+    setGroupSessionForm({ title: "", description: "", session_date: "", start_time: "", end_time: "", max_participants: "", zoom_join_url: "" })
     setGroupSessionDialogOpen(false)
   }
 
@@ -1266,7 +1267,7 @@ export function AdminDashboard() {
                 </Button>
                 <Dialog open={groupSessionDialogOpen} onOpenChange={setGroupSessionDialogOpen}>
                   <DialogTrigger asChild>
-                    <Button size="sm" onClick={() => { setEditingGroupSession(null); setGroupSessionForm({ title: "", description: "", session_date: "", start_time: "", end_time: "", max_participants: "" }); }}>
+                    <Button size="sm" onClick={() => { setEditingGroupSession(null); setGroupSessionForm({ title: "", description: "", session_date: "", start_time: "", end_time: "", max_participants: "", zoom_join_url: "" }); }}>
                       <Plus className="mr-2 h-4 w-4" /> New Session
                     </Button>
                   </DialogTrigger>
@@ -1326,6 +1327,15 @@ export function AdminDashboard() {
                           onChange={(e) => setGroupSessionForm({ ...groupSessionForm, max_participants: e.target.value })}
                           placeholder="Leave empty for unlimited"
                           min={1}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label>Zoom Meeting Link</Label>
+                        <Input
+                          type="url"
+                          value={groupSessionForm.zoom_join_url}
+                          onChange={(e) => setGroupSessionForm({ ...groupSessionForm, zoom_join_url: e.target.value })}
+                          placeholder="https://zoom.us/j/..."
                         />
                       </div>
                       <Button className="w-full" onClick={handleSaveGroupSession}>
@@ -1434,6 +1444,7 @@ export function AdminDashboard() {
                                 start_time: session.start_time,
                                 end_time: session.end_time,
                                 max_participants: session.max_participants ? String(session.max_participants) : "",
+                                zoom_join_url: session.zoom_join_url || "",
                               })
                               setGroupSessionDialogOpen(true)
                             }}
