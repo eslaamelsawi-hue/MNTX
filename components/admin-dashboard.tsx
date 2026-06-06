@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { AdminSubscriptions } from "@/components/admin-subscriptions"
+import { DMChat } from "@/components/chat/dm-chat"
+import { SupportChat } from "@/components/chat/support-chat"
 import { Textarea } from "@/components/ui/textarea"
 import {
   Calendar as CalendarIcon,
@@ -38,6 +40,8 @@ import {
   Copy,
   Settings,
   Save,
+  MessageCircle,
+  HelpCircle,
 } from "lucide-react"
 
 type Slot = {
@@ -188,6 +192,61 @@ export function AdminDashboard() {
   const [weeklyLimitInput, setWeeklyLimitInput] = useState<string>("2")
   const [settingsSaving, setSettingsSaving] = useState(false)
   const [settingsMessage, setSettingsMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
+
+  // Mentor state
+  const [isMentor, setIsMentor] = useState(false)
+  const [mentorId, setMentorId] = useState<string>("")
+  const [mentorName, setMentorName] = useState<string>("")
+  const [mentorConversations, setMentorConversations] = useState<any[]>([])
+  const [loadingMentorConversations, setLoadingMentorConversations] = useState(false)
+  const [selectedConversation, setSelectedConversation] = useState<any>(null)
+  const [conversationMessages, setConversationMessages] = useState<any[]>([])
+  const [newMentorMessage, setNewMentorMessage] = useState("")
+
+  useEffect(() => {
+    // Check if logged in as mentor by checking session cookie
+    const token = document.cookie
+      .split("; ")
+      .find((row) => row.startsWith("admin_session="))
+      ?.split("=")[1]
+
+    if (token) {
+      try {
+        const decoded = Buffer.from(token, "base64").toString("utf-8")
+        if (decoded.startsWith("mentor:")) {
+          const parts = decoded.split(":")
+          const mId = parts[1]
+          setIsMentor(true)
+          setMentorId(mId)
+          // Fetch mentor name from session storage or local storage if available
+          const storedName = localStorage.getItem("mentor_name")
+          if (storedName) {
+            setMentorName(storedName)
+          }
+        }
+      } catch (e) {
+        console.error("Failed to decode session:", e)
+      }
+    }
+  }, [])
+
+  useEffect(() => {
+    if (isMentor && mentorId) {
+      fetchMentorConversations()
+    }
+  }, [isMentor, mentorId])
+
+  const fetchMentorConversations = async () => {
+    setLoadingMentorConversations(true)
+    try {
+      const res = await fetch(`/api/mentor/conversations?mentor_id=${mentorId}`)
+      const data = await res.json()
+      setMentorConversations(data.conversations || [])
+    } catch (e) {
+      console.error("Failed to fetch conversations:", e)
+    }
+    setLoadingMentorConversations(false)
+  }
 
   const fetchSettings = useCallback(async () => {
     try {
@@ -880,19 +939,32 @@ export function AdminDashboard() {
           </Card>
         </div>
 
-        <Tabs defaultValue="bookings" className="space-y-6">
+        <Tabs defaultValue={isMentor ? "mentor-messages" : "bookings"} className="space-y-6">
           <TabsList className="bg-muted flex flex-wrap h-auto gap-1">
-            <TabsTrigger value="bookings">Bookings</TabsTrigger>
-            <TabsTrigger value="slots">Availability</TabsTrigger>
-            <TabsTrigger value="group-sessions">Group Sessions</TabsTrigger>
-            <TabsTrigger value="articles">Gold Articles</TabsTrigger>
-            <TabsTrigger value="orders">Orders</TabsTrigger>
-            <TabsTrigger value="coupons">Coupons</TabsTrigger>
-            <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
-            <TabsTrigger value="settings">
-              <Settings className="mr-1.5 h-3.5 w-3.5" />
-              Settings
-            </TabsTrigger>
+            {isMentor ? (
+              <>
+                <TabsTrigger value="mentor-messages" className="gap-1.5">
+                  <MessageCircle className="h-3.5 w-3.5" /> Messages
+                </TabsTrigger>
+                <TabsTrigger value="support" className="gap-1.5">
+                  <HelpCircle className="h-3.5 w-3.5" /> Support
+                </TabsTrigger>
+              </>
+            ) : (
+              <>
+                <TabsTrigger value="bookings">Bookings</TabsTrigger>
+                <TabsTrigger value="slots">Availability</TabsTrigger>
+                <TabsTrigger value="group-sessions">Group Sessions</TabsTrigger>
+                <TabsTrigger value="articles">Gold Articles</TabsTrigger>
+                <TabsTrigger value="orders">Orders</TabsTrigger>
+                <TabsTrigger value="coupons">Coupons</TabsTrigger>
+                <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
+                <TabsTrigger value="settings">
+                  <Settings className="mr-1.5 h-3.5 w-3.5" />
+                  Settings
+                </TabsTrigger>
+              </>
+            )}
           </TabsList>
 
           {/* Bookings Tab */}
@@ -2359,6 +2431,61 @@ export function AdminDashboard() {
               </CardContent>
             </Card>
           </TabsContent>
+
+          {/* Mentor Messages Tab */}
+          {isMentor && (
+            <TabsContent value="mentor-messages" className="space-y-4">
+              <div className="grid gap-4 md:grid-cols-3">
+                {/* Conversations List */}
+                <Card className="md:col-span-1">
+                  <CardHeader>
+                    <CardTitle className="text-sm">Students</CardTitle>
+                  </CardHeader>
+                  <CardContent className="space-y-2">
+                    {mentorConversations.length === 0 ? (
+                      <p className="text-sm text-muted-foreground">No conversations yet</p>
+                    ) : (
+                      mentorConversations.map((conv) => (
+                        <Button
+                          key={conv.id}
+                          variant={selectedConversation?.id === conv.id ? "default" : "outline"}
+                          className="w-full justify-start text-left h-auto p-2"
+                          onClick={() => setSelectedConversation(conv)}
+                        >
+                          <div className="flex flex-col w-full">
+                            <span className="font-medium text-xs truncate">{conv.student_email}</span>
+                            <span className="text-xs opacity-70 truncate">
+                              {conv.updated_at ? new Date(conv.updated_at).toLocaleDateString() : ""}
+                            </span>
+                          </div>
+                        </Button>
+                      ))
+                    )}
+                  </CardContent>
+                </Card>
+
+                {/* Chat View */}
+                {selectedConversation && mentorId && (
+                  <div className="md:col-span-2">
+                    <DMChat
+                      userEmail={selectedConversation.student_email}
+                      mentorId={mentorId}
+                    />
+                  </div>
+                )}
+              </div>
+            </TabsContent>
+          )}
+
+          {/* Mentor Support Tickets Tab */}
+          {isMentor && mentorName && (
+            <TabsContent value="support" className="space-y-4">
+              <SupportChat
+                userEmail={mentorId}
+                userName={mentorName}
+              />
+            </TabsContent>
+          )}
         </Tabs>
       </div>
     </div>
