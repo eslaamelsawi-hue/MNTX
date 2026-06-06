@@ -11,7 +11,7 @@ import {
   Clock, Calendar, Mail, Loader2, CalendarPlus, Video,
   Users, Rss, ExternalLink, Activity, CheckCircle2,
   XCircle, AlertCircle, Award, Star, MessageCircle,
-  LayoutDashboard, BookOpen, Repeat,
+  LayoutDashboard, BookOpen, Repeat, RefreshCw,
 } from "lucide-react"
 import Link from "next/link"
 import { useLocale } from "next-intl"
@@ -745,10 +745,19 @@ export function ClientDashboard() {
         <TabsContent value="sessions" className="space-y-6">
           {/* Upcoming */}
           <div>
-            <h3 className="mb-3 flex items-center gap-2 font-semibold">
-              <Calendar className="h-4 w-4 text-primary" />{l.upcomingSessions}
-              <Badge variant="secondary">{upcomingSessions.length}</Badge>
-            </h3>
+            <div className="mb-3 flex items-center justify-between">
+              <h3 className="flex items-center gap-2 font-semibold">
+                <Calendar className="h-4 w-4 text-primary" />{l.upcomingSessions}
+                <Badge variant="secondary">{upcomingSessions.length}</Badge>
+              </h3>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => handleLookup({ preventDefault: () => {} } as any)}
+              >
+                <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+              </Button>
+            </div>
             {upcomingSessions.length === 0 ? (
               <Card className="border-border bg-card">
                 <CardContent className="py-8 text-center text-muted-foreground">
@@ -876,9 +885,18 @@ export function ClientDashboard() {
 
         {/* ── Community ── */}
         <TabsContent value="community" className="space-y-4">
-          <div className="mb-2">
-            <h3 className="font-semibold text-lg">{l.communityTitle}</h3>
-            <p className="text-sm text-muted-foreground">{l.communityDesc}</p>
+          <div className="mb-2 flex items-center justify-between">
+            <div>
+              <h3 className="font-semibold text-lg">{l.communityTitle}</h3>
+              <p className="text-sm text-muted-foreground">{l.communityDesc}</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => handleLookup({ preventDefault: () => {} } as any)}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+            </Button>
           </div>
 
           <div className="grid gap-4 sm:grid-cols-2">
@@ -934,9 +952,23 @@ export function ClientDashboard() {
 
         {/* ── Weekly Zoom ── */}
         <TabsContent value="weekly-zoom" className="space-y-4">
-          <div className="mb-6">
-            <h3 className="text-2xl font-bold text-white mb-1">{l.weeklyZoomTitle}</h3>
-            <p className="text-slate-400">{l.weeklyZoomDesc}</p>
+          <div className="mb-6 flex items-center justify-between">
+            <div>
+              <h3 className="text-2xl font-bold text-white mb-1">{l.weeklyZoomTitle}</h3>
+              <p className="text-slate-400">{l.weeklyZoomDesc}</p>
+            </div>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => {
+                fetch("/api/group-sessions")
+                  .then(res => res.json())
+                  .then(data => setGroupSessions(data.sessions ?? []))
+                  .catch(e => console.error("Failed to refresh:", e))
+              }}
+            >
+              <RefreshCw className="h-4 w-4 mr-2" /> Refresh
+            </Button>
           </div>
 
           {groupSessions.length === 0 ? (
