@@ -155,10 +155,6 @@ export function AdminDashboard() {
   const [weeklyZoomLink, setWeeklyZoomLink] = useState("")
   const [communitySettingsSaving, setCommunitySettingsSaving] = useState(false)
 
-  // Tab navigation
-  const [activeTab, setActiveTab] = useState("bookings")
-  const [loadedTabs, setLoadedTabs] = useState(new Set(["bookings", "slots"]))
-
   // Group sessions state
   const [groupSessions, setGroupSessions] = useState<any[]>([])
   const [loadingGroupSessions, setLoadingGroupSessions] = useState(true)
@@ -371,20 +367,12 @@ export function AdminDashboard() {
   useEffect(() => {
     fetchBookings()
     fetchSlots()
+    fetchGroupSessions()
+    fetchArticles()
+    fetchOrders()
+    fetchCoupons()
     fetchSettings()
   }, [])
-
-  // Lazy load tab data when tab is switched
-  useEffect(() => {
-    if (!loadedTabs.has(activeTab)) {
-      setLoadedTabs(prev => new Set([...prev, activeTab]))
-
-      if (activeTab === "group-sessions") fetchGroupSessions()
-      else if (activeTab === "articles") fetchArticles()
-      else if (activeTab === "orders") fetchOrders()
-      else if (activeTab === "coupons") fetchCoupons()
-    }
-  }, [activeTab])
 
   const formatTime = (time: string) => {
     const [h, m] = time.split(":")
@@ -891,7 +879,7 @@ export function AdminDashboard() {
           </Card>
         </div>
 
-        <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+        <Tabs defaultValue="bookings" className="space-y-6">
           <TabsList className="bg-muted flex flex-wrap h-auto gap-1">
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="slots">Availability</TabsTrigger>
