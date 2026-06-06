@@ -906,72 +906,107 @@ export function ClientDashboard() {
 
         {/* ── Weekly Zoom ── */}
         <TabsContent value="weekly-zoom" className="space-y-4">
-          <h3 className="text-lg font-semibold">{l.weeklyZoomTitle}</h3>
+          <div className="mb-6">
+            <h3 className="text-2xl font-bold text-white mb-1">{l.weeklyZoomTitle}</h3>
+            <p className="text-slate-400">{l.weeklyZoomDesc}</p>
+          </div>
+
           {groupSessions.length === 0 ? (
-            <Card className="border-border bg-card">
-              <CardContent className="py-12 text-center">
-                <Video className="mx-auto mb-3 h-10 w-10 text-muted-foreground opacity-50" />
-                <p className="text-muted-foreground">No upcoming group sessions</p>
+            <Card className="border-slate-700/50 bg-gradient-to-br from-slate-900/50 to-slate-800/50">
+              <CardContent className="py-16 text-center">
+                <div className="flex justify-center mb-4">
+                  <div className="p-4 rounded-2xl bg-blue-500/10">
+                    <Video className="w-8 h-8 text-blue-400" />
+                  </div>
+                </div>
+                <p className="text-slate-300 text-lg font-medium mb-2">No upcoming sessions</p>
+                <p className="text-slate-500">Check back soon for scheduled group sessions!</p>
               </CardContent>
             </Card>
           ) : (
-            <div className="space-y-3">
-              {groupSessions.map((session) => (
-                <Card key={session.id} className="border-border bg-card">
-                  <CardContent className="p-4">
-                    <div className="flex items-start justify-between gap-4">
-                      <div className="flex-1">
-                        <h4 className="font-semibold text-foreground mb-1">{session.title}</h4>
-                        {session.description && <p className="text-sm text-muted-foreground mb-2">{session.description}</p>}
-                        <div className="flex items-center gap-4 text-sm text-muted-foreground flex-wrap">
-                          <span className="flex items-center gap-1">
-                            <Calendar className="w-4 h-4" />
-                            {new Date(session.session_date).toLocaleDateString()}
-                          </span>
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-4 h-4" />
-                            {session.start_time.slice(0, 5)} - {session.end_time.slice(0, 5)}
-                          </span>
+            <div className="grid gap-4">
+              {groupSessions.map((session) => {
+                const isRegistered = registeredSessionIds.has(session.id)
+                const sessionDate = new Date(session.session_date)
+                const daysAway = Math.ceil((sessionDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
+
+                return (
+                  <Card key={session.id} className="border-slate-700/50 bg-gradient-to-br from-slate-900/80 to-slate-800/40 hover:border-blue-500/50 transition overflow-hidden group">
+                    <CardContent className="p-6">
+                      <div className="flex items-start justify-between gap-6">
+                        <div className="flex-1">
+                          <div className="flex items-start gap-4 mb-3">
+                            <div className="p-3 rounded-lg bg-blue-500/20 mt-0.5 shrink-0">
+                              <Video className="w-5 h-5 text-blue-400" />
+                            </div>
+                            <div className="flex-1">
+                              <h4 className="text-lg font-bold text-white mb-1 group-hover:text-blue-400 transition">{session.title}</h4>
+                              {session.description && <p className="text-sm text-slate-400 mb-3">{session.description}</p>}
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap gap-4 text-sm">
+                            <div className="flex items-center gap-2 text-slate-300">
+                              <Calendar className="w-4 h-4 text-blue-400" />
+                              <span className="font-medium">{sessionDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                            </div>
+                            <div className="flex items-center gap-2 text-slate-300">
+                              <Clock className="w-4 h-4 text-blue-400" />
+                              <span className="font-medium">{session.start_time.slice(0, 5)} - {session.end_time.slice(0, 5)}</span>
+                            </div>
+                            {daysAway === 0 && <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Today</Badge>}
+                            {daysAway === 1 && <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Tomorrow</Badge>}
+                            {daysAway > 1 && <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">{daysAway} days</Badge>}
+                          </div>
+                        </div>
+
+                        <div className="flex gap-2 shrink-0 flex-col sm:flex-row">
+                          {session.zoom_join_url && isRegistered && (
+                            <a href={session.zoom_join_url} target="_blank" rel="noopener noreferrer" className="block">
+                              <Button size="sm" className="gap-2 bg-emerald-600 hover:bg-emerald-700 w-full sm:w-auto">
+                                <Video className="w-4 h-4" />
+                                Join Now
+                              </Button>
+                            </a>
+                          )}
+                          <Button
+                            size="sm"
+                            onClick={async () => {
+                              try {
+                                const res = await fetch("/api/group-sessions/register", {
+                                  method: "POST",
+                                  headers: { "Content-Type": "application/json" },
+                                  body: JSON.stringify({
+                                    session_id: session.id,
+                                    client_email: email,
+                                    client_name: activeSub?.client_name || email.split("@")[0],
+                                    zoom_url: session.zoom_join_url,
+                                    session_title: session.title,
+                                    session_date: session.session_date,
+                                    start_time: session.start_time,
+                                    end_time: session.end_time,
+                                  })
+                                })
+                                const data = await res.json()
+                                if (!res.ok) throw new Error(data.error)
+                                setRegisteredSessionIds(new Set([...registeredSessionIds, session.id]))
+                                alert("✅ Registered! Confirmation email sent.")
+                              } catch (e) {
+                                alert("❌ " + (e instanceof Error ? e.message : "Failed to register"))
+                              }
+                            }}
+                            disabled={isRegistered}
+                            variant={isRegistered ? "secondary" : "default"}
+                            className={isRegistered ? "bg-slate-700 text-slate-300 cursor-default" : "bg-blue-600 hover:bg-blue-700"}
+                          >
+                            {isRegistered ? "✓ Registered" : "Register"}
+                          </Button>
                         </div>
                       </div>
-                      <div className="flex gap-2 shrink-0">
-                        {session.zoom_join_url && (
-                          <a href={session.zoom_join_url} target="_blank" rel="noopener noreferrer">
-                            <Button size="sm" className="gap-1">
-                              <Video className="w-3.5 h-3.5" />
-                              Join
-                            </Button>
-                          </a>
-                        )}
-                        <Button
-                          size="sm"
-                          variant="outline"
-                          onClick={async () => {
-                            try {
-                              await fetch("/api/group-sessions/register", {
-                                method: "POST",
-                                headers: { "Content-Type": "application/json" },
-                                body: JSON.stringify({
-                                  session_id: session.id,
-                                  client_email: email,
-                                  client_name: activeSub?.client_name || email.split("@")[0]
-                                })
-                              })
-                              setRegisteredSessionIds(new Set([...registeredSessionIds, session.id]))
-                              alert("Registered for session!")
-                            } catch {
-                              alert("Failed to register")
-                            }
-                          }}
-                          disabled={registeredSessionIds.has(session.id)}
-                        >
-                          {registeredSessionIds.has(session.id) ? "Registered" : "Register"}
-                        </Button>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              ))}
+                    </CardContent>
+                  </Card>
+                )
+              })}
             </div>
           )}
         </TabsContent>
