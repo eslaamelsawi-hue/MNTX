@@ -2468,6 +2468,7 @@ export function AdminDashboard() {
                     <DMChat
                       userEmail={selectedConversation.student_email}
                       mentorId={mentorId}
+                      isMentor={true}
                     />
                   </div>
                 )}

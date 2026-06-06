@@ -19,7 +19,7 @@ type Conversation = {
   student_email: string
 }
 
-export function DMChat({ userEmail, mentorId }: { userEmail: string; mentorId: string }) {
+export function DMChat({ userEmail, mentorId, isMentor = false }: { userEmail: string; mentorId: string; isMentor?: boolean }) {
   const [messages, setMessages] = useState<Message[]>([])
   const [conversation, setConversation] = useState<Conversation | null>(null)
   const [newMessage, setNewMessage] = useState("")
@@ -27,6 +27,8 @@ export function DMChat({ userEmail, mentorId }: { userEmail: string; mentorId: s
 
   useEffect(() => {
     fetchMessages()
+    const interval = setInterval(fetchMessages, 3000)
+    return () => clearInterval(interval)
   }, [])
 
   const fetchMessages = async () => {
@@ -75,22 +77,31 @@ export function DMChat({ userEmail, mentorId }: { userEmail: string; mentorId: s
           ) : messages.length === 0 ? (
             <p className="text-slate-400 text-center">No messages yet. Start the conversation!</p>
           ) : (
-            messages.map((msg) => (
-              <div key={msg.id} className={`flex ${msg.sender_email === userEmail ? "justify-end" : "justify-start"}`}>
-                <div
-                  className={`max-w-xs px-4 py-2 rounded-lg ${
-                    msg.sender_email === userEmail
-                      ? "bg-blue-600 text-white"
-                      : "bg-slate-700 text-slate-100"
-                  }`}
-                >
-                  <p className="text-sm">{msg.message}</p>
-                  <p className="text-xs opacity-70 mt-1">
-                    {new Date(msg.created_at).toLocaleTimeString()}
-                  </p>
+            messages.map((msg) => {
+              const isCurrentUserMessage = isMentor
+                ? msg.sender_email !== conversation?.student_email
+                : msg.sender_email === userEmail
+
+              return (
+                <div key={msg.id} className={`flex ${isCurrentUserMessage ? "justify-end" : "justify-start"}`}>
+                  <div
+                    className={`max-w-xs px-4 py-2 rounded-lg ${
+                      isCurrentUserMessage
+                        ? "bg-blue-600 text-white"
+                        : "bg-amber-600/30 text-amber-100 border border-amber-600/50"
+                    }`}
+                  >
+                    {!isCurrentUserMessage && isMentor && (
+                      <p className="text-xs font-semibold mb-1">Student</p>
+                    )}
+                    <p className="text-sm">{msg.message}</p>
+                    <p className="text-xs opacity-70 mt-1">
+                      {new Date(msg.created_at).toLocaleTimeString()}
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))
+              )
+            })
           )}
         </div>
 
