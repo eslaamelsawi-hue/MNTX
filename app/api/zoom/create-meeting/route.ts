@@ -36,7 +36,7 @@ export async function POST(req: NextRequest) {
     const accessToken = await getZoomAccessToken()
 
     const zoomResponse = await fetch(
-      `https://api.zoom.us/v2/users/${process.env.ZOOM_USER_ID}/meetings`,
+      `https://api.zoom.us/v2/accounts/${process.env.ZOOM_ACCOUNT_ID}/meetings`,
       {
         method: "POST",
         headers: {
@@ -48,7 +48,7 @@ export async function POST(req: NextRequest) {
           start_time,
           duration,
           timezone: "UTC",
-          meeting_invitees: [],
+          type: 2,
           settings: {
             host_video: true,
             participant_video: true,
