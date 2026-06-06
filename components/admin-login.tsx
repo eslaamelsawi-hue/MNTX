@@ -37,6 +37,7 @@ export function AdminLogin({ onSuccess }: { onSuccess: () => void }) {
           localStorage.setItem("login_type", "mentor")
           localStorage.setItem("mentor_id", data.mentorId)
           localStorage.setItem("mentor_name", data.mentorName)
+          localStorage.setItem("mentor_email", mentorEmail)
         } else {
           localStorage.setItem("login_type", "admin")
         }

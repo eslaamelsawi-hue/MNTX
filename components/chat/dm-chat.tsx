@@ -19,7 +19,7 @@ type Conversation = {
   student_email: string
 }
 
-export function DMChat({ userEmail, mentorId, isMentor = false }: { userEmail: string; mentorId: string; isMentor?: boolean }) {
+export function DMChat({ userEmail, mentorId, isMentor = false, mentorEmail }: { userEmail: string; mentorId: string; isMentor?: boolean; mentorEmail?: string }) {
   const [messages, setMessages] = useState<Message[]>([])
   const [conversation, setConversation] = useState<Conversation | null>(null)
   const [newMessage, setNewMessage] = useState("")
@@ -46,13 +46,15 @@ export function DMChat({ userEmail, mentorId, isMentor = false }: { userEmail: s
   const sendMessage = async () => {
     if (!newMessage.trim() || !conversation) return
 
+    const senderEmail = isMentor && mentorEmail ? mentorEmail : userEmail
+
     try {
       await fetch("/api/messages/direct", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           conversation_id: conversation.id,
-          sender_email: userEmail,
+          sender_email: senderEmail,
           message: newMessage,
         }),
       })

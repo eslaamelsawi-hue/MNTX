@@ -198,6 +198,7 @@ export function AdminDashboard() {
   const [isMentor, setIsMentor] = useState(false)
   const [mentorId, setMentorId] = useState<string>("")
   const [mentorName, setMentorName] = useState<string>("")
+  const [mentorEmail, setMentorEmail] = useState<string>("")
   const [mentorConversations, setMentorConversations] = useState<any[]>([])
   const [loadingMentorConversations, setLoadingMentorConversations] = useState(false)
   const [selectedConversation, setSelectedConversation] = useState<any>(null)
@@ -210,10 +211,14 @@ export function AdminDashboard() {
     if (loginType === "mentor") {
       const mId = localStorage.getItem("mentor_id")
       const mName = localStorage.getItem("mentor_name")
+      const mEmail = localStorage.getItem("mentor_email")
       if (mId && mName) {
         setIsMentor(true)
         setMentorId(mId)
         setMentorName(mName)
+        if (mEmail) {
+          setMentorEmail(mEmail)
+        }
         console.log("Mentor detected:", mId, mName)
       }
     }
@@ -2469,6 +2474,7 @@ export function AdminDashboard() {
                       userEmail={selectedConversation.student_email}
                       mentorId={mentorId}
                       isMentor={true}
+                      mentorEmail={mentorEmail}
                     />
                   </div>
                 )}
