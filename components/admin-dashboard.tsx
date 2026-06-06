@@ -883,7 +883,7 @@ export function AdminDashboard() {
           <TabsList className="bg-muted flex flex-wrap h-auto gap-1">
             <TabsTrigger value="bookings">Bookings</TabsTrigger>
             <TabsTrigger value="slots">Availability</TabsTrigger>
-            <TabsTrigger value="group-sessions">Group Sessions</TabsTrigger>
+            {/* <TabsTrigger value="group-sessions">Group Sessions</TabsTrigger> */}
             <TabsTrigger value="articles">Gold Articles</TabsTrigger>
             <TabsTrigger value="orders">Orders</TabsTrigger>
             <TabsTrigger value="coupons">Coupons</TabsTrigger>
@@ -1257,8 +1257,8 @@ export function AdminDashboard() {
             )}
           </TabsContent>
 
-          {/* Group Sessions Tab */}
-          <TabsContent value="group-sessions" className="space-y-6">
+          {/* Group Sessions Tab - DISABLED TEMPORARILY */}
+          {/* <TabsContent value="group-sessions" className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-foreground">Group Zoom Sessions</h2>
               <div className="flex gap-2">
@@ -1456,7 +1456,7 @@ export function AdminDashboard() {
                 ))}
               </div>
             )}
-          </TabsContent>
+          </TabsContent> */}
 
           {/* Gold Articles Tab */}
           <TabsContent value="articles" className="space-y-6">
