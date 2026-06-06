@@ -41,7 +41,7 @@ export async function POST(req: NextRequest) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             topic: title,
-            start_time: `${session_date}T${start_time}`,
+            start_time: `${session_date}T${start_time}:00`,
             duration,
           }),
         }
