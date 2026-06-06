@@ -15,6 +15,9 @@ import {
 } from "lucide-react"
 import Link from "next/link"
 import { useLocale } from "next-intl"
+import { DMChat } from "@/components/chat/dm-chat"
+import { SupportChat } from "@/components/chat/support-chat"
+import { GroupChat } from "@/components/chat/group-chat"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -566,6 +569,9 @@ export function ClientDashboard() {
           <TabsTrigger value="weekly-zoom" className="gap-1.5 text-xs sm:text-sm">
             <Repeat className="h-3.5 w-3.5" />{l.tabWeeklyZoom}
           </TabsTrigger>
+          <TabsTrigger value="chats" className="gap-1.5 text-xs sm:text-sm">
+            <MessageCircle className="h-3.5 w-3.5" />Chats
+          </TabsTrigger>
         </TabsList>
 
         {/* ── Overview ── */}
@@ -950,6 +956,18 @@ export function ClientDashboard() {
           </div>
         </TabsContent>
 
+        {/* ── Chats ── */}
+        <TabsContent value="chats" className="space-y-6">
+          <div className="space-y-6">
+            {email && (
+              <>
+                <DMChat userEmail={email} mentorId="mentor-id" />
+                <SupportChat userEmail={email} userName={subscriptions[0]?.client_name || "User"} />
+              </>
+            )}
+          </div>
+        </TabsContent>
+
         {/* ── Weekly Zoom ── */}
         <TabsContent value="weekly-zoom" className="space-y-4">
           <div className="mb-6 flex items-center justify-between">
@@ -1076,6 +1094,15 @@ export function ClientDashboard() {
                 )
               })}
             </div>
+          )}
+
+          {/* Group Chat for Selected Session */}
+          {groupSessions.length > 0 && email && (
+            <GroupChat
+              sessionId={groupSessions[0]?.id || ""}
+              userEmail={email}
+              userName={subscriptions[0]?.client_name || "User"}
+            />
           )}
         </TabsContent>
       </Tabs>
