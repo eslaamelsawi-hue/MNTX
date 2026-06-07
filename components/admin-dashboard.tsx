@@ -43,6 +43,7 @@ import {
   Save,
   MessageCircle,
   HelpCircle,
+  MessageSquare,
 } from "lucide-react"
 
 type Slot = {
