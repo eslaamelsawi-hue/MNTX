@@ -25,7 +25,7 @@ export async function GET(req: NextRequest) {
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
-  const { session_id, sender_email, sender_name, message } = body
+  const { session_id, sender_email, sender_name, message, category } = body
 
   if (!session_id || !sender_email || !sender_name || !message) {
     return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
@@ -40,6 +40,7 @@ export async function POST(req: NextRequest) {
       sender_email: sender_email.toLowerCase().trim(),
       sender_name,
       message,
+      category: category || "general",
     })
     .select()
     .single()

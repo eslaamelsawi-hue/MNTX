@@ -5,22 +5,53 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
-import { Send, MessageSquare, RefreshCw, Copy, Trash2, ArrowDown } from "lucide-react"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
+import { Send, MessageSquare, RefreshCw, Copy, Trash2, ArrowDown, ChevronDown, ChevronUp } from "lucide-react"
 
 type Message = {
   id: number
   sender_email: string
   sender_name: string
   message: string
+  category?: string
   created_at: string
 }
 
-export function GroupChat({ sessionId, userEmail, userName }: { sessionId: string; userEmail: string; userName: string }) {
+const CHAT_CATEGORIES = [
+  { value: "general", label: "General", color: "bg-slate-500" },
+  { value: "question", label: "Question", color: "bg-blue-500" },
+  { value: "announcement", label: "Announcement", color: "bg-purple-500" },
+  { value: "technical", label: "Technical", color: "bg-orange-500" },
+  { value: "feedback", label: "Feedback", color: "bg-green-500" },
+  { value: "resource", label: "Resource", color: "bg-cyan-500" },
+]
+
+export function GroupChat({
+  sessionId,
+  userEmail,
+  userName,
+  onToggleVisibility,
+  isVisible = true
+}: {
+  sessionId: string
+  userEmail: string
+  userName: string
+  onToggleVisibility?: (visible: boolean) => void
+  isVisible?: boolean
+}) {
   const [messages, setMessages] = useState<Message[]>([])
   const [newMessage, setNewMessage] = useState("")
+  const [selectedCategory, setSelectedCategory] = useState("general")
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [showScrollButton, setShowScrollButton] = useState(false)
+  const [isMinimized, setIsMinimized] = useState(false)
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const messagesContainerRef = useRef<HTMLDivElement>(null)
 
@@ -58,6 +89,7 @@ export function GroupChat({ sessionId, userEmail, userName }: { sessionId: strin
           sender_email: userEmail,
           sender_name: userName,
           message: newMessage,
+          category: selectedCategory,
         }),
       })
       setNewMessage("")
@@ -66,6 +98,18 @@ export function GroupChat({ sessionId, userEmail, userName }: { sessionId: strin
       console.error("Failed to send message:", e)
     }
   }
+
+  const getCategoryColor = (category?: string) => {
+    const cat = CHAT_CATEGORIES.find(c => c.value === category)
+    return cat?.color || "bg-slate-500"
+  }
+
+  const getCategoryLabel = (category?: string) => {
+    const cat = CHAT_CATEGORIES.find(c => c.value === category)
+    return cat?.label || "General"
+  }
+
+  if (!isVisible) return null
 
   const deleteMessage = async (messageId: number) => {
     if (!confirm("Delete this message?")) return
@@ -111,35 +155,58 @@ export function GroupChat({ sessionId, userEmail, userName }: { sessionId: strin
             </div>
             <span>Group Session Chat</span>
           </CardTitle>
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={async () => {
-              setRefreshing(true)
-              await fetchMessages()
-            }}
-            disabled={refreshing}
-            className="text-slate-400 hover:text-slate-200"
-          >
-            <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={() => setIsMinimized(!isMinimized)}
+              className="text-slate-400 hover:text-slate-200"
+            >
+              {isMinimized ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={async () => {
+                setRefreshing(true)
+                await fetchMessages()
+              }}
+              disabled={refreshing}
+              className="text-slate-400 hover:text-slate-200"
+            >
+              <RefreshCw className={`h-4 w-4 ${refreshing ? "animate-spin" : ""}`} />
+            </Button>
+            {onToggleVisibility && (
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => onToggleVisibility(false)}
+                className="text-slate-400 hover:text-red-400"
+              >
+                ✕
+              </Button>
+            )}
+          </div>
         </div>
-        <div className="flex gap-2">
-          <Badge variant="outline" className="bg-blue-500/10 text-blue-300 border-blue-500/30">
-            {messages.length} messages
-          </Badge>
-          <Badge variant="outline" className="bg-purple-500/10 text-purple-300 border-purple-500/30">
-            {getUniqueParticipants()} participants
-          </Badge>
-        </div>
+        {!isMinimized && (
+          <div className="flex gap-2">
+            <Badge variant="outline" className="bg-blue-500/10 text-blue-300 border-blue-500/30">
+              {messages.length} messages
+            </Badge>
+            <Badge variant="outline" className="bg-purple-500/10 text-purple-300 border-purple-500/30">
+              {getUniqueParticipants()} participants
+            </Badge>
+          </div>
+        )}
       </CardHeader>
 
-      <CardContent className="space-y-4 pt-4">
-        <div
-          ref={messagesContainerRef}
-          onScroll={handleScroll}
-          className="h-72 overflow-y-auto space-y-3 bg-slate-800/30 p-4 rounded-lg border border-slate-700/50 scroll-smooth"
-        >
+      {!isMinimized && (
+        <CardContent className="space-y-4 pt-4">
+          <div
+            ref={messagesContainerRef}
+            onScroll={handleScroll}
+            className="h-72 overflow-y-auto space-y-3 bg-slate-800/30 p-4 rounded-lg border border-slate-700/50 scroll-smooth"
+          >
           {loading ? (
             <div className="flex items-center justify-center h-full">
               <p className="text-slate-400">Loading messages...</p>
@@ -168,6 +235,11 @@ export function GroupChat({ sessionId, userEmail, userName }: { sessionId: strin
                   >
                     {!isOwnMessage && (
                       <p className="text-xs font-semibold text-blue-300 mb-1 opacity-90">{msg.sender_name}</p>
+                    )}
+                    {msg.category && msg.category !== "general" && (
+                      <Badge className={`text-xs mb-2 ${getCategoryColor(msg.category)} text-white`}>
+                        {getCategoryLabel(msg.category)}
+                      </Badge>
                     )}
                     <p className="text-sm leading-relaxed break-words">{msg.message}</p>
                     <div className="flex items-center justify-between gap-2 mt-2 pt-2 border-t border-white/10">
@@ -206,34 +278,53 @@ export function GroupChat({ sessionId, userEmail, userName }: { sessionId: strin
           <div ref={messagesEndRef} />
         </div>
 
-        {showScrollButton && (
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={scrollToBottom}
-            className="w-full border-slate-600 hover:bg-slate-700/50"
-          >
-            <ArrowDown className="h-4 w-4 mr-2" /> Scroll to latest
-          </Button>
-        )}
+          {showScrollButton && (
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={scrollToBottom}
+              className="w-full border-slate-600 hover:bg-slate-700/50"
+            >
+              <ArrowDown className="h-4 w-4 mr-2" /> Scroll to latest
+            </Button>
+          )}
 
-        <div className="flex gap-2">
-          <Input
-            placeholder="Share your thoughts..."
-            value={newMessage}
-            onChange={(e) => setNewMessage(e.target.value)}
-            onKeyPress={(e) => e.key === "Enter" && sendMessage()}
-            className="bg-slate-800 border-slate-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
-          />
-          <Button
-            onClick={sendMessage}
-            disabled={!newMessage.trim()}
-            className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
-          >
-            <Send className="h-4 w-4" />
-          </Button>
-        </div>
-      </CardContent>
+          <div className="space-y-2">
+            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+              <SelectTrigger className="bg-slate-800 border-slate-700 h-9">
+                <SelectValue placeholder="Select category" />
+              </SelectTrigger>
+              <SelectContent className="bg-slate-800 border-slate-700">
+                {CHAT_CATEGORIES.map((cat) => (
+                  <SelectItem key={cat.value} value={cat.value}>
+                    <span className="flex items-center gap-2">
+                      <div className={`w-2 h-2 rounded-full ${cat.color}`} />
+                      {cat.label}
+                    </span>
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+
+            <div className="flex gap-2">
+              <Input
+                placeholder="Share your thoughts..."
+                value={newMessage}
+                onChange={(e) => setNewMessage(e.target.value)}
+                onKeyPress={(e) => e.key === "Enter" && sendMessage()}
+                className="bg-slate-800 border-slate-700 focus:border-blue-500 focus:ring-1 focus:ring-blue-500/30"
+              />
+              <Button
+                onClick={sendMessage}
+                disabled={!newMessage.trim()}
+                className="bg-gradient-to-r from-blue-600 to-blue-700 hover:from-blue-700 hover:to-blue-800 text-white"
+              >
+                <Send className="h-4 w-4" />
+              </Button>
+            </div>
+          </div>
+        </CardContent>
+      )}
     </Card>
   )
 }
