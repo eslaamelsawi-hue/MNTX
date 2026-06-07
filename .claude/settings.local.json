@@ -9,7 +9,9 @@
       "Bash(git -C \"c:/Users/ikloo/OneDrive/Desktop/mentixz\" status)",
       "Bash(git -C \"c:/Users/ikloo/OneDrive/Desktop/mentixz\" log --oneline -3)",
       "Bash(git -C \"c:/Users/ikloo/OneDrive/Desktop/mentixz\" diff --stat HEAD)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(git commit -m 'Redesign group chat with new features and improved UI *)",
+      "Bash(git push *)"
     ]
   }
 }
