@@ -194,6 +194,10 @@ export function AdminDashboard() {
   const [settingsSaving, setSettingsSaving] = useState(false)
   const [settingsMessage, setSettingsMessage] = useState<{ type: "success" | "error"; text: string } | null>(null)
 
+  // Chat visibility state
+  const [hideAllGroupChats, setHideAllGroupChats] = useState(false)
+  const [hiddenGroupSessions, setHiddenGroupSessions] = useState<Set<string>>(new Set())
+
   // Mentor state
   const [isMentor, setIsMentor] = useState(false)
   const [mentorId, setMentorId] = useState<string>("")
@@ -2432,6 +2436,78 @@ export function AdminDashboard() {
                     Authorize Zoom Account
                   </Button>
                 </a>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
+                  <MessageSquare className="h-5 w-5 text-primary" />
+                  Group Chat Visibility
+                </CardTitle>
+                <CardDescription>
+                  Control visibility of group session chats.
+                </CardDescription>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3 bg-slate-800/30 rounded-lg border border-slate-700/50">
+                    <div>
+                      <p className="font-medium text-sm">Hide All Group Chats</p>
+                      <p className="text-xs text-slate-400">Disable group chat for all sessions</p>
+                    </div>
+                    <button
+                      onClick={() => setHideAllGroupChats(!hideAllGroupChats)}
+                      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
+                        hideAllGroupChats ? "bg-red-600" : "bg-slate-700"
+                      }`}
+                    >
+                      <span
+                        className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
+                          hideAllGroupChats ? "translate-x-6" : "translate-x-1"
+                        }`}
+                      />
+                    </button>
+                  </div>
+
+                  {!hideAllGroupChats && groupSessions.length > 0 && (
+                    <div className="space-y-2">
+                      <p className="text-sm font-medium">Hide Individual Sessions</p>
+                      <div className="grid gap-2 max-h-48 overflow-y-auto">
+                        {groupSessions.map((session) => (
+                          <div
+                            key={session.id}
+                            className="flex items-center justify-between p-2 bg-slate-800/30 rounded border border-slate-700/50"
+                          >
+                            <span className="text-sm truncate">{session.title}</span>
+                            <button
+                              onClick={() => {
+                                setHiddenGroupSessions((prev) => {
+                                  const newSet = new Set(prev)
+                                  if (newSet.has(session.id)) {
+                                    newSet.delete(session.id)
+                                  } else {
+                                    newSet.add(session.id)
+                                  }
+                                  return newSet
+                                })
+                              }}
+                              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${
+                                hiddenGroupSessions.has(session.id) ? "bg-red-600" : "bg-slate-600"
+                              }`}
+                            >
+                              <span
+                                className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+                                  hiddenGroupSessions.has(session.id) ? "translate-x-4" : "translate-x-1"
+                                }`}
+                              />
+                            </button>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </TabsContent>

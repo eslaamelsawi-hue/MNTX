@@ -266,6 +266,7 @@ export function ClientDashboard() {
   const [looked, setLooked] = useState(false)
   const [groupSessions, setGroupSessions] = useState<GroupSession[]>([])
   const [registeredSessionIds, setRegisteredSessionIds] = useState<Set<string>>(new Set())
+  const [hiddenSessionChats, setHiddenSessionChats] = useState<Set<string>>(new Set())
 
   // On component mount, restore from localStorage
   useEffect(() => {
@@ -1102,6 +1103,19 @@ export function ClientDashboard() {
               sessionId={groupSessions[0]?.id || ""}
               userEmail={email}
               userName={subscriptions[0]?.client_name || "User"}
+              isVisible={!hiddenSessionChats.has(groupSessions[0]?.id || "")}
+              onToggleVisibility={(visible) => {
+                const sessionId = groupSessions[0]?.id || ""
+                if (visible) {
+                  setHiddenSessionChats(prev => {
+                    const newSet = new Set(prev)
+                    newSet.delete(sessionId)
+                    return newSet
+                  })
+                } else {
+                  setHiddenSessionChats(prev => new Set(prev).add(sessionId))
+                }
+              }}
             />
           )}
         </TabsContent>
