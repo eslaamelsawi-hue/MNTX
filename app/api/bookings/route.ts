@@ -93,11 +93,11 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Create Zoom meeting using Server-to-Server API
+  // Create Zoom meeting using OAuth (same as group sessions)
   let zoomData = null;
   try {
     const zoomRes = await fetch(
-      `${request.nextUrl.origin}/api/zoom/create-meeting-s2s`,
+      `${request.nextUrl.origin}/api/zoom/create-meeting`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -111,9 +111,9 @@ export async function POST(request: NextRequest) {
     if (zoomRes.ok) {
       const response = await zoomRes.json();
       zoomData = {
-        id: response.id,
-        join_url: response.join_url,
-        start_url: response.start_url,
+        id: response.zoom_meeting_id || response.id,
+        join_url: response.zoom_join_url || response.join_url,
+        start_url: response.zoom_start_url || response.start_url,
       };
       console.log("✅ Zoom meeting created for booking:", zoomData.id);
     } else {
