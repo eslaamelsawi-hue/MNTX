@@ -6,8 +6,13 @@ async function getServerToServerToken() {
   const clientSecret = process.env.ZOOM_CLIENT_SECRET
 
   if (!clientId || !clientSecret) {
-    throw new Error("Missing Zoom Server-to-Server credentials")
+    console.error("❌ Missing Zoom credentials:")
+    console.error("  ZOOM_CLIENT_ID:", clientId ? "✓ Set" : "✗ Missing")
+    console.error("  ZOOM_CLIENT_SECRET:", clientSecret ? "✓ Set" : "✗ Missing")
+    throw new Error("Missing Zoom Server-to-Server credentials. Please set ZOOM_CLIENT_ID and ZOOM_CLIENT_SECRET in .env.local")
   }
+
+  console.log("✓ Zoom credentials found, generating JWT token...")
 
   const payload = {
     iss: clientId,
@@ -49,6 +54,20 @@ export async function POST(req: NextRequest) {
 
     const accessToken = await getServerToServerToken()
     const accountId = process.env.ZOOM_ACCOUNT_ID
+
+    if (!accountId) {
+      console.error("❌ Missing ZOOM_ACCOUNT_ID")
+      return NextResponse.json(
+        { error: "Missing ZOOM_ACCOUNT_ID in environment variables" },
+        { status: 500 }
+      )
+    }
+
+    console.log("📍 Creating Zoom meeting with:")
+    console.log("  Topic:", topic)
+    console.log("  Start time:", start_time)
+    console.log("  Duration:", duration, "minutes")
+    console.log("  Account ID:", accountId)
 
     const zoomResponse = await fetch(
       `https://api.zoom.us/v2/users/${accountId}/meetings`,
