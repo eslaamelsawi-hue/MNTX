@@ -93,11 +93,11 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Create Zoom meeting
+  // Create Zoom meeting using Server-to-Server API
   let zoomData = null;
   try {
     const zoomRes = await fetch(
-      `${request.nextUrl.origin}/api/zoom/create-meeting`,
+      `${request.nextUrl.origin}/api/zoom/create-meeting-s2s`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -109,10 +109,19 @@ export async function POST(request: NextRequest) {
       }
     );
     if (zoomRes.ok) {
-      zoomData = await zoomRes.json();
+      const response = await zoomRes.json();
+      zoomData = {
+        id: response.id,
+        join_url: response.join_url,
+        start_url: response.start_url,
+      };
+      console.log("✅ Zoom meeting created for booking:", zoomData.id);
+    } else {
+      const errorData = await zoomRes.json();
+      console.error("❌ Zoom meeting creation failed:", errorData);
     }
   } catch (e) {
-    console.error("Zoom meeting creation failed:", e);
+    console.error("❌ Zoom meeting creation error:", e);
   }
 
   // Mark slot as booked
