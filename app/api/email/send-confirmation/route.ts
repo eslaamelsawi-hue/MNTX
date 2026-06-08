@@ -94,7 +94,9 @@ export async function POST(request: NextRequest) {
           <p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Booking ID:</strong> ${booking_id}</p>
           ${zoom_join_url ? `<p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Zoom Link:</strong> <a href="${zoom_join_url}" style="color: #d4a017;">${zoom_join_url}</a></p>` : ""}
         </div>
-        ${zoom_join_url ? `<div style="text-align: center; margin: 30px 0;"><a href="${zoom_join_url}" style="background-color: #d4a017; color: #0a0a0a; padding: 14px 28px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">Join Zoom Meeting</a></div>` : ""}
+        ${zoom_join_url ? `<div style="text-align: center; margin: 30px 0;">
+          <a href="${zoom_join_url}" style="background: linear-gradient(135deg, #d4a017 0%, #e8b923 100%); color: #0a0a0a; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 16px; box-shadow: 0 4px 12px rgba(212, 160, 23, 0.3); transition: all 0.3s ease;">🔗 Join Meeting Now</a>
+        </div>` : ""}
         <p style="color: #888; font-size: 14px; line-height: 1.6;">If you need to reschedule or cancel, please contact us as soon as possible.</p>
       </div>
       <div style="text-align: center; padding: 20px 0; border-top: 1px solid #333; color: #666; font-size: 12px;">
