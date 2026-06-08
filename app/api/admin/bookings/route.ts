@@ -76,6 +76,25 @@ export async function PATCH(request: NextRequest) {
         .from("availability_slots")
         .update({ is_booked: false, updated_at: new Date().toISOString() })
         .eq("id", currentBooking.slot_id);
+
+      // Restore hours to user's subscription
+      if (currentBooking.client_email && currentBooking.duration) {
+        // Get current used_hours
+        const { data: subscription } = await supabase
+          .from("user_subscriptions")
+          .select("used_hours")
+          .eq("client_email", currentBooking.client_email.toLowerCase().trim())
+          .single();
+
+        if (subscription && subscription.used_hours > 0) {
+          // Reduce used_hours by the booking duration
+          const newUsedHours = Math.max(0, subscription.used_hours - currentBooking.duration);
+          await supabase
+            .from("user_subscriptions")
+            .update({ used_hours: newUsedHours })
+            .eq("client_email", currentBooking.client_email.toLowerCase().trim());
+        }
+      }
     }
 
     const { data, error } = await supabase
