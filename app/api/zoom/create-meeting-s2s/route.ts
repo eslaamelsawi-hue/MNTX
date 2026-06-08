@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
-import jwt from "jsonwebtoken"
 
 async function getServerToServerToken() {
-  console.log("\n🔐 === TOKEN GENERATION ===")
+  console.log("\n🔐 === TOKEN GENERATION (Client Credentials) ===")
 
   const clientId = process.env.ZOOM_CLIENT_ID
   const clientSecret = process.env.ZOOM_CLIENT_SECRET
@@ -12,30 +11,24 @@ async function getServerToServerToken() {
   console.log("  ZOOM_CLIENT_SECRET:", clientSecret ? `✓ Set (${clientSecret.substring(0, 10)}...)` : "✗ Missing")
 
   if (!clientId || !clientSecret) {
-    throw new Error("Missing Zoom Server-to-Server credentials. Please set ZOOM_CLIENT_ID and ZOOM_CLIENT_SECRET in environment variables")
+    throw new Error("Missing Zoom credentials. Please set ZOOM_CLIENT_ID and ZOOM_CLIENT_SECRET in environment variables")
   }
 
   console.log("✓ Credentials found")
 
   try {
-    console.log("📝 Generating JWT token...")
-    const payload = {
-      iss: clientId,
-      exp: Math.floor(Date.now() / 1000) + 3600,
-    }
+    console.log("🌐 Requesting access token using Client Credentials flow...")
 
-    const token = jwt.sign(payload, clientSecret)
-    console.log("✓ JWT token generated successfully")
+    const auth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64")
 
-    console.log("🌐 Requesting access token from Zoom OAuth endpoint...")
     const tokenResponse = await fetch("https://zoom.us/oauth/token", {
       method: "POST",
       headers: {
+        "Authorization": `Basic ${auth}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
       body: new URLSearchParams({
-        grant_type: "urn:ietf:params:oauth:grant-type:jwt-bearer",
-        assertion: token,
+        grant_type: "client_credentials",
       }).toString(),
     })
 
