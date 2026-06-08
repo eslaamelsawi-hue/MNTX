@@ -86,13 +86,15 @@ export async function PATCH(request: NextRequest) {
           .eq("client_email", currentBooking.client_email.toLowerCase().trim())
           .single();
 
-        if (subscription && subscription.used_hours > 0) {
-          // Reduce used_hours by the booking duration
-          const newUsedHours = Math.max(0, subscription.used_hours - currentBooking.duration);
+        if (subscription) {
+          // Reduce used_hours by the booking duration (convert minutes to hours)
+          const hoursToRestore = currentBooking.duration / 60;
+          const newUsedHours = Math.max(0, subscription.used_hours - hoursToRestore);
           await supabase
             .from("user_subscriptions")
             .update({ used_hours: newUsedHours })
             .eq("client_email", currentBooking.client_email.toLowerCase().trim());
+          console.log(`Restored ${hoursToRestore} hours for ${currentBooking.client_email}`);
         }
       }
     }
