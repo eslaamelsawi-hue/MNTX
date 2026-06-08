@@ -41,18 +41,25 @@ async function getServerToServerToken() {
 }
 
 export async function POST(req: NextRequest) {
+  console.log("\n=== ZOOM MEETING CREATION REQUEST ===")
   try {
     const body = await req.json()
     const { topic, start_time, duration } = body
 
+    console.log("📥 Request body:", { topic, start_time, duration })
+
     if (!topic || !start_time || !duration) {
+      console.error("❌ Missing required fields")
       return NextResponse.json(
         { error: "Missing required fields: topic, start_time, duration" },
         { status: 400 }
       )
     }
 
+    console.log("🔑 Getting Zoom access token...")
     const accessToken = await getServerToServerToken()
+    console.log("✓ Access token obtained")
+
     const accountId = process.env.ZOOM_ACCOUNT_ID
 
     if (!accountId) {
@@ -95,9 +102,15 @@ export async function POST(req: NextRequest) {
       }
     )
 
+    console.log(`📤 Sending request to Zoom API: /v2/users/${accountId}/meetings`)
+
     if (!zoomResponse.ok) {
       const errorData = await zoomResponse.json()
-      console.error("Zoom API error:", errorData, zoomResponse.status)
+      console.error("❌ Zoom API Error:", {
+        status: zoomResponse.status,
+        error: errorData,
+      })
+      console.error("Full error response:", JSON.stringify(errorData, null, 2))
       return NextResponse.json(
         { error: "Failed to create Zoom meeting", details: errorData },
         { status: 500 }
@@ -105,9 +118,10 @@ export async function POST(req: NextRequest) {
     }
 
     const zoomData = await zoomResponse.json()
-    console.log("✅ Zoom meeting created:", {
+    console.log("✅ Zoom meeting created successfully:", {
       id: zoomData.id,
       join_url: zoomData.join_url,
+      start_url: zoomData.start_url,
     })
 
     return NextResponse.json({
@@ -117,6 +131,7 @@ export async function POST(req: NextRequest) {
     })
   } catch (error) {
     console.error("❌ Error creating Zoom meeting:", error)
+    console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace")
     return NextResponse.json(
       { error: "Failed to create Zoom meeting", details: String(error) },
       { status: 500 }
