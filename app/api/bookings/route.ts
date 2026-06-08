@@ -93,11 +93,11 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Create Zoom meeting (original method - uses OAuth from database)
+  // Create Zoom meeting (using S2S credentials)
   let zoomData = null;
   try {
     const zoomRes = await fetch(
-      `${request.nextUrl.origin}/api/zoom/create-meeting`,
+      `${request.nextUrl.origin}/api/zoom/create-meeting-s2s`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -111,6 +111,9 @@ export async function POST(request: NextRequest) {
     if (zoomRes.ok) {
       zoomData = await zoomRes.json();
       console.log("✅ Zoom meeting created:", zoomData.id);
+    } else {
+      const err = await zoomRes.json();
+      console.error("❌ Zoom meeting creation error:", err);
     }
   } catch (e) {
     console.error("Zoom meeting creation failed:", e);

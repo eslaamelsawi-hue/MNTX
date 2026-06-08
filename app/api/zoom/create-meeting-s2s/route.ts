@@ -1,96 +1,48 @@
 import { NextRequest, NextResponse } from "next/server"
 
-async function getServerToServerToken() {
-  console.log("\n🔐 === TOKEN GENERATION (Client Credentials) ===")
-
-  const clientId = process.env.ZOOM_CLIENT_ID
-  const clientSecret = process.env.ZOOM_CLIENT_SECRET
-
-  console.log("Checking credentials:")
-  console.log("  ZOOM_CLIENT_ID:", clientId ? `✓ Set (${clientId.substring(0, 10)}...)` : "✗ Missing")
-  console.log("  ZOOM_CLIENT_SECRET:", clientSecret ? `✓ Set (${clientSecret.substring(0, 10)}...)` : "✗ Missing")
-
-  if (!clientId || !clientSecret) {
-    throw new Error("Missing Zoom credentials. Please set ZOOM_CLIENT_ID and ZOOM_CLIENT_SECRET in environment variables")
-  }
-
-  console.log("✓ Credentials found")
-
-  try {
-    console.log("🌐 Requesting access token using Client Credentials flow...")
-
-    const auth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64")
-
-    const tokenResponse = await fetch("https://zoom.us/oauth/token", {
-      method: "POST",
-      headers: {
-        "Authorization": `Basic ${auth}`,
-        "Content-Type": "application/x-www-form-urlencoded",
-      },
-      body: new URLSearchParams({
-        grant_type: "client_credentials",
-      }).toString(),
-    })
-
-    console.log("📊 Zoom token response status:", tokenResponse.status)
-
-    if (!tokenResponse.ok) {
-      const errorText = await tokenResponse.text()
-      console.error("❌ Zoom OAuth error response:", errorText)
-      throw new Error(`Failed to get Zoom access token: ${tokenResponse.status} - ${errorText}`)
-    }
-
-    const data = await tokenResponse.json()
-    console.log("✓ Access token received")
-    return data.access_token
-  } catch (error) {
-    console.error("❌ Token generation error:", error)
-    throw error
-  }
-}
-
 export async function POST(req: NextRequest) {
-  console.log("\n=== ZOOM MEETING CREATION REQUEST ===")
   try {
+    console.log("\n📍 === ZOOM MEETING CREATION (S2S) ===")
+
     const body = await req.json()
     const { topic, start_time, duration } = body
 
-    console.log("📥 Request body:", { topic, start_time, duration })
+    console.log("📥 Request:", { topic, start_time, duration })
 
     if (!topic || !start_time || !duration) {
-      console.error("❌ Missing required fields")
       return NextResponse.json(
         { error: "Missing required fields: topic, start_time, duration" },
         { status: 400 }
       )
     }
 
-    console.log("🔑 Getting Zoom access token...")
-    const accessToken = await getServerToServerToken()
-    console.log("✓ Access token obtained")
-
+    const clientId = process.env.ZOOM_CLIENT_ID
+    const clientSecret = process.env.ZOOM_CLIENT_SECRET
     const accountId = process.env.ZOOM_ACCOUNT_ID
 
-    if (!accountId) {
-      console.error("❌ Missing ZOOM_ACCOUNT_ID")
+    console.log("🔐 Credentials check:")
+    console.log("  CLIENT_ID:", clientId ? "✓" : "✗")
+    console.log("  CLIENT_SECRET:", clientSecret ? "✓" : "✗")
+    console.log("  ACCOUNT_ID:", accountId ? "✓" : "✗")
+
+    if (!clientId || !clientSecret || !accountId) {
       return NextResponse.json(
-        { error: "Missing ZOOM_ACCOUNT_ID in environment variables" },
+        { error: "Missing Zoom credentials" },
         { status: 500 }
       )
     }
 
-    console.log("📍 Creating Zoom meeting with:")
-    console.log("  Topic:", topic)
-    console.log("  Start time:", start_time)
-    console.log("  Duration:", duration, "minutes")
-    console.log("  Account ID:", accountId)
+    // Use Basic Auth directly with Zoom API
+    const auth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64")
+
+    console.log("📤 Calling Zoom API with Basic Auth...")
 
     const zoomResponse = await fetch(
       `https://api.zoom.us/v2/users/${accountId}/meetings`,
       {
         method: "POST",
         headers: {
-          Authorization: `Bearer ${accessToken}`,
+          "Authorization": `Basic ${auth}`,
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
@@ -111,15 +63,11 @@ export async function POST(req: NextRequest) {
       }
     )
 
-    console.log(`📤 Sending request to Zoom API: /v2/users/${accountId}/meetings`)
+    console.log("📊 Response status:", zoomResponse.status)
 
     if (!zoomResponse.ok) {
       const errorData = await zoomResponse.json()
-      console.error("❌ Zoom API Error:", {
-        status: zoomResponse.status,
-        error: errorData,
-      })
-      console.error("Full error response:", JSON.stringify(errorData, null, 2))
+      console.error("❌ Zoom API error:", errorData)
       return NextResponse.json(
         { error: "Failed to create Zoom meeting", details: errorData },
         { status: 500 }
@@ -127,11 +75,7 @@ export async function POST(req: NextRequest) {
     }
 
     const zoomData = await zoomResponse.json()
-    console.log("✅ Zoom meeting created successfully:", {
-      id: zoomData.id,
-      join_url: zoomData.join_url,
-      start_url: zoomData.start_url,
-    })
+    console.log("✅ Meeting created:", { id: zoomData.id, join_url: zoomData.join_url })
 
     return NextResponse.json({
       id: zoomData.id,
@@ -139,8 +83,7 @@ export async function POST(req: NextRequest) {
       start_url: zoomData.start_url,
     })
   } catch (error) {
-    console.error("❌ Error creating Zoom meeting:", error)
-    console.error("Error stack:", error instanceof Error ? error.stack : "No stack trace")
+    console.error("❌ Error:", error)
     return NextResponse.json(
       { error: "Failed to create Zoom meeting", details: String(error) },
       { status: 500 }
