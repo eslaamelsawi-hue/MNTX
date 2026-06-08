@@ -93,11 +93,11 @@ export async function POST(request: NextRequest) {
     }
   }
 
-  // Create Zoom meeting using Client Credentials OAuth
+  // Create Zoom meeting (original method - uses OAuth from database)
   let zoomData = null;
   try {
     const zoomRes = await fetch(
-      `${request.nextUrl.origin}/api/zoom/create-meeting-s2s`,
+      `${request.nextUrl.origin}/api/zoom/create-meeting`,
       {
         method: "POST",
         headers: { "Content-Type": "application/json" },
@@ -109,19 +109,11 @@ export async function POST(request: NextRequest) {
       }
     );
     if (zoomRes.ok) {
-      const response = await zoomRes.json();
-      zoomData = {
-        id: response.id,
-        join_url: response.join_url,
-        start_url: response.start_url,
-      };
-      console.log("✅ Zoom meeting created for booking:", zoomData.id);
-    } else {
-      const errorData = await zoomRes.json();
-      console.error("❌ Zoom meeting creation failed:", errorData);
+      zoomData = await zoomRes.json();
+      console.log("✅ Zoom meeting created:", zoomData.id);
     }
   } catch (e) {
-    console.error("❌ Zoom meeting creation error:", e);
+    console.error("Zoom meeting creation failed:", e);
   }
 
   // Mark slot as booked
