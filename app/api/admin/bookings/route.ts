@@ -115,3 +115,24 @@ export async function PATCH(request: NextRequest) {
 
   return NextResponse.json({ error: "No action specified" }, { status: 400 });
 }
+
+export async function DELETE(request: NextRequest) {
+  const supabase = await createClient();
+  const { ids } = await request.json();
+
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return NextResponse.json({ error: "IDs array required" }, { status: 400 });
+  }
+
+  const { error } = await supabase
+    .from("bookings")
+    .delete()
+    .in("id", ids)
+    .eq("status", "cancelled");
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true, deleted: ids.length });
+}

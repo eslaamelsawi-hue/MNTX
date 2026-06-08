@@ -130,6 +130,8 @@ export function AdminDashboard() {
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [rescheduleBookingId, setRescheduleBookingId] = useState<string | null>(null)
   const [rescheduleSlotId, setRescheduleSlotId] = useState<string>("")
+  const [selectedCancelledIds, setSelectedCancelledIds] = useState<Set<string>>(new Set())
+  const [deletingCancelled, setDeletingCancelled] = useState(false)
 
   // Gold articles state
   const [articles, setArticles] = useState<GoldArticle[]>([])
@@ -583,6 +585,47 @@ export function AdminDashboard() {
     }
   }
 
+  const toggleCancelledSelection = (id: string) => {
+    setSelectedCancelledIds(prev => {
+      const next = new Set(prev)
+      next.has(id) ? next.delete(id) : next.add(id)
+      return next
+    })
+  }
+
+  const toggleSelectAllCancelled = () => {
+    const cancelledIds = bookings.filter(b => b.status === "cancelled").map(b => b.id)
+    if (selectedCancelledIds.size === cancelledIds.length) {
+      setSelectedCancelledIds(new Set())
+    } else {
+      setSelectedCancelledIds(new Set(cancelledIds))
+    }
+  }
+
+  const handleDeleteSelectedCancelled = async () => {
+    if (selectedCancelledIds.size === 0) return
+    if (!confirm(`Permanently delete ${selectedCancelledIds.size} cancelled booking(s)? This cannot be undone.`)) return
+    setDeletingCancelled(true)
+    try {
+      const res = await fetch("/api/admin/bookings", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids: Array.from(selectedCancelledIds) }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        setSelectedCancelledIds(new Set())
+        fetchBookings()
+      } else {
+        alert(data.error || "Failed to delete")
+      }
+    } catch (e) {
+      console.error("Failed to delete cancelled bookings:", e)
+      alert("Something went wrong")
+    }
+    setDeletingCancelled(false)
+  }
+
   // ========== Coupons functions ==========
   const fetchCoupons = async () => {
     setLoadingCoupons(true)
@@ -980,9 +1023,22 @@ export function AdminDashboard() {
           <TabsContent value="bookings" className="space-y-4">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-foreground">All Bookings</h2>
-              <Button variant="outline" size="sm" onClick={fetchBookings}>
-                <RefreshCw className="mr-2 h-4 w-4" /> Refresh
-              </Button>
+              <div className="flex items-center gap-2">
+                {selectedCancelledIds.size > 0 && (
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleDeleteSelectedCancelled}
+                    disabled={deletingCancelled}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {deletingCancelled ? "Deleting..." : `Delete Selected (${selectedCancelledIds.size})`}
+                  </Button>
+                )}
+                <Button variant="outline" size="sm" onClick={fetchBookings}>
+                  <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+                </Button>
+              </div>
             </div>
 
             {loadingBookings ? (
@@ -1002,6 +1058,17 @@ export function AdminDashboard() {
                   <Table>
                     <TableHeader>
                       <TableRow className="border-border">
+                        <TableHead className="w-10">
+                          {bookings.some(b => b.status === "cancelled") && (
+                            <input
+                              type="checkbox"
+                              className="h-4 w-4 rounded border-border"
+                              checked={selectedCancelledIds.size === bookings.filter(b => b.status === "cancelled").length && bookings.some(b => b.status === "cancelled")}
+                              onChange={toggleSelectAllCancelled}
+                              title="Select all cancelled"
+                            />
+                          )}
+                        </TableHead>
                         <TableHead>Client</TableHead>
                         <TableHead>Date & Time</TableHead>
                         <TableHead>Duration</TableHead>
@@ -1012,7 +1079,17 @@ export function AdminDashboard() {
                     </TableHeader>
                     <TableBody>
                       {bookings.map((booking) => (
-                        <TableRow key={booking.id} className="border-border">
+                        <TableRow key={booking.id} className={`border-border ${booking.status === "cancelled" && selectedCancelledIds.has(booking.id) ? "bg-red-500/5" : ""}`}>
+                          <TableCell>
+                            {booking.status === "cancelled" && (
+                              <input
+                                type="checkbox"
+                                className="h-4 w-4 rounded border-border"
+                                checked={selectedCancelledIds.has(booking.id)}
+                                onChange={() => toggleCancelledSelection(booking.id)}
+                              />
+                            )}
+                          </TableCell>
                           <TableCell>
                             <div>
                               <p className="font-medium text-foreground">{booking.client_name}</p>
