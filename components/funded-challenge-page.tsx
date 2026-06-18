@@ -376,8 +376,10 @@ export function FundedChallengePage() {
               </ul>
             </CardContent>
             <CardFooter className="flex flex-col gap-3 pt-4">
-              <OKXPayButton plan="funded-challenge" className="w-full" />
-              <NowPaymentsButton plan="funded-challenge" className="w-full" />
+              <div className="w-full rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-center">
+                <p className="font-semibold text-red-400">Enrollment Closed</p>
+                <p className="mt-1 text-xs text-muted-foreground">This course is currently not accepting new students.</p>
+              </div>
             </CardFooter>
           </Card>
         </div>
