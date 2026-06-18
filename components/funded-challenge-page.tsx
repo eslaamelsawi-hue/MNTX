@@ -227,6 +227,12 @@ export function FundedChallengePage() {
 
   return (
     <div>
+      {/* Enrollment Closed Banner */}
+      <div className="w-full border-b border-red-500/30 bg-red-500/10 px-4 py-4 text-center">
+        <p className="text-lg font-semibold text-red-400">Enrollment Closed</p>
+        <p className="mt-1 text-sm text-muted-foreground">This course is currently not accepting new students.</p>
+      </div>
+
       {/* Hero */}
       <section className="relative px-4 pb-10 pt-10 text-center md:pt-12">
         <div className="mx-auto max-w-4xl">
@@ -376,10 +382,8 @@ export function FundedChallengePage() {
               </ul>
             </CardContent>
             <CardFooter className="flex flex-col gap-3 pt-4">
-              <div className="w-full rounded-lg border border-red-500/30 bg-red-500/10 px-4 py-3 text-center">
-                <p className="font-semibold text-red-400">Enrollment Closed</p>
-                <p className="mt-1 text-xs text-muted-foreground">This course is currently not accepting new students.</p>
-              </div>
+              <OKXPayButton plan="funded-challenge" className="w-full" />
+              <NowPaymentsButton plan="funded-challenge" className="w-full" />
             </CardFooter>
           </Card>
         </div>
