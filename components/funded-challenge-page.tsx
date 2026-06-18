@@ -226,11 +226,19 @@ export function FundedChallengePage() {
   const masterItems = t.raw("masterItems") as string[]
 
   return (
-    <div>
-      {/* Enrollment Closed Banner */}
-      <div className="w-full border-b border-red-500/30 bg-red-500/10 px-4 py-4 text-center">
-        <p className="text-lg font-semibold text-red-400">Enrollment Closed</p>
-        <p className="mt-1 text-sm text-muted-foreground">This course is currently not accepting new students.</p>
+    <div className="relative">
+      {/* Full-page Enrollment Closed Overlay */}
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-background/95 backdrop-blur-sm">
+        <div className="mx-4 max-w-md text-center">
+          <div className="mx-auto mb-6 flex h-20 w-20 items-center justify-center rounded-full border border-red-500/30 bg-red-500/10">
+            <X className="h-10 w-10 text-red-400" />
+          </div>
+          <h1 className="mb-3 text-3xl font-bold text-foreground md:text-4xl">Enrollment Closed</h1>
+          <p className="mb-8 text-muted-foreground">The PropFirm Mastery Course is currently not accepting new students. Check back later for future enrollment windows.</p>
+          <a href="/" className="inline-flex items-center gap-2 rounded-lg bg-primary px-6 py-3 font-medium text-primary-foreground hover:bg-primary/90 transition-colors">
+            <ArrowRight className="h-4 w-4 rotate-180" /> Back to Home
+          </a>
+        </div>
       </div>
 
       {/* Hero */}
