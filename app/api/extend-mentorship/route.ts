@@ -3,9 +3,9 @@ import { createNowpaymentsInvoice } from "@/lib/nowpayments"
 import { createClient } from "@/lib/supabase/server"
 
 const PLANS: Record<string, { amount: number; label: string }> = {
-  "extend-1m": { amount: 199, label: "Mentix Mentorship Extension – 1 Month" },
-  "extend-2m": { amount: 379, label: "Mentix Mentorship Extension – 2 Months" },
-  "extend-3m": { amount: 699, label: "Mentix Mentorship Extension – 3 Months" },
+  "extend-1m": { amount: 250, label: "Mentix Mentorship Extension – 1 Month" },
+  "extend-2m": { amount: 449, label: "Mentix Mentorship Extension – 2 Months" },
+  "extend-3m": { amount: 900, label: "Mentix Mentorship Extension – 3 Months" },
   "extend-6m": { amount: 1499, label: "Mentix Mentorship Extension – 6 Months" },
 }
 

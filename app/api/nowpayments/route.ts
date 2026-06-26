@@ -7,9 +7,9 @@ const PLAN_INFO: Record<string, { amount: number; description: string }> = {
   "gold-pro":  { amount: 100,  description: "Mentix Trading - Gold Pro Monthly Analysis" },
   starter:     { amount: 379,  description: "Mentix Trading - ADVANCED SMC Course" },
   coaching:    { amount: 1599, description: "Mentix Trading - 1-on-1 Coaching Plan" },
-  "extend-1m": { amount: 199,  description: "Mentix Trading - Mentorship Extension 1 Month" },
-  "extend-2m": { amount: 379,  description: "Mentix Trading - Mentorship Extension 2 Months" },
-  "extend-3m": { amount: 699,  description: "Mentix Trading - Mentorship Extension 3 Months" },
+  "extend-1m": { amount: 250,  description: "Mentix Trading - Mentorship Extension 1 Month" },
+  "extend-2m": { amount: 449,  description: "Mentix Trading - Mentorship Extension 2 Months" },
+  "extend-3m": { amount: 900,  description: "Mentix Trading - Mentorship Extension 3 Months" },
   "extend-6m": { amount: 1499, description: "Mentix Trading - Mentorship Extension 6 Months" },
   "funded-challenge": { amount: 500, description: "Mentix Trading - PropFirm Mastery Course" },
 }

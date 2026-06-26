@@ -24,19 +24,19 @@ export const PRODUCTS: Product[] = [
     id: "extend-1m",
     name: "Extend Mentorship – 1 Month",
     description: "Extend your 1-on-1 online mentorship for 1 additional month. Includes weekly zoom sessions, Discord & Telegram access, and continued personalized guidance.",
-    priceInCents: 19900, // $199.00
+    priceInCents: 25000, // $250.00
   },
   {
     id: "extend-2m",
     name: "Extend Mentorship – 2 Months",
     description: "Extend your 1-on-1 online mentorship for 2 additional months. Includes weekly zoom sessions, Discord & Telegram access, and continued personalized guidance.",
-    priceInCents: 37900, // $379.00
+    priceInCents: 44900, // $449.00
   },
   {
     id: "extend-3m",
     name: "Extend Mentorship – 3 Months",
     description: "Extend your 1-on-1 online mentorship for 3 additional months. Includes weekly zoom sessions, Discord & Telegram access, and continued personalized guidance.",
-    priceInCents: 69900, // $699.00
+    priceInCents: 90000, // $900.00
   },
   {
     id: "extend-6m",
