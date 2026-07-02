@@ -20,13 +20,16 @@ export function Navbar() {
         </Link>
 
         <div className="hidden items-center gap-4 md:flex">
-          <Link href="/crypto" className="text-sm font-medium text-yellow-500 transition-colors hover:text-yellow-400">
+          <Link href="/tools" className="text-sm font-medium text-foreground transition-colors hover:text-primary">
+            {t('tools')}
+          </Link>
+          <Link href="/crypto" className="text-sm font-medium text-foreground transition-colors hover:text-primary">
             {t('crypto')}
           </Link>
-          <Link href="/funded-challenge" className="text-sm font-medium text-primary transition-colors hover:text-primary/80">
+          <Link href="/funded-challenge" className="text-sm font-medium text-foreground transition-colors hover:text-primary">
             {t('fundedChallenge')}
           </Link>
-          <Link href="/dashboard" className="text-sm font-medium text-yellow-500 transition-colors hover:text-yellow-400">
+          <Link href="/dashboard" className="text-sm font-medium text-foreground transition-colors hover:text-primary">
             {t("dashboard")}
           </Link>
           <LanguageSwitcher />
@@ -48,22 +51,28 @@ export function Navbar() {
       {open && (
         <div className="border-t border-border bg-background px-4 pb-4 md:hidden">
           <div className="flex flex-col gap-3 pt-3">
+            <Link href="/tools"
+              className="text-sm font-medium text-foreground transition-colors hover:text-primary"
+              onClick={() => setOpen(false)}
+            >
+              {t('tools')}
+            </Link>
             <Link href="/crypto"
-              className="text-sm font-medium text-yellow-500 transition-colors hover:text-yellow-400"
+              className="text-sm font-medium text-foreground transition-colors hover:text-primary"
               onClick={() => setOpen(false)}
             >
               {t('crypto')}
             </Link>
             <Link
               href="/funded-challenge"
-              className="text-sm font-medium text-primary transition-colors hover:text-primary/80"
+              className="text-sm font-medium text-foreground transition-colors hover:text-primary"
               onClick={() => setOpen(false)}
             >
               {t('fundedChallenge')}
             </Link>
             <Link
               href="/dashboard"
-              className="text-sm font-medium text-yellow-500 transition-colors hover:text-yellow-400"
+              className="text-sm font-medium text-foreground transition-colors hover:text-primary"
               onClick={() => setOpen(false)}
             >
               {t("dashboard")}
