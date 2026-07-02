@@ -68,7 +68,7 @@ export async function POST(request: Request) {
       customerEmail: email,
       amount: plan.amount,
       description: `${plan.label} | ${name} | @${telegram}`,
-      successUrl: `${baseUrl}/${locale || "en"}/extend?success=true`,
+      successUrl: `${baseUrl}/${locale || "en"}/payment/success?plan=${planId}&order=${orderId}`,
       cancelUrl: `${baseUrl}/${locale || "en"}/extend?canceled=true`,
       orderId,
     })

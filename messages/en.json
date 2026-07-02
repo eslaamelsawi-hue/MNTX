@@ -10,6 +10,31 @@
     "fundedChallenge": "PropFirm",
     "tools": "Tools"
   },
+  "paymentSuccess": {
+    "badge": "Payment received",
+    "title": "Thank you for your purchase!",
+    "subtitle": "Your payment has been received and is being confirmed.",
+    "planLabel": "Plan",
+    "orderLabel": "Order reference",
+    "confirmingNote": "Crypto payments can take a few minutes to confirm on-chain — there's nothing else you need to do.",
+    "confirmingNoteCard": "Your payment is confirmed and your access is being set up right now.",
+    "emailNote": "A confirmation email with your next steps is on its way to the address you provided.",
+    "starterNote": "You'll receive a private Telegram invite link by email to join the community.",
+    "dashboard": "Go to my dashboard",
+    "backHome": "Back to home",
+    "needHelp": "Need help? Reach us on Discord.",
+    "plans": {
+      "starter": "ADVANCED SMC Course",
+      "coaching": "1-on-1 Coaching Plan",
+      "funded-challenge": "PropFirm Mastery Course",
+      "gold-pro": "Gold Pro — Monthly Analysis",
+      "extend-1m": "Mentorship Extension – 1 Month",
+      "extend-2m": "Mentorship Extension – 2 Months",
+      "extend-3m": "Mentorship Extension – 3 Months",
+      "extend-6m": "Mentorship Extension – 6 Months",
+      "test": "Test Plan"
+    }
+  },
   "hero": {
     "badge": "Limited Spots Available",
     "title": "Master",

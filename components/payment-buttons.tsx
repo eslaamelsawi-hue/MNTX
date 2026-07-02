@@ -293,7 +293,7 @@ export function NowPaymentsButton({
       const res = await fetch("/api/nowpayments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, email: emailToUse, telegram, couponCode }),
+        body: JSON.stringify({ plan, email: emailToUse, telegram, couponCode, locale }),
       })
       const data = await res.json()
       if (data.url) window.location.href = data.url

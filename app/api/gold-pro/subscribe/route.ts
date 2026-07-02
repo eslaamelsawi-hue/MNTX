@@ -11,9 +11,9 @@ export async function POST(request: Request) {
     }
 
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
-    const successUrl = `${baseUrl}/${locale || "en"}/gold-pro?success=true`
-    const cancelUrl = `${baseUrl}/${locale || "en"}/gold-pro?canceled=true`
     const orderId = `gold-pro-${email}-${Date.now()}`
+    const successUrl = `${baseUrl}/${locale || "en"}/payment/success?plan=gold-pro&order=${orderId}`
+    const cancelUrl = `${baseUrl}/${locale || "en"}/gold-pro?canceled=true`
 
     const invoice = await createNowpaymentsInvoice({
       email,

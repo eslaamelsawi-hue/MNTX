@@ -43,7 +43,7 @@ async function applyCouponDiscount(code: string, plan: string, amountDollars: nu
 
 export async function POST(request: Request) {
   try {
-    const { plan, email, couponCode } = await request.json()
+    const { plan, email, couponCode, locale } = await request.json()
 
     if (!email || !email.includes("@")) {
       return NextResponse.json({ error: "Valid email is required" }, { status: 400 })
@@ -68,8 +68,8 @@ export async function POST(request: Request) {
       customerEmail: email,
       amount: Math.round(finalAmount * 1.005 * 100) / 100,
       description: planInfo.description,
-      successUrl: `${baseUrl}/payment/success?provider=nowpayments&plan=${plan}`,
-      cancelUrl: `${baseUrl}/#pricing`,
+      successUrl: `${baseUrl}/${locale || "en"}/payment/success?provider=nowpayments&plan=${plan}&order=${orderId}`,
+      cancelUrl: `${baseUrl}/${locale || "en"}/#pricing`,
       orderId,
     })
 
