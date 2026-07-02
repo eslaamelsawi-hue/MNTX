@@ -8,6 +8,7 @@ import Image from "next/image"
 import { useTranslations } from 'next-intl'
 
 const certificates = [
+  { id: 19, src: "/certs/cert-19.png", alt: "Certificate - 2026" },
   { id: 17, src: "/certs/cert-17.png", alt: "Certificate - 2026" },
   { id: 18, src: "/certs/cert-18.png", alt: "Certificate - 2026" },
   { id: 15, src: "/certs/cert-15.png", alt: "Alpha Capital - Lifetime Payout $22,213.00 - Mar 2026" },
