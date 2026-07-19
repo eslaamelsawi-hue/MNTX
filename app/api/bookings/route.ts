@@ -36,8 +36,13 @@ export async function POST(req: NextRequest) {
   try {
     const body = await req.json()
     const { topic, start_time, duration } = body
-    if (!topic || !start_time || !duration) {
-      return NextResponse.json({ error: "Missing required fields" }, { status: 400 })
+
+    const missing: string[] = []
+    if (!topic) missing.push("topic")
+    if (!start_time) missing.push("start_time")
+    if (!duration) missing.push("duration")
+    if (missing.length > 0) {
+      return NextResponse.json({ error: "Missing required fields", missing, received: body }, { status: 400 })
     }
 
     const startUtc = toZoomUtc(start_time)
