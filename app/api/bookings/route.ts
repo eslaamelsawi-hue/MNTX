@@ -1,91 +1,282 @@
-import { NextRequest, NextResponse } from "next/server"
+import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
+import { NextRequest, NextResponse } from "next/server";
 
-async function getAccessToken() {
-  const clientId = process.env.ZOOM_CLIENT_ID
-  const clientSecret = process.env.ZOOM_CLIENT_SECRET
-  const accountId = process.env.ZOOM_ACCOUNT_ID
-  if (!clientId || !clientSecret || !accountId) {
-    throw new Error("Missing Zoom credentials")
+export async function POST(request: NextRequest) {
+  const supabase = await createClient();
+  const body = await request.json();
+  const { slot_id, client_name, client_email, client_phone, client_message, duration, client_timezone } = body;
+  const normalizedEmail = client_email?.toLowerCase().trim();
+
+  if (!slot_id || !client_name || !client_email || !duration) {
+    return NextResponse.json(
+      { error: "Missing required fields" },
+      { status: 400 }
+    );
   }
-  const auth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64")
-  const tokenResponse = await fetch(
-    `https://zoom.us/oauth/token?grant_type=account_credentials&account_id=${accountId}`,
-    { method: "POST", headers: { Authorization: `Basic ${auth}`, "Content-Type": "application/x-www-form-urlencoded" } }
-  )
-  const tokenText = await tokenResponse.text()
-  if (!tokenResponse.ok) throw new Error(`Failed to get Zoom token: ${tokenResponse.status} - ${tokenText}`)
-  return JSON.parse(tokenText).access_token
-}
 
-// Convert any incoming time to Zoom's exact format: "YYYY-MM-DDTHH:mm:ssZ" (GMT, NO milliseconds).
-// A value with no timezone is treated as Cairo local time. This stops the "scheduled for now" bug.
-function toZoomUtc(raw: string): string {
-  let s = String(raw).trim()
-  const hasZone = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(s)
-  if (hasZone) return new Date(s).toISOString().replace(/\.\d{3}Z$/, "Z")
-  if (/T\d{2}:\d{2}$/.test(s)) s += ":00"
-  const datePart = s.slice(0, 10)
-  const probe = new Date(`${datePart}T12:00:00Z`)
-  const offsetMs =
-    new Date(probe.toLocaleString("en-US", { timeZone: "Africa/Cairo" })).getTime() -
-    new Date(probe.toLocaleString("en-US", { timeZone: "UTC" })).getTime()
-  return new Date(new Date(`${s}Z`).getTime() - offsetMs).toISOString().replace(/\.\d{3}Z$/, "Z")
-}
+  // Check slot availability
+  const { data: slot, error: slotError } = await supabase
+    .from("availability_slots")
+    .select("*")
+    .eq("id", slot_id)
+    .eq("is_booked", false)
+    .single();
 
-export async function POST(req: NextRequest) {
+  if (slotError || !slot) {
+    return NextResponse.json(
+      { error: "Slot is no longer available" },
+      { status: 409 }
+    );
+  }
+
+  // Check if user has remaining mentorship hours
+  const adminDb = createAdminClient();
+  const { data: activeSub } = await adminDb
+    .from("user_subscriptions")
+    .select("id, remaining_hours")
+    .eq("client_email", normalizedEmail)
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single();
+
+  const hoursNeeded = duration / 60;
+  if (!activeSub || activeSub.remaining_hours < hoursNeeded) {
+    return NextResponse.json(
+      { error: "noHoursRemaining" },
+      { status: 403 }
+    );
+  }
+
+  // Read the weekly limit from admin_settings (falls back to 2 if not configured).
+  const { data: limitSetting } = await adminDb
+    .from("admin_settings")
+    .select("value")
+    .eq("key", "weekly_booking_limit")
+    .single();
+  const weeklyLimit = parseInt(limitSetting?.value || "2") || 2;
+
+  // Enforce the weekly session limit.
+  // Two-step query: first get slot IDs in the target week, then count matching bookings.
+  // (Filtering on a joined table via .gte("related.col") is unreliable in PostgREST.)
+  const slotDate = new Date(`${slot.date}T00:00:00Z`);
+  const daysSinceMonday = (slotDate.getUTCDay() + 6) % 7;
+  const weekStartDate = new Date(slotDate);
+  weekStartDate.setUTCDate(slotDate.getUTCDate() - daysSinceMonday);
+  const weekEndDate = new Date(weekStartDate);
+  weekEndDate.setUTCDate(weekStartDate.getUTCDate() + 6);
+  const weekStart = weekStartDate.toISOString().split("T")[0];
+  const weekEnd = weekEndDate.toISOString().split("T")[0];
+
+  const { data: slotsInWeek } = await adminDb
+    .from("availability_slots")
+    .select("id")
+    .gte("date", weekStart)
+    .lte("date", weekEnd);
+
+  const weekSlotIds = (slotsInWeek || []).map((s) => s.id);
+
+  if (weekSlotIds.length > 0) {
+    const { count: weeklyCount } = await adminDb
+      .from("bookings")
+      .select("id", { count: "exact", head: true })
+      .eq("client_email", normalizedEmail)
+      .in("status", ["confirmed", "completed"])
+      .in("slot_id", weekSlotIds);
+
+    if ((weeklyCount || 0) >= weeklyLimit) {
+      return NextResponse.json(
+        { error: "weeklyLimitReached" },
+        { status: 403 }
+      );
+    }
+  }
+
+  // Create Zoom meeting (using S2S credentials)
+  let zoomData = null;
   try {
-    const body = await req.json().catch(() => ({}))
-    const topic = typeof body.topic === "string" ? body.topic.trim() : ""
-    const start_time = typeof body.start_time === "string" ? body.start_time.trim() : ""
-    const duration = Number(body.duration)
-
-    const missing: string[] = []
-    if (!topic) missing.push("topic")
-    if (!start_time) missing.push("start_time")
-    if (!duration || Number.isNaN(duration)) missing.push("duration")
-    if (missing.length > 0) {
-      return NextResponse.json({ error: "Missing required fields", missing, received: body }, { status: 400 })
+    const zoomRes = await fetch(
+      `${request.nextUrl.origin}/api/zoom/create-meeting-s2s`,
+      {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: `1-on-1 Coaching: ${client_name}`,
+          start_time: `${slot.date}T${slot.start_time}`,
+          duration,
+        }),
+      }
+    );
+    if (zoomRes.ok) {
+      zoomData = await zoomRes.json();
+      console.log("✅ Zoom meeting created:", zoomData.id);
+    } else {
+      const err = await zoomRes.json();
+      console.error("❌ Zoom meeting creation error:", err);
     }
-
-    const startUtc = toZoomUtc(start_time)
-    console.log("Zoom start_time:", { received: start_time, sentToZoom: startUtc })
-
-    const accessToken = await getAccessToken()
-
-    const zoomResponse = await fetch(`https://api.zoom.us/v2/users/me/meetings`, {
-      method: "POST",
-      headers: { Authorization: `Bearer ${accessToken}`, "Content-Type": "application/json" },
-      body: JSON.stringify({
-        topic,
-        type: 2,
-        start_time: startUtc,
-        duration,
-        timezone: "Africa/Cairo",
-        settings: {
-          host_video: true,
-          participant_video: true,
-          join_before_host: false,
-          mute_upon_entry: true,
-          waiting_room: false,
-          meeting_authentication: false,
-        },
-      }),
-    })
-
-    if (!zoomResponse.ok) {
-      const errorData = await zoomResponse.json()
-      return NextResponse.json({ error: "Failed to create Zoom meeting", details: errorData }, { status: 500 })
-    }
-
-    const zoomData = await zoomResponse.json()
-    return NextResponse.json({
-      id: zoomData.id,
-      join_url: zoomData.join_url,
-      start_url: zoomData.start_url,
-      scheduled_for: zoomData.start_time,
-      sent_start_time: startUtc,
-    })
-  } catch (error) {
-    return NextResponse.json({ error: "Failed to create Zoom meeting", details: String(error) }, { status: 500 })
+  } catch (e) {
+    console.error("Zoom meeting creation failed:", e);
   }
+
+  // Mark slot as booked
+  await supabase
+    .from("availability_slots")
+    .update({ is_booked: true, updated_at: new Date().toISOString() })
+    .eq("id", slot_id);
+
+  // Create booking
+  const { data: booking, error: bookingError } = await supabase
+    .from("bookings")
+    .insert({
+      slot_id,
+      client_name,
+      client_email,
+      client_phone: client_phone || null,
+      client_message: client_message || null,
+      duration,
+      status: "confirmed",
+      zoom_meeting_id: zoomData?.id?.toString() || null,
+      zoom_join_url: zoomData?.join_url || null,
+      zoom_start_url: zoomData?.start_url || null,
+      client_timezone: client_timezone || null,
+    })
+    .select()
+    .single();
+
+  if (bookingError) {
+    // Revert slot booking
+    await supabase
+      .from("availability_slots")
+      .update({ is_booked: false, updated_at: new Date().toISOString() })
+      .eq("id", slot_id);
+    // DB trigger raises this when the weekly limit is exceeded at the DB level
+    if (bookingError.message?.includes("weeklyLimitReached")) {
+      return NextResponse.json({ error: "weeklyLimitReached" }, { status: 403 });
+    }
+    return NextResponse.json(
+      { error: bookingError.message },
+      { status: 500 }
+    );
+  }
+
+
+  // Deduct mentorship hours from active subscription
+  try {
+    const adminDb = createAdminClient();
+    const { data: activeSub } = await adminDb
+      .from("user_subscriptions")
+      .select("id, used_hours")
+      .eq("client_email", normalizedEmail)
+      .eq("status", "active")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .single();
+    if (activeSub) {
+      const hoursToDeduct = duration / 60;
+      await adminDb
+        .from("user_subscriptions")
+        .update({ used_hours: activeSub.used_hours + hoursToDeduct, updated_at: new Date().toISOString() })
+        .eq("id", activeSub.id);
+      console.log("Deducted", hoursToDeduct, "hours from subscription", activeSub.id);
+
+      // Check remaining hours after deduction and send warning email if <= 1
+      const { data: updatedSub } = await adminDb
+        .from("user_subscriptions")
+        .select("remaining_hours")
+        .eq("id", activeSub.id)
+        .single();
+
+      if (updatedSub && updatedSub.remaining_hours <= 1) {
+        try {
+          await fetch(`${request.nextUrl.origin}/api/email/send-low-hours`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+              client_name,
+              client_email,
+              remaining_hours: updatedSub.remaining_hours,
+            }),
+          });
+          console.log("Low-hours warning email triggered for", client_email);
+        } catch (emailErr) {
+          console.error("Low-hours email trigger failed:", emailErr);
+        }
+      }
+    }
+  } catch (e) {
+    console.error("Hour deduction failed:", e);
+  }
+
+  // Send confirmation email
+  try {
+    const emailRes = await fetch(`${request.nextUrl.origin}/api/email/send-confirmation`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        booking_id: booking.id,
+        client_name,
+        client_email,
+        date: slot.date,
+        start_time: slot.start_time,
+        duration,
+        zoom_join_url: zoomData?.join_url || null,
+        client_timezone: client_timezone || null,
+      }),
+    });
+    
+    const emailResult = await emailRes.json();
+    
+    if (!emailRes.ok) {
+      console.error("âŒ Email sending failed:", emailResult);
+    } else {
+      console.log("âœ… Email confirmation sent successfully");
+    }
+  } catch (e) {
+    console.error("âŒ Email sending error:", e);
+  }
+
+  // Notion calendar automation
+  try {
+    await fetch(`${request.nextUrl.origin}/api/notion/create-event`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        client_name,
+        client_email,
+        date: slot.date,
+        start_time: slot.start_time,
+        duration,
+        zoom_join_url: zoomData?.join_url || null,
+      }),
+    });
+  } catch (e) {
+    console.error("Notion event creation failed:", e);
+  }
+
+  return NextResponse.json({ booking, zoom: zoomData, zoom_join_url: zoomData?.join_url || booking.zoom_join_url || null });
+}
+
+export async function GET(request: NextRequest) {
+  const supabase = await createClient();
+  const { searchParams } = new URL(request.url);
+  const status = searchParams.get("status");
+
+  let query = supabase
+    .from("bookings")
+    .select("*, availability_slots(*)")
+    .order("created_at", { ascending: false });
+
+  if (status) {
+    query = query.eq("status", status);
+  }
+
+  const { data, error } = await query;
+
+  if (error) {
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+
+  return NextResponse.json({ bookings: data });
 }
