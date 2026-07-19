@@ -277,10 +277,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  import { cairoToUtcISO } from "@/lib/timezone";
-
-  start_time: cairoToUtcISO(slot.date, slot.start_time),
-
 
   return NextResponse.json({ bookings: data });
 }
