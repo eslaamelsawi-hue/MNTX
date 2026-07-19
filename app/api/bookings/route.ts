@@ -2,281 +2,138 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
 
-export async function POST(request: NextRequest) {
+export async function GET() {
   const supabase = await createClient();
-  const body = await request.json();
-  const { slot_id, client_name, client_email, client_phone, client_message, duration, client_timezone } = body;
-  const normalizedEmail = client_email?.toLowerCase().trim();
 
-  if (!slot_id || !client_name || !client_email || !duration) {
-    return NextResponse.json(
-      { error: "Missing required fields" },
-      { status: 400 }
-    );
-  }
-
-  // Check slot availability
-  const { data: slot, error: slotError } = await supabase
-    .from("availability_slots")
-    .select("*")
-    .eq("id", slot_id)
-    .eq("is_booked", false)
-    .single();
-
-  if (slotError || !slot) {
-    return NextResponse.json(
-      { error: "Slot is no longer available" },
-      { status: 409 }
-    );
-  }
-
-  // Check if user has remaining mentorship hours
-  const adminDb = createAdminClient();
-  const { data: activeSub } = await adminDb
-    .from("user_subscriptions")
-    .select("id, remaining_hours")
-    .eq("client_email", normalizedEmail)
-    .eq("status", "active")
-    .order("created_at", { ascending: false })
-    .limit(1)
-    .single();
-
-  const hoursNeeded = duration / 60;
-  if (!activeSub || activeSub.remaining_hours < hoursNeeded) {
-    return NextResponse.json(
-      { error: "noHoursRemaining" },
-      { status: 403 }
-    );
-  }
-
-  // Read the weekly limit from admin_settings (falls back to 2 if not configured).
-  const { data: limitSetting } = await adminDb
-    .from("admin_settings")
-    .select("value")
-    .eq("key", "weekly_booking_limit")
-    .single();
-  const weeklyLimit = parseInt(limitSetting?.value || "2") || 2;
-
-  // Enforce the weekly session limit.
-  // Two-step query: first get slot IDs in the target week, then count matching bookings.
-  // (Filtering on a joined table via .gte("related.col") is unreliable in PostgREST.)
-  const slotDate = new Date(`${slot.date}T00:00:00Z`);
-  const daysSinceMonday = (slotDate.getUTCDay() + 6) % 7;
-  const weekStartDate = new Date(slotDate);
-  weekStartDate.setUTCDate(slotDate.getUTCDate() - daysSinceMonday);
-  const weekEndDate = new Date(weekStartDate);
-  weekEndDate.setUTCDate(weekStartDate.getUTCDate() + 6);
-  const weekStart = weekStartDate.toISOString().split("T")[0];
-  const weekEnd = weekEndDate.toISOString().split("T")[0];
-
-  const { data: slotsInWeek } = await adminDb
-    .from("availability_slots")
-    .select("id")
-    .gte("date", weekStart)
-    .lte("date", weekEnd);
-
-  const weekSlotIds = (slotsInWeek || []).map((s) => s.id);
-
-  if (weekSlotIds.length > 0) {
-    const { count: weeklyCount } = await adminDb
-      .from("bookings")
-      .select("id", { count: "exact", head: true })
-      .eq("client_email", normalizedEmail)
-      .in("status", ["confirmed", "completed"])
-      .in("slot_id", weekSlotIds);
-
-    if ((weeklyCount || 0) >= weeklyLimit) {
-      return NextResponse.json(
-        { error: "weeklyLimitReached" },
-        { status: 403 }
-      );
-    }
-  }
-
-  // Create Zoom meeting (using S2S credentials)
-  let zoomData = null;
-  try {
-    const zoomRes = await fetch(
-      `${request.nextUrl.origin}/api/zoom/create-meeting-s2s`,
-      {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          topic: `1-on-1 Coaching: ${client_name}`,
-          start_time: `${slot.date}T${slot.start_time}`,
-          duration,
-        }),
-      }
-    );
-    if (zoomRes.ok) {
-      zoomData = await zoomRes.json();
-      console.log("✅ Zoom meeting created:", zoomData.id);
-    } else {
-      const err = await zoomRes.json();
-      console.error("❌ Zoom meeting creation error:", err);
-    }
-  } catch (e) {
-    console.error("Zoom meeting creation failed:", e);
-  }
-
-  // Mark slot as booked
-  await supabase
-    .from("availability_slots")
-    .update({ is_booked: true, updated_at: new Date().toISOString() })
-    .eq("id", slot_id);
-
-  // Create booking
-  const { data: booking, error: bookingError } = await supabase
-    .from("bookings")
-    .insert({
-      slot_id,
-      client_name,
-      client_email,
-      client_phone: client_phone || null,
-      client_message: client_message || null,
-      duration,
-      status: "confirmed",
-      zoom_meeting_id: zoomData?.id?.toString() || null,
-      zoom_join_url: zoomData?.join_url || null,
-      zoom_start_url: zoomData?.start_url || null,
-      client_timezone: client_timezone || null,
-    })
-    .select()
-    .single();
-
-  if (bookingError) {
-    // Revert slot booking
-    await supabase
-      .from("availability_slots")
-      .update({ is_booked: false, updated_at: new Date().toISOString() })
-      .eq("id", slot_id);
-    // DB trigger raises this when the weekly limit is exceeded at the DB level
-    if (bookingError.message?.includes("weeklyLimitReached")) {
-      return NextResponse.json({ error: "weeklyLimitReached" }, { status: 403 });
-    }
-    return NextResponse.json(
-      { error: bookingError.message },
-      { status: 500 }
-    );
-  }
-
-
-  // Deduct mentorship hours from active subscription
-  try {
-    const adminDb = createAdminClient();
-    const { data: activeSub } = await adminDb
-      .from("user_subscriptions")
-      .select("id, used_hours")
-      .eq("client_email", normalizedEmail)
-      .eq("status", "active")
-      .order("created_at", { ascending: false })
-      .limit(1)
-      .single();
-    if (activeSub) {
-      const hoursToDeduct = duration / 60;
-      await adminDb
-        .from("user_subscriptions")
-        .update({ used_hours: activeSub.used_hours + hoursToDeduct, updated_at: new Date().toISOString() })
-        .eq("id", activeSub.id);
-      console.log("Deducted", hoursToDeduct, "hours from subscription", activeSub.id);
-
-      // Check remaining hours after deduction and send warning email if <= 1
-      const { data: updatedSub } = await adminDb
-        .from("user_subscriptions")
-        .select("remaining_hours")
-        .eq("id", activeSub.id)
-        .single();
-
-      if (updatedSub && updatedSub.remaining_hours <= 1) {
-        try {
-          await fetch(`${request.nextUrl.origin}/api/email/send-low-hours`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              client_name,
-              client_email,
-              remaining_hours: updatedSub.remaining_hours,
-            }),
-          });
-          console.log("Low-hours warning email triggered for", client_email);
-        } catch (emailErr) {
-          console.error("Low-hours email trigger failed:", emailErr);
-        }
-      }
-    }
-  } catch (e) {
-    console.error("Hour deduction failed:", e);
-  }
-
-  // Send confirmation email
-  try {
-    const emailRes = await fetch(`${request.nextUrl.origin}/api/email/send-confirmation`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        booking_id: booking.id,
-        client_name,
-        client_email,
-        date: slot.date,
-        start_time: slot.start_time,
-        duration,
-        zoom_join_url: zoomData?.join_url || null,
-        client_timezone: client_timezone || null,
-      }),
-    });
-    
-    const emailResult = await emailRes.json();
-    
-    if (!emailRes.ok) {
-      console.error("âŒ Email sending failed:", emailResult);
-    } else {
-      console.log("âœ… Email confirmation sent successfully");
-    }
-  } catch (e) {
-    console.error("âŒ Email sending error:", e);
-  }
-
-  // Notion calendar automation
-  try {
-    await fetch(`${request.nextUrl.origin}/api/notion/create-event`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        client_name,
-        client_email,
-        date: slot.date,
-        start_time: slot.start_time,
-        duration,
-        zoom_join_url: zoomData?.join_url || null,
-      }),
-    });
-  } catch (e) {
-    console.error("Notion event creation failed:", e);
-  }
-
-  return NextResponse.json({ booking, zoom: zoomData, zoom_join_url: zoomData?.join_url || booking.zoom_join_url || null });
-}
-
-export async function GET(request: NextRequest) {
-  const supabase = await createClient();
-  const { searchParams } = new URL(request.url);
-  const status = searchParams.get("status");
-
-  let query = supabase
+  const { data, error } = await supabase
     .from("bookings")
     .select("*, availability_slots(*)")
     .order("created_at", { ascending: false });
-
-  if (status) {
-    query = query.eq("status", status);
-  }
-
-  const { data, error } = await query;
 
   if (error) {
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-
   return NextResponse.json({ bookings: data });
+}
+
+export async function PATCH(request: NextRequest) {
+  const supabase = await createClient();
+  const body = await request.json();
+  const { booking_id, status, new_slot_id } = body;
+
+  if (!booking_id) {
+    return NextResponse.json({ error: "Booking ID required" }, { status: 400 });
+  }
+
+  // Get current booking
+  const { data: currentBooking, error: fetchError } = await supabase
+    .from("bookings")
+    .select("*")
+    .eq("id", booking_id)
+    .single();
+
+  if (fetchError || !currentBooking) {
+    return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+  }
+
+  // If rescheduling
+  if (new_slot_id && new_slot_id !== currentBooking.slot_id) {
+    // Free old slot
+    await supabase
+      .from("availability_slots")
+      .update({ is_booked: false, updated_at: new Date().toISOString() })
+      .eq("id", currentBooking.slot_id);
+
+    // Book new slot
+    await supabase
+      .from("availability_slots")
+      .update({ is_booked: true, updated_at: new Date().toISOString() })
+      .eq("id", new_slot_id);
+
+    const { data, error } = await supabase
+      .from("bookings")
+      .update({
+        slot_id: new_slot_id,
+        status: "rescheduled",
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", booking_id)
+      .select("*, availability_slots(*)")
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ booking: data });
+  }
+
+  // If just updating status (cancel, complete, etc.)
+  if (status) {
+    if (status === "cancelled") {
+      // Free the slot
+      await supabase
+        .from("availability_slots")
+        .update({ is_booked: false, updated_at: new Date().toISOString() })
+        .eq("id", currentBooking.slot_id);
+
+      // Restore hours to user's subscription
+      if (currentBooking.client_email && currentBooking.duration) {
+        // Get current used_hours
+        const { data: subscription } = await supabase
+          .from("user_subscriptions")
+          .select("used_hours")
+          .eq("client_email", currentBooking.client_email.toLowerCase().trim())
+          .single();
+
+        if (subscription) {
+          // Reduce used_hours by the booking duration (convert minutes to hours)
+          const hoursToRestore = currentBooking.duration / 60;
+          const newUsedHours = Math.max(0, subscription.used_hours - hoursToRestore);
+          await supabase
+            .from("user_subscriptions")
+            .update({ used_hours: newUsedHours })
+            .eq("client_email", currentBooking.client_email.toLowerCase().trim());
+          console.log(`Restored ${hoursToRestore} hours for ${currentBooking.client_email}`);
+        }
+      }
+    }
+
+    const { data, error } = await supabase
+      .from("bookings")
+      .update({ status, updated_at: new Date().toISOString() })
+      .eq("id", booking_id)
+      .select("*, availability_slots(*)")
+      .single();
+
+    if (error) {
+      return NextResponse.json({ error: error.message }, { status: 500 });
+    }
+
+    return NextResponse.json({ booking: data });
+  }
+
+  return NextResponse.json({ error: "No action specified" }, { status: 400 });
+}
+
+export async function DELETE(request: NextRequest) {
+  const supabase = createAdminClient();
+  const { ids } = await request.json();
+
+  if (!ids || !Array.isArray(ids) || ids.length === 0) {
+    return NextResponse.json({ error: "IDs array required" }, { status: 400 });
+  }
+
+  const { error, count } = await supabase
+    .from("bookings")
+    .delete({ count: "exact" })
+    .in("id", ids);
+
+  if (error) {
+    console.error("Delete bookings error:", error);
+    return NextResponse.json({ error: error.message }, { status: 500 });
+  }
+
+  return NextResponse.json({ success: true, deleted: count });
 }
