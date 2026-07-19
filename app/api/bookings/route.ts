@@ -34,13 +34,15 @@ function toZoomUtc(raw: string): string {
 
 export async function POST(req: NextRequest) {
   try {
-    const body = await req.json()
-    const { topic, start_time, duration } = body
+    const body = await req.json().catch(() => ({}))
+    const topic = typeof body.topic === "string" ? body.topic.trim() : ""
+    const start_time = typeof body.start_time === "string" ? body.start_time.trim() : ""
+    const duration = Number(body.duration)
 
     const missing: string[] = []
     if (!topic) missing.push("topic")
     if (!start_time) missing.push("start_time")
-    if (!duration) missing.push("duration")
+    if (!duration || Number.isNaN(duration)) missing.push("duration")
     if (missing.length > 0) {
       return NextResponse.json({ error: "Missing required fields", missing, received: body }, { status: 400 })
     }
