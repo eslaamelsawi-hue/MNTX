@@ -36,3 +36,11 @@ export function formatDateCairo(date: Date): string {
 }
 
 
+export function cairoToUtcISO(date: string, time: string): string {
+  const t = time.length === 5 ? `${time}:00` : time
+  const probe = new Date(`${date}T12:00:00Z`)
+  const offsetMs =
+    new Date(probe.toLocaleString("en-US", { timeZone: SITE_TIMEZONE })).getTime() -
+    new Date(probe.toLocaleString("en-US", { timeZone: "UTC" })).getTime()
+  return new Date(new Date(`${date}T${t}Z`).getTime() - offsetMs).toISOString()
+}
