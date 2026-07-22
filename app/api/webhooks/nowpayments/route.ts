@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { grantExtendHours, EXTEND_PLAN_HOURS } from "@/lib/grant-hours"
+import { grantExtendHours, grantCoaching, EXTEND_PLAN_HOURS } from "@/lib/grant-hours"
 import { createStarterInviteLink } from "@/lib/tg-invite"
 import { sendConfirmationEmail } from "@/lib/email"
 
@@ -56,8 +56,9 @@ export async function POST(request: Request) {
 
     const isExtendPlan = !!EXTEND_PLAN_HOURS[planId]
     const isStarterPlan = planId === "starter"
+    const isCoachingPlan = planId === "coaching"
 
-    if (!isExtendPlan && !isStarterPlan) {
+    if (!isExtendPlan && !isStarterPlan && !isCoachingPlan) {
       // Not a handled plan — nothing to do
       return NextResponse.json({ ok: true })
     }
@@ -97,6 +98,19 @@ export async function POST(request: Request) {
         orderId: String(order_id),
         tgInviteLink,
       })
+    }
+
+    if (isCoachingPlan) {
+      // Grant 10 hours + academy access + a Telegram course link.
+      const { tgInviteLink, alreadyFulfilled } = await grantCoaching(email, `Coaching-NP-${String(order_id).slice(-6)}`, name)
+      if (!alreadyFulfilled) {
+        await sendConfirmationEmail({
+          to: email,
+          planLabel: "1-on-1 Coaching Plan",
+          orderId: String(order_id),
+          tgInviteLink,
+        })
+      }
     }
 
     return NextResponse.json({ ok: true })

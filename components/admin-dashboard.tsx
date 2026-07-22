@@ -11,6 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { AdminSubscriptions } from "@/components/admin-subscriptions"
+import { AdminCourseAccess } from "@/components/admin-course-access"
+import { AdminCourses } from "@/components/admin-courses"
+import { AdminWaitlist } from "@/components/admin-waitlist"
+import { AdminRecordings } from "@/components/admin-recordings"
 import { DMChat } from "@/components/chat/dm-chat"
 import { SupportChat } from "@/components/chat/support-chat"
 import { MentorSupport } from "@/components/chat/mentor-support"
@@ -41,6 +45,9 @@ import {
   Copy,
   Settings,
   Save,
+  Crown,
+  BookOpen,
+  ClipboardList,
   MessageCircle,
   HelpCircle,
   MessageSquare,
@@ -1011,6 +1018,18 @@ export function AdminDashboard() {
                 <TabsTrigger value="orders">Orders</TabsTrigger>
                 <TabsTrigger value="coupons">Coupons</TabsTrigger>
                 <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
+                <TabsTrigger value="courses" className="gap-1.5">
+                  <BookOpen className="h-3.5 w-3.5" /> Courses
+                </TabsTrigger>
+                <TabsTrigger value="course-access" className="gap-1.5">
+                  <Crown className="h-3.5 w-3.5" /> MNTX Elite
+                </TabsTrigger>
+                <TabsTrigger value="waitlist" className="gap-1.5">
+                  <ClipboardList className="h-3.5 w-3.5" /> Waitlist
+                </TabsTrigger>
+                <TabsTrigger value="recordings" className="gap-1.5">
+                  <Video className="h-3.5 w-3.5" /> Recordings
+                </TabsTrigger>
                 <TabsTrigger value="settings">
                   <Settings className="mr-1.5 h-3.5 w-3.5" />
                   Settings
@@ -2110,6 +2129,20 @@ export function AdminDashboard() {
                                   {orderActionLoading === `${order.orderId}-mark_expired` ? "…" : "Expire"}
                                 </Button>
                               )}
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 text-xs border-red-500/30 text-red-400 hover:bg-red-500/10"
+                                disabled={orderActionLoading === `${order.orderId}-delete`}
+                                onClick={() => {
+                                  if (confirm(`Permanently delete this ${order.status} order for ${order.email}? This cannot be undone.`)) {
+                                    handleOrderAction(order.orderId, "delete")
+                                  }
+                                }}
+                              >
+                                <Trash2 className="mr-1 h-3 w-3" />
+                                {orderActionLoading === `${order.orderId}-delete` ? "…" : "Delete"}
+                              </Button>
                               <div className="flex items-center gap-1">
                                 <button
                                   className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
@@ -2352,6 +2385,26 @@ export function AdminDashboard() {
           {/* Subscriptions Tab */}
           <TabsContent value="subscriptions" className="space-y-4">
             <AdminSubscriptions />
+          </TabsContent>
+
+          {/* Courses management Tab */}
+          <TabsContent value="courses" className="space-y-4">
+            <AdminCourses />
+          </TabsContent>
+
+          {/* MNTX Elite / Course Access Tab */}
+          <TabsContent value="course-access" className="space-y-4">
+            <AdminCourseAccess />
+          </TabsContent>
+
+          {/* Waitlist Tab */}
+          <TabsContent value="waitlist" className="space-y-4">
+            <AdminWaitlist />
+          </TabsContent>
+
+          {/* Recordings Tab */}
+          <TabsContent value="recordings" className="space-y-4">
+            <AdminRecordings />
           </TabsContent>
 
           {/* Settings Tab */}

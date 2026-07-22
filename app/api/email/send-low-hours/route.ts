@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
     </div>`;
 
     await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || "Mentix Trading <onboarding@resend.dev>",
+      from: process.env.RESEND_FROM_EMAIL || "Mentix Trading <noreply@mentixtrading.com>",
       to: client_email,
       subject: "⏳ Your Mentorship Hours Are Running Low — Extend Now",
       html: emailHtml,

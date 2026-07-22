@@ -8,9 +8,14 @@ export async function POST(request: NextRequest) {
   const { slot_id, client_name, client_email, client_phone, client_message, duration, client_timezone } = body;
   const normalizedEmail = client_email?.toLowerCase().trim();
 
-  if (!slot_id || !client_name || !client_email || !duration) {
+  const missing: string[] = [];
+  if (!slot_id) missing.push("slot_id");
+  if (!client_name) missing.push("client_name");
+  if (!client_email) missing.push("client_email");
+  if (!duration) missing.push("duration");
+  if (missing.length > 0) {
     return NextResponse.json(
-      { error: "Missing required fields" },
+      { error: "Missing required fields", missing },
       { status: 400 }
     );
   }
@@ -103,7 +108,16 @@ export async function POST(request: NextRequest) {
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           topic: `1-on-1 Coaching: ${client_name}`,
-          start_time: `${slot.date}T${slot.start_time}`,
+          // Convert the Cairo slot time to an absolute UTC instant (DST-aware) so Zoom
+          // schedules the exact time and never falls back to "now". Inline = no import.
+          start_time: (() => {
+            const time = slot.start_time.length === 5 ? `${slot.start_time}:00` : slot.start_time;
+            const probe = new Date(`${slot.date}T12:00:00Z`);
+            const offset =
+              new Date(probe.toLocaleString("en-US", { timeZone: "Africa/Cairo" })).getTime() -
+              new Date(probe.toLocaleString("en-US", { timeZone: "UTC" })).getTime();
+            return new Date(new Date(`${slot.date}T${time}Z`).getTime() - offset).toISOString();
+          })(),
           duration,
         }),
       }

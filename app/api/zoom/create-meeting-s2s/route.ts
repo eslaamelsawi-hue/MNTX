@@ -1,98 +1,101 @@
 import { NextRequest, NextResponse } from "next/server"
 
 // Server-to-Server OAuth: exchange credentials for an access token.
-// Grant type MUST be "account_credentials" for S2S apps.
 async function getAccessToken() {
   const clientId = process.env.ZOOM_CLIENT_ID
   const clientSecret = process.env.ZOOM_CLIENT_SECRET
   const accountId = process.env.ZOOM_ACCOUNT_ID
-
-  console.log("🔐 Credentials check:")
-  console.log("  CLIENT_ID:", clientId ? "✓" : "✗ MISSING")
-  console.log("  CLIENT_SECRET:", clientSecret ? "✓" : "✗ MISSING")
-  console.log("  ACCOUNT_ID:", accountId ? "✓" : "✗ MISSING")
 
   if (!clientId || !clientSecret || !accountId) {
     throw new Error("Missing Zoom credentials (ZOOM_CLIENT_ID, ZOOM_CLIENT_SECRET, ZOOM_ACCOUNT_ID)")
   }
 
   const auth = Buffer.from(`${clientId}:${clientSecret}`).toString("base64")
-
   const tokenResponse = await fetch(
     `https://zoom.us/oauth/token?grant_type=account_credentials&account_id=${accountId}`,
     {
       method: "POST",
       headers: {
-        "Authorization": `Basic ${auth}`,
+        Authorization: `Basic ${auth}`,
         "Content-Type": "application/x-www-form-urlencoded",
       },
     }
   )
-
   const tokenText = await tokenResponse.text()
-  console.log("📊 Token response status:", tokenResponse.status)
-
   if (!tokenResponse.ok) {
-    console.error("❌ Token error:", tokenText)
     throw new Error(`Failed to get Zoom token: ${tokenResponse.status} - ${tokenText}`)
   }
+  return JSON.parse(tokenText).access_token
+}
 
-  const tokenData = JSON.parse(tokenText)
-  console.log("✅ Access token received")
-  return tokenData.access_token
+/**
+ * Normalize any incoming start time to the EXACT format Zoom accepts:
+ * "YYYY-MM-DDTHH:mm:ssZ" (GMT, no milliseconds).
+ * A value without a timezone is treated as Cairo wall-clock time and converted to
+ * UTC. Zoom silently falls back to "now" when it can't parse start_time — this
+ * guarantees a clean value so that never happens.
+ */
+function toZoomUtc(raw: string): string {
+  let s = String(raw).trim()
+  const hasZone = /[zZ]$|[+-]\d{2}:?\d{2}$/.test(s)
+  if (hasZone) {
+    return new Date(s).toISOString().replace(/\.\d{3}Z$/, "Z")
+  }
+  if (/T\d{2}:\d{2}$/.test(s)) s += ":00" // ensure HH:mm:ss
+  const datePart = s.slice(0, 10)
+  const probe = new Date(`${datePart}T12:00:00Z`)
+  const offsetMs =
+    new Date(probe.toLocaleString("en-US", { timeZone: "Africa/Cairo" })).getTime() -
+    new Date(probe.toLocaleString("en-US", { timeZone: "UTC" })).getTime()
+  return new Date(new Date(`${s}Z`).getTime() - offsetMs).toISOString().replace(/\.\d{3}Z$/, "Z")
 }
 
 export async function POST(req: NextRequest) {
   try {
-    console.log("\n📍 === ZOOM MEETING CREATION (S2S) ===")
+    const body = await req.json().catch(() => ({}))
+    const topic = typeof body.topic === "string" ? body.topic.trim() : ""
+    const start_time = typeof body.start_time === "string" ? body.start_time.trim() : ""
+    const duration = Number(body.duration)
 
-    const body = await req.json()
-    const { topic, start_time, duration } = body
-
-    console.log("📥 Request:", { topic, start_time, duration })
-
-    if (!topic || !start_time || !duration) {
-      return NextResponse.json(
-        { error: "Missing required fields: topic, start_time, duration" },
-        { status: 400 }
-      )
+    const missing: string[] = []
+    if (!topic) missing.push("topic")
+    if (!start_time) missing.push("start_time")
+    if (!duration || Number.isNaN(duration)) missing.push("duration")
+    if (missing.length > 0) {
+      return NextResponse.json({ error: "Missing required fields", missing, received: body }, { status: 400 })
     }
+
+    const startUtc = toZoomUtc(start_time)
+    console.log("Zoom start_time:", { received: start_time, sentToZoom: startUtc })
 
     const accessToken = await getAccessToken()
 
-    console.log("📤 Creating meeting via Zoom API...")
-
-    const zoomResponse = await fetch(
-      `https://api.zoom.us/v2/users/me/meetings`,
-      {
-        method: "POST",
-        headers: {
-          "Authorization": `Bearer ${accessToken}`,
-          "Content-Type": "application/json",
+    const zoomResponse = await fetch(`https://api.zoom.us/v2/users/me/meetings`, {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        topic,
+        type: 2, // scheduled meeting
+        start_time: startUtc, // GMT with Z — Zoom schedules this exact instant
+        duration,
+        timezone: "Africa/Cairo", // display only; start_time is already absolute GMT
+        settings: {
+          host_video: true,
+          participant_video: true,
+          join_before_host: false,
+          mute_upon_entry: true,
+          waiting_room: false,
+          meeting_authentication: false,
         },
-        body: JSON.stringify({
-          topic,
-          start_time,
-          duration,
-          timezone: "Africa/Cairo",
-          type: 2,
-          settings: {
-            host_video: true,
-            participant_video: true,
-            join_before_host: false,
-            mute_upon_entry: true,
-            waiting_room: false,
-            meeting_authentication: false,
-          },
-        }),
-      }
-    )
-
-    console.log("📊 Meeting response status:", zoomResponse.status)
+      }),
+    })
 
     if (!zoomResponse.ok) {
       const errorData = await zoomResponse.json()
-      console.error("❌ Zoom API error:", errorData)
+      console.error("Zoom API error:", errorData)
       return NextResponse.json(
         { error: "Failed to create Zoom meeting", details: errorData },
         { status: 500 }
@@ -100,15 +103,17 @@ export async function POST(req: NextRequest) {
     }
 
     const zoomData = await zoomResponse.json()
-    console.log("✅ Meeting created:", { id: zoomData.id, join_url: zoomData.join_url })
+    console.log("Meeting created:", { id: zoomData.id, scheduled_for: zoomData.start_time })
 
     return NextResponse.json({
       id: zoomData.id,
       join_url: zoomData.join_url,
       start_url: zoomData.start_url,
+      scheduled_for: zoomData.start_time, // what Zoom stored — verify this
+      sent_start_time: startUtc,
     })
   } catch (error) {
-    console.error("❌ Error:", error)
+    console.error("Error:", error)
     return NextResponse.json(
       { error: "Failed to create Zoom meeting", details: String(error) },
       { status: 500 }

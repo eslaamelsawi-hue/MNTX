@@ -12,12 +12,16 @@ import {
   Users, Rss, ExternalLink, Activity, CheckCircle2,
   XCircle, AlertCircle, Award, Star, MessageCircle,
   LayoutDashboard, BookOpen, Repeat, RefreshCw,
+  GraduationCap, Settings, Lock, Crown, ChevronsUpDown,
 } from "lucide-react"
 import Link from "next/link"
 import { useLocale } from "next-intl"
-import { DMChat } from "@/components/chat/dm-chat"
-import { SupportChat } from "@/components/chat/support-chat"
+import { createClient } from "@/lib/supabase/client"
 import { GroupChat } from "@/components/chat/group-chat"
+import { DashboardAcademy } from "@/components/course/dashboard-academy"
+import { DashboardSettings } from "@/components/dashboard-settings"
+import { DashboardRecordings } from "@/components/dashboard-recordings"
+import BookingCalendar from "@/components/booking-calendar"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -101,6 +105,10 @@ const t: Record<"en" | "ar", Record<string, string>> = {
     tabFeed: "Activity",
     tabCommunity: "Community",
     tabWeeklyZoom: "Weekly Zoom",
+    tabBooking: "Book Session",
+    lockedTitle: "Premium coaching content",
+    lockedDesc: "This is part of the 1-on-1 mentorship program. Get a coaching plan to unlock your hours, private sessions, and weekly group calls.",
+    lockedCta: "Join the mentorship",
     remainingHours: "Remaining Hours",
     usedHours: "Used Hours",
     totalHours: "Total Hours",
@@ -166,6 +174,10 @@ const t: Record<"en" | "ar", Record<string, string>> = {
     tabFeed: "النشاط",
     tabCommunity: "المجتمع",
     tabWeeklyZoom: "زووم الأسبوعي",
+    tabBooking: "احجز جلسة",
+    lockedTitle: "محتوى إرشاد مميّز",
+    lockedDesc: "هذا جزء من برنامج الإرشاد الفردي. احصل على خطة إرشاد لفتح ساعاتك وجلساتك الخاصة والمكالمات الجماعية الأسبوعية.",
+    lockedCta: "انضم للإرشاد",
     remainingHours: "الساعات المتبقية",
     usedHours: "الساعات المستخدمة",
     totalHours: "إجمالي الساعات",
@@ -245,6 +257,25 @@ function SessionStatusBadge({ status, l }: { status: string; l: Record<string, s
   return <Badge className={map[status] ?? "bg-gray-500/20 text-gray-400 border-gray-500/30"}>{labels[status] ?? status}</Badge>
 }
 
+// Shown in place of coaching-only tabs when the member has no active subscription.
+function LockedPanel({ l, locale }: { l: Record<string, string>; locale: string }) {
+  return (
+    <div className="flex flex-col items-center justify-center rounded-2xl border border-border bg-card px-6 py-16 text-center">
+      <div className="mb-4 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary/10 text-primary">
+        <Lock className="h-7 w-7" />
+      </div>
+      <h3 className="text-xl font-bold text-foreground">{l.lockedTitle}</h3>
+      <p className="mt-2 max-w-md text-sm text-muted-foreground">{l.lockedDesc}</p>
+      <Link href={`/${locale}/checkout?plan=coaching`} className="mt-6">
+        <Button className="gap-2">
+          <Crown className="h-4 w-4" />
+          {l.lockedCta}
+        </Button>
+      </Link>
+    </div>
+  )
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function ClientDashboard() {
@@ -258,6 +289,8 @@ export function ClientDashboard() {
   const isRtl = locale === "ar"
 
   const [email, setEmail] = useState("")
+  const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
+  const [activeTab, setActiveTab] = useState("academy")
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
@@ -268,26 +301,10 @@ export function ClientDashboard() {
   const [registeredSessionIds, setRegisteredSessionIds] = useState<Set<string>>(new Set())
   const [hiddenSessionChats, setHiddenSessionChats] = useState<Set<string>>(new Set())
 
-  // On component mount, restore from localStorage
-  useEffect(() => {
-    const savedEmail = localStorage.getItem("mentix_user_email")
-    const savedRegistrations = localStorage.getItem("mentix_registered_sessions")
-
-    if (savedEmail && savedRegistrations) {
-      setEmail(savedEmail)
-      setRegisteredSessionIds(new Set(JSON.parse(savedRegistrations)))
-
-      // Fetch fresh session data
-      fetch("/api/group-sessions")
-        .then(res => res.json())
-        .then(data => setGroupSessions(data.sessions ?? []))
-        .catch(e => console.error("Failed to fetch sessions:", e))
-    }
-  }, [])
-
-  const handleLookup = async (e: React.FormEvent) => {
-    e.preventDefault()
-    if (!email.trim()) return
+  // Core lookup by email — used both by the auto-login flow and the fallback form.
+  const runLookup = async (targetEmail: string) => {
+    const em = targetEmail.trim()
+    if (!em) return
     setLoading(true)
     setError("")
     try {
@@ -295,28 +312,26 @@ export function ClientDashboard() {
         fetch("/api/user-dashboard", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: email.trim() }),
+          body: JSON.stringify({ email: em }),
         }),
         fetch("/api/group-sessions"),
         fetch("/api/group-sessions/user-registrations", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email: email.trim() }),
+          body: JSON.stringify({ email: em }),
         })
       ])
       const dashData = await dashRes.json()
       const sessionsData = await sessionsRes.json()
       const regsData = await regsRes.json()
 
+      setGroupSessions(sessionsData.sessions ?? [])
       if (dashData.found) {
         setSubscriptions(dashData.subscriptions)
         setBookings(dashData.bookings)
         setSettings(dashData.settings ?? {})
-        setGroupSessions(sessionsData.sessions ?? [])
         setRegisteredSessionIds(new Set(regsData.registeredSessionIds ?? []))
-
-        // Save to localStorage
-        localStorage.setItem("mentix_user_email", email.trim())
+        localStorage.setItem("mentix_user_email", em)
         localStorage.setItem("mentix_registered_sessions", JSON.stringify(regsData.registeredSessionIds ?? []))
       } else {
         setSubscriptions([])
@@ -331,6 +346,30 @@ export function ClientDashboard() {
       setLoading(false)
     }
   }
+
+  const handleLookup = async (e: React.FormEvent) => {
+    e.preventDefault()
+    await runLookup(email)
+  }
+
+  // On mount: use the logged-in account's email automatically (this page requires
+  // login), falling back to a previously saved email.
+  useEffect(() => {
+    const savedRegs = localStorage.getItem("mentix_registered_sessions")
+    if (savedRegs) setRegisteredSessionIds(new Set(JSON.parse(savedRegs)))
+    const supabase = createClient()
+    supabase.auth.getUser().then(({ data }) => {
+      setAvatarUrl((data.user?.user_metadata?.avatar_url as string) || null)
+      const sessionEmail = data.user?.email || localStorage.getItem("mentix_user_email") || ""
+      if (sessionEmail) {
+        setEmail(sessionEmail)
+        runLookup(sessionEmail)
+      } else {
+        setLooked(true)
+      }
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   const activeSub = useMemo(
     () => subscriptions.find((s) => s.status === "active") ?? subscriptions[0],
@@ -429,154 +468,168 @@ export function ClientDashboard() {
 
   // ── Gate ──────────────────────────────────────────────────────────────────
 
-  if (!looked || subscriptions.length === 0) {
+  // Still loading the account lookup → spinner.
+  if (!looked) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-neutral-950 via-neutral-900 to-neutral-950 flex flex flex-col items-center justify-center px-4 py-20" dir={isRtl ? "rtl" : "ltr"}>
-        <div className="w-full max-w-md">
-          {/* Icon & Title */}
-          <div className="text-center mb-12">
-            <div className="mx-auto mb-6 inline-flex items-center justify-center">
-              <div className="relative">
-                <div className="absolute inset-0 bg-gradient-to-r from-amber-500 to-orange-500 rounded-3xl blur-2xl opacity-20"></div>
-                <div className="relative h-20 w-20 flex items-center justify-center rounded-3xl bg-gradient-to-br from-amber-500/20 to-orange-500/20 border border-amber-500/30 backdrop-blur">
-                  <LayoutDashboard className="h-10 w-10 text-amber-400" />
-                </div>
-              </div>
-            </div>
-            <h1 className="text-4xl font-bold text-white mb-2 tracking-tight">{l.title}</h1>
-            <p className="text-slate-400 text-lg">{l.subtitle}</p>
-          </div>
-
-          {/* Form Card */}
-          <Card className="border-slate-700/50 bg-slate-800/40 backdrop-blur-lg shadow-2xl">
-            <CardContent className="pt-8 pb-8">
-              <form onSubmit={handleLookup} className="space-y-5">
-                <div className="relative group">
-                  <div className="absolute inset-0 bg-gradient-to-r from-amber-500/0 to-orange-500/0 group-focus-within:from-amber-500/10 group-focus-within:to-orange-500/10 rounded-lg transition duration-300"></div>
-                  <div className="relative flex items-center">
-                    <Mail className="absolute left-4 h-5 w-5 text-slate-500 group-focus-within:text-amber-400 transition" />
-                    <Input
-                      type="email"
-                      placeholder={l.emailPlaceholder}
-                      value={email}
-                      onChange={(e) => setEmail(e.target.value)}
-                      className="pl-12 h-12 bg-slate-900/50 border-slate-600 text-white placeholder:text-slate-500 focus:border-amber-500 focus:ring-2 focus:ring-amber-500/20 rounded-lg transition"
-                      required
-                    />
-                  </div>
-                </div>
-                <Button
-                  type="submit"
-                  disabled={loading}
-                  className="w-full h-12 bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-semibold text-base rounded-lg transition duration-300 shadow-lg hover:shadow-amber-500/20"
-                >
-                  {loading ? (
-                    <><Loader2 className="mr-2 h-4 w-4 animate-spin" />{l.loading}</>
-                  ) : (
-                    l.lookup
-                  )}
-                </Button>
-              </form>
-            </CardContent>
-          </Card>
-
-          {/* Error Message */}
-          {error && (
-            <div className="mt-6 flex items-start gap-3 rounded-lg border border-red-500/30 bg-red-500/10 backdrop-blur p-4 text-sm text-red-400 animate-in fade-in">
-              <AlertCircle className="mt-0.5 h-5 w-5 shrink-0" />
-              <span>{error}</span>
-            </div>
-          )}
-        </div>
-
+      <div className="flex min-h-[60vh] items-center justify-center" dir={isRtl ? "rtl" : "ltr"}>
+        <Loader2 className="h-7 w-7 animate-spin text-muted-foreground" />
       </div>
     )
   }
 
   // ── Dashboard ─────────────────────────────────────────────────────────────
+  // Everyone gets the same dashboard; coaching-only tabs are locked for members
+  // without an active subscription.
 
+  const hasCoaching = subscriptions.length > 0
   const userName = activeSub?.client_name ?? ""
+  const displayName = userName || email.split("@")[0] || "Member"
+  const initials = displayName.trim().slice(0, 2).toUpperCase()
+  const navItemCls =
+    "w-auto shrink-0 justify-start gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground data-[state=active]:bg-muted data-[state=active]:text-foreground data-[state=active]:shadow-sm lg:w-full"
   const hoursUsedPct = activeSub
     ? Math.min(100, (activeSub.used_hours / activeSub.total_hours) * 100)
     : 0
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-10" dir={isRtl ? "rtl" : "ltr"}>
-      {/* Header */}
-      <div className="mb-8 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div>
-          <p className="text-sm text-muted-foreground">{l.welcome}</p>
-          <h1 className="text-3xl font-bold">{userName}</h1>
-          <p className="mt-0.5 text-sm text-muted-foreground">{email}</p>
-        </div>
-        <Link href={`/${locale}/booking`}>
-          <Button className="gap-2">
-            <CalendarPlus className="h-4 w-4" />
-            {l.bookSession}
-          </Button>
-        </Link>
-      </div>
-
-      {/* Stats strip */}
-      <div className="mb-8 grid grid-cols-2 gap-3 sm:grid-cols-4">
-        <Card className="border-border bg-card">
-          <CardContent className="px-4 py-4">
-            <p className="text-xs text-muted-foreground">{l.remainingHours}</p>
-            <p className={`mt-1 text-2xl font-bold ${(activeSub?.remaining_hours ?? 0) <= 1 ? "text-red-400" : "text-emerald-400"}`}>
-              {activeSub?.remaining_hours ?? 0}
-            </p>
-          </CardContent>
-        </Card>
-        <Card className="border-border bg-card">
-          <CardContent className="px-4 py-4">
-            <p className="text-xs text-muted-foreground">{l.usedHours}</p>
-            <p className="mt-1 text-2xl font-bold text-orange-400">{activeSub?.used_hours ?? 0}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border bg-card">
-          <CardContent className="px-4 py-4">
-            <p className="text-xs text-muted-foreground">{l.totalSessions}</p>
-            <p className="mt-1 text-2xl font-bold">{bookings.length}</p>
-          </CardContent>
-        </Card>
-        <Card className="border-border bg-card">
-          <CardContent className="px-4 py-4">
-            <p className="text-xs text-muted-foreground">{l.status}</p>
-            <div className="mt-1">
-              <StatusBadge status={activeSub?.status ?? "expired"} l={l} />
+    <Tabs
+      value={activeTab}
+      onValueChange={setActiveTab}
+      className="min-h-screen bg-background"
+      dir={isRtl ? "rtl" : "ltr"}
+    >
+      <div className="flex flex-col lg:flex-row">
+        {/* Sidebar */}
+        <aside className="shrink-0 border-b border-border bg-card/40 p-3 lg:flex lg:min-h-screen lg:w-64 lg:flex-col lg:border-b-0 lg:border-e lg:border-border lg:p-4">
+          {/* Account chip */}
+          <div className="mb-2 flex items-center gap-3 rounded-xl px-1.5 py-1.5">
+            <div className="relative shrink-0">
+              {avatarUrl ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img src={avatarUrl} alt="" className="h-10 w-10 rounded-lg object-cover" />
+              ) : (
+                <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-amber-600 text-sm font-bold text-primary-foreground">
+                  {initials}
+                </div>
+              )}
+              <span className="absolute -bottom-0.5 -end-0.5 h-3 w-3 rounded-full border-2 border-card bg-emerald-500" />
             </div>
-          </CardContent>
-        </Card>
-      </div>
+            <div className="min-w-0 flex-1">
+              <p className="truncate text-sm font-semibold text-foreground">{displayName}</p>
+              <p className="truncate text-xs text-muted-foreground">{email}</p>
+            </div>
+            <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
+          </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="overview">
-        <TabsList className="mb-6 flex h-auto flex-wrap gap-1 bg-muted/50 p-1">
-          <TabsTrigger value="overview" className="gap-1.5 text-xs sm:text-sm">
-            <LayoutDashboard className="h-3.5 w-3.5" />{l.tabOverview}
-          </TabsTrigger>
-          <TabsTrigger value="mentorship" className="gap-1.5 text-xs sm:text-sm">
-            <BookOpen className="h-3.5 w-3.5" />{l.tabMentorship}
-          </TabsTrigger>
-          <TabsTrigger value="sessions" className="gap-1.5 text-xs sm:text-sm">
-            <Calendar className="h-3.5 w-3.5" />{l.tabSessions}
-          </TabsTrigger>
-          <TabsTrigger value="feed" className="gap-1.5 text-xs sm:text-sm">
-            <Rss className="h-3.5 w-3.5" />{l.tabFeed}
-          </TabsTrigger>
-          <TabsTrigger value="community" className="gap-1.5 text-xs sm:text-sm">
-            <Users className="h-3.5 w-3.5" />{l.tabCommunity}
-          </TabsTrigger>
-          <TabsTrigger value="weekly-zoom" className="gap-1.5 text-xs sm:text-sm">
-            <Repeat className="h-3.5 w-3.5" />{l.tabWeeklyZoom}
-          </TabsTrigger>
-          <TabsTrigger value="chats" className="gap-1.5 text-xs sm:text-sm">
-            <MessageCircle className="h-3.5 w-3.5" />Chats
-          </TabsTrigger>
-        </TabsList>
+          <div className="mb-2 hidden h-px w-full bg-border lg:block" />
+
+          <TabsList className="flex h-auto w-full gap-0.5 overflow-x-auto bg-transparent p-0 lg:flex-col">
+            <TabsTrigger value="academy" className={navItemCls}>
+              <GraduationCap className="h-[18px] w-[18px]" />{isRtl ? "دوراتي" : "My Courses"}
+            </TabsTrigger>
+
+            <div className="my-1.5 hidden h-px w-full bg-border lg:block" />
+
+            <TabsTrigger value="overview" className={navItemCls}>
+              <LayoutDashboard className="h-[18px] w-[18px]" />{l.tabOverview}
+            </TabsTrigger>
+            <TabsTrigger value="mentorship" className={navItemCls}>
+              <BookOpen className="h-[18px] w-[18px]" />{l.tabMentorship}
+            </TabsTrigger>
+            <TabsTrigger value="sessions" className={navItemCls}>
+              <Calendar className="h-[18px] w-[18px]" />{l.tabSessions}
+            </TabsTrigger>
+            <TabsTrigger value="booking" className={navItemCls}>
+              <CalendarPlus className="h-[18px] w-[18px]" />{l.tabBooking}
+            </TabsTrigger>
+
+            <div className="my-1.5 hidden h-px w-full bg-border lg:block" />
+
+            <TabsTrigger value="recordings" className={navItemCls}>
+              <Video className="h-[18px] w-[18px]" />{isRtl ? "التسجيلات" : "Recordings"}
+            </TabsTrigger>
+            <TabsTrigger value="feed" className={navItemCls}>
+              <Rss className="h-[18px] w-[18px]" />{l.tabFeed}
+            </TabsTrigger>
+            <TabsTrigger value="community" className={navItemCls}>
+              <Users className="h-[18px] w-[18px]" />{l.tabCommunity}
+            </TabsTrigger>
+            <TabsTrigger value="weekly-zoom" className={navItemCls}>
+              <Repeat className="h-[18px] w-[18px]" />{l.tabWeeklyZoom}
+            </TabsTrigger>
+
+            <div className="my-1.5 hidden h-px w-full bg-border lg:block" />
+
+            <TabsTrigger value="settings" className={navItemCls}>
+              <Settings className="h-[18px] w-[18px]" />{isRtl ? "الإعدادات" : "Settings"}
+            </TabsTrigger>
+          </TabsList>
+        </aside>
+
+        {/* Main content */}
+        <main className="min-w-0 flex-1 p-4 lg:p-8">
+          {/* Top bar */}
+          <div className="mb-6 rounded-2xl border border-border bg-card p-5 sm:p-6">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <p className="text-sm text-muted-foreground">{l.welcome}</p>
+                <h1 className="mt-0.5 text-2xl font-bold text-foreground sm:text-3xl">{displayName}</h1>
+              </div>
+              {hasCoaching && ["overview", "mentorship", "sessions"].includes(activeTab) && (
+                <div className="flex items-center gap-3">
+                  <StatusBadge status={activeSub?.status ?? "expired"} l={l} />
+                </div>
+              )}
+            </div>
+          </div>
+
+        {/* ── Academy ── */}
+        <TabsContent value="academy" className="space-y-4">
+          <DashboardAcademy email={email} />
+        </TabsContent>
+
+        {/* ── Book a 1-on-1 Session ── */}
+        <TabsContent value="booking" className="space-y-4">
+          {!hasCoaching ? <LockedPanel l={l} locale={locale} /> : <BookingCalendar defaultEmail={email} lockEmail />}
+        </TabsContent>
+
+        {/* ── Recordings ── */}
+        <TabsContent value="recordings" className="space-y-4">
+          <DashboardRecordings email={email} />
+        </TabsContent>
+
+        {/* ── Settings ── */}
+        <TabsContent value="settings" className="space-y-4">
+          <DashboardSettings />
+        </TabsContent>
 
         {/* ── Overview ── */}
         <TabsContent value="overview" className="space-y-4">
+          {!hasCoaching ? <LockedPanel l={l} locale={locale} /> : (<>
+          {/* Stats */}
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+            <div className="rounded-2xl border border-border bg-card p-4 transition-colors hover:border-primary/40">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary"><Clock className="h-3.5 w-3.5" /></span>
+                {l.remainingHours}
+              </div>
+              <p className={`mt-3 text-3xl font-bold tracking-tight ${(activeSub?.remaining_hours ?? 0) <= 1 ? "text-red-400" : "text-foreground"}`}>{activeSub?.remaining_hours ?? 0}</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-4 transition-colors hover:border-primary/40">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary"><Activity className="h-3.5 w-3.5" /></span>
+                {l.usedHours}
+              </div>
+              <p className="mt-3 text-3xl font-bold tracking-tight text-foreground">{activeSub?.used_hours ?? 0}</p>
+            </div>
+            <div className="rounded-2xl border border-border bg-card p-4 transition-colors hover:border-primary/40">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary"><Calendar className="h-3.5 w-3.5" /></span>
+                {l.totalSessions}
+              </div>
+              <p className="mt-3 text-3xl font-bold tracking-tight text-foreground">{bookings.length}</p>
+            </div>
+          </div>
           <div className="grid gap-4 sm:grid-cols-2">
             {/* Next session */}
             <Card className="border-border bg-card">
@@ -615,11 +668,6 @@ export function ClientDashboard() {
                   <div className="py-4 text-center text-muted-foreground">
                     <Calendar className="mx-auto mb-2 h-8 w-8 opacity-30" />
                     <p className="text-sm">{l.noNextSession}</p>
-                    <Link href={`/${locale}/booking`} className="mt-2 inline-block">
-                      <Button size="sm" variant="outline" className="gap-1.5 mt-1">
-                        <CalendarPlus className="h-3.5 w-3.5" />{l.bookSession}
-                      </Button>
-                    </Link>
                   </div>
                 )}
               </CardContent>
@@ -688,68 +736,98 @@ export function ClientDashboard() {
               </div>
             </div>
           )}
+          </>)}
         </TabsContent>
 
         {/* ── My Mentorship ── */}
         <TabsContent value="mentorship" className="space-y-4">
-          {subscriptions.map((sub) => (
-            <Card key={sub.id} className="border-border bg-card">
-              <CardHeader className="pb-3">
-                <div className="flex items-center justify-between">
-                  <CardTitle className="capitalize text-lg">{sub.plan.replace(/-/g, " ")}</CardTitle>
+          {!hasCoaching ? <LockedPanel l={l} locale={locale} /> : (<>
+          {subscriptions.map((sub) => {
+            const usedPct = Math.min(100, Math.round((sub.used_hours / Math.max(1, sub.total_hours)) * 100))
+            const low = sub.remaining_hours <= 1
+            const C = 2 * Math.PI * 52
+            return (
+              <Card key={sub.id} className="overflow-hidden border-border bg-card">
+                {/* Header strip */}
+                <div className="flex items-center justify-between gap-3 border-b border-border px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                      <BookOpen className="h-5 w-5" />
+                    </div>
+                    <div className="min-w-0">
+                      <h3 className="truncate text-lg font-bold capitalize text-foreground">{sub.plan.replace(/-/g, " ")}</h3>
+                      <p className="truncate text-xs text-muted-foreground">{sub.notes || l.tabMentorship}</p>
+                    </div>
+                  </div>
                   <StatusBadge status={sub.status} l={l} />
                 </div>
-                {sub.notes && <CardDescription>{sub.notes}</CardDescription>}
-              </CardHeader>
-              <CardContent className="space-y-5">
-                <div className="grid grid-cols-3 gap-3">
-                  <div className="rounded-lg bg-muted/50 p-3 text-center">
-                    <p className="text-xs text-muted-foreground">{l.totalHours}</p>
-                    <p className="mt-1 text-2xl font-bold">{sub.total_hours}</p>
-                  </div>
-                  <div className="rounded-lg bg-muted/50 p-3 text-center">
-                    <p className="text-xs text-muted-foreground">{l.usedHours}</p>
-                    <p className="mt-1 text-2xl font-bold text-orange-400">{sub.used_hours}</p>
-                  </div>
-                  <div className="rounded-lg bg-muted/50 p-3 text-center">
-                    <p className="text-xs text-muted-foreground">{l.remainingHours}</p>
-                    <p className={`mt-1 text-2xl font-bold ${sub.remaining_hours <= 1 ? "text-red-400" : "text-emerald-400"}`}>
-                      {sub.remaining_hours}
-                    </p>
-                  </div>
-                </div>
 
-                <div>
-                  <div className="mb-1.5 flex justify-between text-xs text-muted-foreground">
-                    <span>{l.hoursProgress}</span>
-                    <span>{Math.round(Math.min(100, (sub.used_hours / sub.total_hours) * 100))}%</span>
+                <CardContent className="grid gap-6 p-5 sm:grid-cols-[auto_1fr] sm:items-center">
+                  {/* Hours ring */}
+                  <div className="relative mx-auto h-32 w-32 shrink-0">
+                    <svg viewBox="0 0 120 120" className="h-32 w-32 -rotate-90">
+                      <circle cx="60" cy="60" r="52" fill="none" strokeWidth="10" className="stroke-muted" />
+                      <circle
+                        cx="60" cy="60" r="52" fill="none" strokeWidth="10" strokeLinecap="round"
+                        className="stroke-primary transition-all duration-700"
+                        strokeDasharray={C}
+                        strokeDashoffset={C * (1 - usedPct / 100)}
+                      />
+                    </svg>
+                    <div className="absolute inset-0 flex flex-col items-center justify-center">
+                      <span className={`text-3xl font-bold leading-none ${low ? "text-red-400" : "text-foreground"}`}>{sub.remaining_hours}</span>
+                      <span className="mt-1 text-[11px] text-muted-foreground">{isRtl ? "ساعة متبقية" : "hrs left"}</span>
+                    </div>
                   </div>
-                  <Progress value={Math.min(100, (sub.used_hours / sub.total_hours) * 100)} className="h-2" />
-                </div>
 
-                <div className="grid grid-cols-2 gap-3 text-sm">
-                  <div>
-                    <p className="text-xs text-muted-foreground">{l.startsOn}</p>
-                    <p className="font-medium">{new Date(sub.starts_at).toLocaleDateString()}</p>
-                  </div>
-                  <div>
-                    <p className="text-xs text-muted-foreground">{l.expiresOn}</p>
-                    <p className="font-medium">{sub.expires_at ? new Date(sub.expires_at).toLocaleDateString() : "—"}</p>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          ))}
+                  {/* Stats + progress + dates */}
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-3 gap-3">
+                      <div className="rounded-xl border border-border bg-muted/30 p-3">
+                        <p className="text-xs text-muted-foreground">{l.totalHours}</p>
+                        <p className="mt-1 text-xl font-bold text-foreground">{sub.total_hours}</p>
+                      </div>
+                      <div className="rounded-xl border border-border bg-muted/30 p-3">
+                        <p className="text-xs text-muted-foreground">{l.usedHours}</p>
+                        <p className="mt-1 text-xl font-bold text-amber-400">{sub.used_hours}</p>
+                      </div>
+                      <div className="rounded-xl border border-border bg-muted/30 p-3">
+                        <p className="text-xs text-muted-foreground">{l.remainingHours}</p>
+                        <p className={`mt-1 text-xl font-bold ${low ? "text-red-400" : "text-emerald-400"}`}>{sub.remaining_hours}</p>
+                      </div>
+                    </div>
 
-          <Link href={`/${locale}/booking`}>
-            <Button className="w-full gap-2">
-              <CalendarPlus className="h-4 w-4" />{l.bookSession}
-            </Button>
-          </Link>
+                    <div>
+                      <div className="mb-1.5 flex justify-between text-xs text-muted-foreground">
+                        <span>{l.hoursProgress}</span>
+                        <span className="font-medium text-foreground">{usedPct}%</span>
+                      </div>
+                      <Progress value={usedPct} className="h-2" />
+                    </div>
+
+                    <div className="flex flex-wrap gap-x-6 gap-y-2 border-t border-border pt-3 text-sm">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">{l.startsOn}:</span>
+                        <span className="font-medium">{new Date(sub.starts_at).toLocaleDateString()}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        <Clock className="h-3.5 w-3.5 text-muted-foreground" />
+                        <span className="text-xs text-muted-foreground">{l.expiresOn}:</span>
+                        <span className="font-medium">{sub.expires_at ? new Date(sub.expires_at).toLocaleDateString() : "—"}</span>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )
+          })}
+          </>)}
         </TabsContent>
 
         {/* ── My Sessions ── */}
         <TabsContent value="sessions" className="space-y-6">
+          {!hasCoaching ? <LockedPanel l={l} locale={locale} /> : (<>
           {/* Upcoming */}
           <div>
             <div className="mb-3 flex items-center justify-between">
@@ -770,11 +848,6 @@ export function ClientDashboard() {
                 <CardContent className="py-8 text-center text-muted-foreground">
                   <Calendar className="mx-auto mb-2 h-8 w-8 opacity-30" />
                   <p className="text-sm">{l.noUpcoming}</p>
-                  <Link href={`/${locale}/booking`} className="mt-2 inline-block">
-                    <Button size="sm" variant="outline" className="gap-1.5 mt-1">
-                      <CalendarPlus className="h-3.5 w-3.5" />{l.bookSession}
-                    </Button>
-                  </Link>
                 </CardContent>
               </Card>
             ) : (
@@ -856,10 +929,12 @@ export function ClientDashboard() {
               </div>
             )}
           </div>
+          </>)}
         </TabsContent>
 
         {/* ── Feed / Activity ── */}
         <TabsContent value="feed">
+          {!hasCoaching ? <LockedPanel l={l} locale={locale} /> : (<>
           <h3 className="mb-4 flex items-center gap-2 font-semibold">
             <Rss className="h-4 w-4 text-primary" />{l.activityFeed}
           </h3>
@@ -888,6 +963,7 @@ export function ClientDashboard() {
               ))}
             </div>
           )}
+          </>)}
         </TabsContent>
 
         {/* ── Community ── */}
@@ -957,20 +1033,9 @@ export function ClientDashboard() {
           </div>
         </TabsContent>
 
-        {/* ── Chats ── */}
-        <TabsContent value="chats" className="space-y-6">
-          <div className="space-y-6">
-            {email && (
-              <>
-                <DMChat userEmail={email} mentorId="1" />
-                <SupportChat userEmail={email} userName={subscriptions[0]?.client_name || "User"} />
-              </>
-            )}
-          </div>
-        </TabsContent>
-
         {/* ── Weekly Zoom ── */}
         <TabsContent value="weekly-zoom" className="space-y-4">
+          {!hasCoaching ? <LockedPanel l={l} locale={locale} /> : (<>
           <div className="mb-6 flex items-center justify-between">
             <div>
               <h3 className="text-2xl font-bold text-white mb-1">{l.weeklyZoomTitle}</h3>
@@ -1118,8 +1183,10 @@ export function ClientDashboard() {
               }}
             />
           )}
+          </>)}
         </TabsContent>
-      </Tabs>
-    </div>
+        </main>
+      </div>
+    </Tabs>
   )
 }

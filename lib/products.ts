@@ -17,8 +17,8 @@ export const PRODUCTS: Product[] = [
     id: "coaching",
     name: "1-on-1 Coaching Plan",
     description:
-      "Full courses lessons (Volume Profile & MNTX Theory), 50+ video lessons, passing funded acc challenge strategy, private Discord & Telegram communities, trading playbook & templates, weekly 1-on-1 zoom sessions for 6 months. One-time payment, lifetime access.",
-    priceInCents: 159900, // $1,599.00
+      "Full courses lessons (MNTX Theory), 50+ video lessons, passing funded acc challenge strategy, private Discord & Telegram communities, trading playbook & templates, weekly 1-on-1 zoom sessions (4 months, 10 sessions total). One-time payment, lifetime access.",
+    priceInCents: 90000, // $900.00
   },
   {
     id: "extend-1m",
@@ -43,6 +43,13 @@ export const PRODUCTS: Product[] = [
     name: "Extend Mentorship – 6 Months",
     description: "Extend your 1-on-1 online mentorship for 6 additional months. Includes weekly zoom sessions, Discord & Telegram access, and continued personalized guidance. Best value.",
     priceInCents: 149900, // $1,499.00
+  },
+  {
+    id: "mntx-elite",
+    name: "MNTX ELITE",
+    description:
+      "MNTX ELITE membership — full lifetime access to the ADVANCED SMC Course, streamed on-site with all lessons and future updates.",
+    priceInCents: 49900, // $499.00
   },
   {
     id: "funded-challenge",

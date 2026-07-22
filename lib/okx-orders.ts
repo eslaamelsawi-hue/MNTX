@@ -65,6 +65,12 @@ export async function updateOrder(orderId: string, updates: Partial<OKXOrder>): 
   if (error) throw new Error("Failed to update order: " + error.message)
 }
 
+export async function deleteOrder(orderId: string): Promise<void> {
+  const supabase = createAdminClient()
+  const { error } = await supabase.from("okx_orders").delete().eq("order_id", orderId)
+  if (error) throw new Error("Failed to delete order: " + error.message)
+}
+
 export async function getPendingOrders(): Promise<OKXOrder[]> {
   const supabase = createAdminClient()
   const { data, error } = await supabase

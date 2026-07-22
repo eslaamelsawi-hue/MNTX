@@ -4,6 +4,7 @@ import { useState } from "react"
 import { Menu, X, TrendingUp } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { LanguageSwitcher } from "@/components/language-switcher"
+import { NavAuth } from "@/components/auth/nav-auth"
 import { useTranslations } from 'next-intl'
 import { Link } from '@/i18n/navigation'
 
@@ -13,13 +14,15 @@ export function Navbar() {
 
   return (
     <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
-      <div className="mx-auto flex max-w-6xl items-center justify-between px-4 py-4">
-        <Link href="/" className="flex items-center gap-2 text-lg font-bold text-foreground tracking-tight">
+      <div className="flex items-center justify-between px-6 py-4 sm:px-10 lg:px-16 md:grid md:grid-cols-[1fr_auto_1fr]">
+        {/* Left: logo */}
+        <Link href="/" className="flex items-center gap-2 text-lg font-bold text-foreground tracking-tight md:justify-self-start">
           <TrendingUp className="h-5 w-5 text-primary" />
           {t('brand')}
         </Link>
 
-        <div className="hidden items-center gap-4 md:flex">
+        {/* Center: nav links */}
+        <div className="hidden items-center justify-center gap-6 md:flex">
           <Link href="/tools" className="text-sm font-medium text-foreground transition-colors hover:text-primary">
             {t('tools')}
           </Link>
@@ -29,9 +32,11 @@ export function Navbar() {
           <Link href="/funded-challenge" className="text-sm font-medium text-foreground transition-colors hover:text-primary">
             {t('fundedChallenge')}
           </Link>
-          <Link href="/dashboard" className="text-sm font-medium text-foreground transition-colors hover:text-primary">
-            {t("dashboard")}
-          </Link>
+        </div>
+
+        {/* Right: auth + language + join discord */}
+        <div className="hidden items-center gap-4 md:flex md:justify-self-end">
+          <NavAuth />
           <LanguageSwitcher />
           <Button asChild size="sm">
             <a href="https://discord.gg/MKysYbcnYW" target="_blank" rel="noopener noreferrer">{t('joinDiscord')}</a>
@@ -70,13 +75,7 @@ export function Navbar() {
             >
               {t('fundedChallenge')}
             </Link>
-            <Link
-              href="/dashboard"
-              className="text-sm font-medium text-foreground transition-colors hover:text-primary"
-              onClick={() => setOpen(false)}
-            >
-              {t("dashboard")}
-            </Link>
+            <NavAuth onNavigate={() => setOpen(false)} />
             <LanguageSwitcher />
             <Button asChild size="sm" className="w-full">
               <a href="https://discord.gg/MKysYbcnYW" target="_blank" rel="noopener noreferrer" onClick={() => setOpen(false)}>{t('joinDiscord')}</a>

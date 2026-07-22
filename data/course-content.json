@@ -1,0 +1,85 @@
+{
+  "courses": [
+    {
+      "id": "2d0210c4",
+      "slug": "smc",
+      "titleEn": "ADVANCED SMC Course",
+      "titleAr": "دورة SMC المتقدمة",
+      "subtitleEn": "Smart Money Concepts from the ground up — structure, liquidity, and execution.",
+      "subtitleAr": "مفاهيم المال الذكي من الصفر — الهيكل، السيولة، والتنفيذ.",
+      "accessPlans": [
+        "mntx-elite",
+        "starter"
+      ],
+      "published": true,
+      "sections": [
+        {
+          "id": "f48acc08",
+          "titleEn": "Getting Started",
+          "titleAr": "البداية",
+          "lessons": [
+            {
+              "id": "7a06fcce",
+              "titleEn": "1. Introduction & Market Structure",
+              "titleAr": "١. مقدمة وهيكل السوق",
+              "duration": "05:20",
+              "video": "lesson-1.mp4",
+              "freePreview": true
+            },
+            {
+              "id": "a976256d",
+              "titleEn": "2. Liquidity & Order Blocks",
+              "titleAr": "٢. السيولة وكتل الأوامر",
+              "duration": "12:40",
+              "video": "lesson-2.mp4",
+              "freePreview": false
+            },
+            {
+              "id": "27c06fa2",
+              "titleEn": "3. Entries, Stops & Execution",
+              "titleAr": "٣. الدخول، الوقف، والتنفيذ",
+              "duration": "18:05",
+              "video": "lesson-3.mp4",
+              "freePreview": false
+            }
+          ]
+        },
+        {
+          "id": "c73b9b0b",
+          "titleEn": "New Section",
+          "titleAr": "قسم جديد",
+          "lessons": [
+            {
+              "id": "cc68d326",
+              "titleEn": "fff",
+              "titleAr": "fff",
+              "duration": "00:00",
+              "video": "",
+              "freePreview": false
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "0741ab33",
+      "slug": "new-course",
+      "titleEn": "New Course",
+      "titleAr": "دورة جديدة444",
+      "subtitleEn": "44",
+      "subtitleAr": "444",
+      "accessPlans": [
+        "mntx-elite"
+      ],
+      "published": true,
+      "sections": [
+        {
+          "id": "7e28129d",
+          "titleEn": "New Section",
+          "titleAr": "قسم جديد",
+          "lessons": []
+        }
+      ]
+    }
+  ]
+}

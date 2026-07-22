@@ -132,7 +132,7 @@ export async function sendConfirmationEmail(opts: ConfirmationEmailOptions): Pro
     return
   }
 
-  const from = process.env.RESEND_FROM_EMAIL || "Mentix Trading <onboarding@resend.dev>"
+  const from = process.env.RESEND_FROM_EMAIL || "Mentix Trading <noreply@mentixtrading.com>"
   const resend = new Resend(apiKey)
 
   const html = buildConfirmationHtml(opts)

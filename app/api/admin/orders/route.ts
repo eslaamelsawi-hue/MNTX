@@ -1,9 +1,9 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
-import { getPendingOrders, getOrder, updateOrder } from "@/lib/okx-orders"
+import { getPendingOrders, getOrder, updateOrder, deleteOrder } from "@/lib/okx-orders"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { sendConfirmationEmail } from "@/lib/email"
-import { grantExtendHours } from "@/lib/grant-hours"
+import { grantExtendHours, grantCoaching } from "@/lib/grant-hours"
 import { createStarterInviteLink } from "@/lib/tg-invite"
 
 async function getAllOrders() {
@@ -95,6 +95,17 @@ export async function PATCH(request: Request) {
     }
   }
 
+  // Delete a single order of ANY status (pending / paid / expired).
+  if (action === "delete") {
+    try {
+      await deleteOrder(orderId)
+      return NextResponse.json({ success: true })
+    } catch (e) {
+      console.error("Failed to delete order:", e)
+      return NextResponse.json({ error: "Failed to delete order" }, { status: 500 })
+    }
+  }
+
   const order = await getOrder(orderId)
   if (!order) {
     return NextResponse.json({ error: "Order not found" }, { status: 404 })
@@ -109,11 +120,15 @@ export async function PATCH(request: Request) {
     // Grant hours if this is an extend plan
     await grantExtendHours(order.email, order.plan)
 
-    // Claim a TG token and send confirmation email for starter plan
+    // Claim a TG token and send confirmation email for starter / coaching plan
     const planLabel = order.plan.charAt(0).toUpperCase() + order.plan.slice(1).replace(/-/g, " ")
     let tgInviteLink: string | null = null
     if (order.plan === "starter") {
       tgInviteLink = await createStarterInviteLink(orderId)
+    } else if (order.plan === "coaching") {
+      // Grant 10 hours + academy access + a Telegram course link.
+      const res = await grantCoaching(order.email, orderId)
+      tgInviteLink = res.tgInviteLink
     }
     await sendConfirmationEmail({
       to: order.email,

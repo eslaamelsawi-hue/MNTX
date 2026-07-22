@@ -106,7 +106,7 @@ export async function POST(request: NextRequest) {
 
     // Send to client
     await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || "Mentix Trading <onboarding@resend.dev>",
+      from: process.env.RESEND_FROM_EMAIL || "Mentix Trading <noreply@mentixtrading.com>",
       to: client_email,
       subject: `Coaching Session Confirmed - ${local.date}`,
       html: emailHtml,
@@ -131,7 +131,7 @@ export async function POST(request: NextRequest) {
     </div>`;
 
     await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || "Mentix Trading <onboarding@resend.dev>",
+      from: process.env.RESEND_FROM_EMAIL || "Mentix Trading <noreply@mentixtrading.com>",
       to: adminEmail,
       subject: `New Booking: ${client_name} - ${cairoFormattedDate}`,
       html: adminHtml,

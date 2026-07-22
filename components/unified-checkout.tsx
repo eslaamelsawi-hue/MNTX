@@ -50,8 +50,9 @@ const translations = {
     secureCheckout: "Secure Checkout",
     emailLabel: "Email for confirmation",
     emailPlaceholder: "your@email.com",
-    telegramLabel: "Telegram username (optional)",
+    telegramLabel: "Telegram username",
     telegramPlaceholder: "@username",
+    telegramRequired: "Please enter your Telegram username above to continue.",
     features: "What's included",
     perMonth: "/month",
     oneTime: "One-time payment",
@@ -77,8 +78,9 @@ const translations = {
     secureCheckout: "دفع آمن",
     emailLabel: "البريد الإلكتروني للتأكيد",
     emailPlaceholder: "بريدك@الإلكتروني.com",
-    telegramLabel: "اسم مستخدم تيليجرام (اختياري)",
+    telegramLabel: "اسم مستخدم تيليجرام",
     telegramPlaceholder: "@username",
+    telegramRequired: "من فضلك أدخل اسم مستخدم تيليجرام بالأعلى للمتابعة.",
     features: "ماذا يشمل",
     perMonth: "/شهر",
     oneTime: "دفعة واحدة",
@@ -102,11 +104,11 @@ const PLAN_FEATURES: Record<string, string[]> = {
     "Lifetime access",
   ],
   coaching: [
-    "Full courses (Volume Profile & MNTX Theory)",
+    "Full courses (MNTX Theory)",
     "50+ video lessons",
     "Funded account challenge strategy",
     "Discord & Telegram communities",
-    "Weekly 1-on-1 Zoom sessions (6 months)",
+    "Weekly 1-on-1 Zoom sessions (4 months — 10 sessions)",
     "Trading playbook & templates",
     "Lifetime access",
   ],
@@ -357,11 +359,12 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
                 onChange={(e) => setEmail(e.target.value)}
               />
               <Label htmlFor="checkout-telegram" className="mb-2 mt-4 block text-sm font-medium">
-                {t.telegramLabel}
+                {t.telegramLabel} <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="checkout-telegram"
                 type="text"
+                required
                 placeholder={t.telegramPlaceholder}
                 value={telegram}
                 onChange={(e) => setTelegram(e.target.value)}
@@ -374,38 +377,12 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
               <CardTitle className="text-lg">{t.choosePayment}</CardTitle>
             </CardHeader>
             <CardContent className="space-y-3">
-              <button
-                type="button"
-                onClick={() =>
-                  setPaymentMethod(paymentMethod === "stripe" ? null : "stripe")
-                }
-                className={`flex w-full items-center justify-between rounded-lg border p-4 text-left transition-all ${
-                  paymentMethod === "stripe"
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-primary/50"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <CreditCard className="h-5 w-5 text-primary" />
-                  <span className="font-medium">{t.payWithStripe}</span>
-                </div>
-                <ChevronDown
-                  className={`h-4 w-4 text-muted-foreground transition-transform ${
-                    paymentMethod === "stripe" ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-              {paymentMethod === "stripe" && (
-                <div key={appliedCoupon?.code || "no-coupon"} className="rounded-lg border border-border p-4">
-                  <EmbeddedCheckoutProvider
-                    stripe={stripePromise}
-                    options={{ clientSecret: fetchClientSecret }}
-                  >
-                    <EmbeddedCheckout />
-                  </EmbeddedCheckoutProvider>
-                </div>
+              {!telegram.trim() && (
+                <p className="rounded-lg border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                  {t.telegramRequired}
+                </p>
               )}
-
+              <div className={`space-y-3 ${!telegram.trim() ? "pointer-events-none opacity-50" : ""}`}>
               <OKXPayButton
                 plan={selectedPlan}
                 prefillEmail={email || undefined}
@@ -446,6 +423,7 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
                   <EgyptPayment />
                 </div>
               )}
+              </div>
             </CardContent>
           </Card>
         </div>

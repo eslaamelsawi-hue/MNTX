@@ -15,13 +15,13 @@ const essentialFeatures = [
 ]
 
 const completeFeatures = [
-  { text: "Full Courses Lessons (Volume Profile & MNTX Theory)", highlight: false },
+  { text: "Full Courses Lessons (MNTX Theory)", highlight: false },
   { text: "50+ Video Lessons", highlight: false },
   { text: "Passing Funded Acc Challenge Strategy", highlight: false },
   { text: "Private Discord Community", highlight: false },
   { text: "Private Telegram Community", highlight: false },
   { text: "Trading Playbook & Templates", highlight: false },
-  { text: "Weekly 1-on-1 Zoom Sessions (for 6 Months)", highlight: true },
+  { text: "Weekly 1-on-1 Zoom Sessions (4 Months — 10 Sessions)", highlight: true },
   { text: "Lifetime Access & Updates", highlight: false },
 ]
 
@@ -115,8 +115,8 @@ export function Pricing() {
             <CardHeader className="text-center">
               <CardTitle className="text-2xl text-foreground">1-on-1 Coaching</CardTitle>
               <div className="mt-4 flex items-baseline justify-center gap-2">
-                <span className="text-lg text-muted-foreground line-through">$2499</span>
-                <span className="text-5xl font-bold text-primary">$1599</span>
+                <span className="text-lg text-muted-foreground line-through">$1599</span>
+                <span className="text-5xl font-bold text-primary">$900</span>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">One-time payment, lifetime access</p>
             </CardHeader>

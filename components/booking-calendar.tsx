@@ -71,7 +71,9 @@ function cairoToLocal(
   return { displayTime, tzAbbr, dayOffset }
 }
 
-export default function BookingCalendar() {
+export default function BookingCalendar(
+  { defaultEmail = "", lockEmail = false }: { defaultEmail?: string; lockEmail?: boolean } = {}
+) {
   const t = useTranslations("booking")
 
   const [step, setStep] = useState<Step>("calendar")
@@ -90,7 +92,7 @@ export default function BookingCalendar() {
 
   const [formData, setFormData] = useState({
     client_name: "",
-    client_email: "",
+    client_email: defaultEmail,
     client_phone: "",
     client_message: "",
   })
@@ -130,6 +132,13 @@ export default function BookingCalendar() {
     }
     setVerifyingEmail(false)
   }
+
+  // When the email is pre-filled from the logged-in account, auto-verify hours
+  // as soon as a slot is chosen (the weekly-limit check depends on the slot date).
+  useEffect(() => {
+    if (defaultEmail && selectedSlot) verifyEmail(defaultEmail)
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedSlot?.id, defaultEmail])
 
   const fetchMonthSlots = useCallback(async (month: string) => {
     try {
@@ -242,7 +251,7 @@ export default function BookingCalendar() {
     setSelectedDate(undefined)
     setSelectedSlot(null)
     setSlots([])
-    setFormData({ client_name: "", client_email: "", client_phone: "", client_message: "" })
+    setFormData({ client_name: "", client_email: defaultEmail, client_phone: "", client_message: "" })
     setError(null)
     setConfirmationData(null)
     setEmailChecked(false)
@@ -500,11 +509,12 @@ export default function BookingCalendar() {
                           id="email"
                           type="email"
                           required
+                          readOnly={lockEmail}
                           value={formData.client_email}
-                          onChange={(e) => { setFormData((p) => ({ ...p, client_email: e.target.value })); setEmailChecked(false); setEmailAllowed(false); setWeeklyLimitReached(false) }}
+                          onChange={(e) => { if (lockEmail) return; setFormData((p) => ({ ...p, client_email: e.target.value })); setEmailChecked(false); setEmailAllowed(false); setWeeklyLimitReached(false) }}
                           onBlur={(e) => verifyEmail(e.target.value)}
                           placeholder={t("emailPlaceholder")}
-                          className="pl-10 h-11 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors"
+                          className={`pl-10 h-11 rounded-xl border-border/50 bg-background/50 focus:bg-background transition-colors ${lockEmail ? "cursor-not-allowed opacity-80" : ""}`}
                         />
                       </div>
                     </div>

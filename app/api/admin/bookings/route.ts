@@ -125,15 +125,15 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: "IDs array required" }, { status: 400 });
   }
 
-  const { error } = await supabase
+  const { error, count } = await supabase
     .from("bookings")
-    .delete()
-    .in("id", ids)
-    .eq("status", "cancelled");
+    .delete({ count: "exact" })
+    .in("id", ids);
 
   if (error) {
+    console.error("Delete bookings error:", error);
     return NextResponse.json({ error: error.message }, { status: 500 });
   }
 
-  return NextResponse.json({ success: true, deleted: ids.length });
+  return NextResponse.json({ success: true, deleted: count });
 }

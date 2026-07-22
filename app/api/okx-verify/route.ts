@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { getOrder, updateOrder } from "@/lib/okx-orders"
-import { grantExtendHours, grantExtendHoursIfMissing } from "@/lib/grant-hours"
+import { grantExtendHours, grantExtendHoursIfMissing, grantCoaching } from "@/lib/grant-hours"
 import { createStarterInviteLink } from "@/lib/tg-invite"
 import { sendConfirmationEmail } from "@/lib/email"
 import { createAdminClient } from "@/lib/supabase/admin"
@@ -130,13 +130,17 @@ export async function POST(request: Request) {
     // Grant hours if this is an extend plan
     await grantExtendHours(order.email, order.plan)
 
-    // Generate Telegram invite link for starter plan subscribers
+    // Generate Telegram invite link for starter / coaching subscribers
     let tgInviteLink: string | null = null
     if (order.plan === "starter") {
       tgInviteLink = await createStarterInviteLink(orderId)
       if (!tgInviteLink) {
         console.error("[okx-verify] WARNING: No TG token available — check tg_access_tokens table has unused rows")
       }
+    } else if (order.plan === "coaching") {
+      // Grant 10 hours + academy access + a Telegram course link.
+      const res = await grantCoaching(order.email, orderId)
+      tgInviteLink = res.tgInviteLink
     }
 
     // Send one confirmation email to the customer

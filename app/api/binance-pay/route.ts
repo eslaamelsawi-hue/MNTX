@@ -47,7 +47,7 @@ export async function POST(request: Request) {
       orderAmount = 199
       description = "Mentix Trading - ADVANCED SMC Course (Starter Plan)"
     } else if (plan === "coaching") {
-      orderAmount = 1599
+      orderAmount = 900
       description = "Mentix Trading - 1-on-1 Coaching Plan"
     } else {
       return NextResponse.json({ error: "Invalid plan selected" }, { status: 400 })
