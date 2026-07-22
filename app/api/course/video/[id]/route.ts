@@ -47,7 +47,7 @@ function toWebStream(nodeStream: fs.ReadStream): ReadableStream<Uint8Array> {
 
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
-  const found = findLesson(id)
+  const found = await findLesson(id)
   if (!found) return new Response("Not found", { status: 404 })
   const lesson = found.lesson
 

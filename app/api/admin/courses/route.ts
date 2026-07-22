@@ -24,7 +24,7 @@ async function isAdmin() {
 
 export async function GET() {
   if (!(await isAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
-  return NextResponse.json({ courses: listCourses() })
+  return NextResponse.json({ courses: await listCourses() })
 }
 
 export async function POST(req: NextRequest) {
@@ -35,27 +35,27 @@ export async function POST(req: NextRequest) {
   try {
     switch (action) {
       case "createCourse":
-        return NextResponse.json({ course: createCourse(body.data || {}) })
+        return NextResponse.json({ course: await createCourse(body.data || {}) })
       case "updateCourse":
-        return NextResponse.json({ course: updateCourse(body.id, body.patch || {}) })
+        return NextResponse.json({ course: await updateCourse(body.id, body.patch || {}) })
       case "deleteCourse":
-        return NextResponse.json({ success: deleteCourse(body.id) })
+        return NextResponse.json({ success: await deleteCourse(body.id) })
       case "addSection":
-        return NextResponse.json({ section: addSection(body.courseId, body.data || {}) })
+        return NextResponse.json({ section: await addSection(body.courseId, body.data || {}) })
       case "updateSection":
-        return NextResponse.json({ success: updateSection(body.courseId, body.sectionId, body.patch || {}) })
+        return NextResponse.json({ success: await updateSection(body.courseId, body.sectionId, body.patch || {}) })
       case "deleteSection":
-        return NextResponse.json({ success: deleteSection(body.courseId, body.sectionId) })
+        return NextResponse.json({ success: await deleteSection(body.courseId, body.sectionId) })
       case "addLesson":
-        return NextResponse.json({ lesson: addLesson(body.courseId, body.sectionId, body.data || {}) })
+        return NextResponse.json({ lesson: await addLesson(body.courseId, body.sectionId, body.data || {}) })
       case "updateLesson":
-        return NextResponse.json({ success: updateLesson(body.courseId, body.sectionId, body.lessonId, body.patch || {}) })
+        return NextResponse.json({ success: await updateLesson(body.courseId, body.sectionId, body.lessonId, body.patch || {}) })
       case "deleteLesson":
-        return NextResponse.json({ success: deleteLesson(body.courseId, body.sectionId, body.lessonId) })
+        return NextResponse.json({ success: await deleteLesson(body.courseId, body.sectionId, body.lessonId) })
       case "reorderSections":
-        return NextResponse.json({ success: reorderSections(body.courseId, body.orderedIds || []) })
+        return NextResponse.json({ success: await reorderSections(body.courseId, body.orderedIds || []) })
       case "reorderLessons":
-        return NextResponse.json({ success: reorderLessons(body.courseId, body.sectionId, body.orderedIds || []) })
+        return NextResponse.json({ success: await reorderLessons(body.courseId, body.sectionId, body.orderedIds || []) })
       default:
         return NextResponse.json({ error: "Unknown action" }, { status: 400 })
     }

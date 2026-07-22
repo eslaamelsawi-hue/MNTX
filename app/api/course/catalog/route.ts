@@ -5,7 +5,7 @@ import { lessonCount } from "@/lib/course-types"
 export const runtime = "nodejs"
 
 export async function GET() {
-  const courses = listCourses({ publishedOnly: true }).map((c) => ({
+  const courses = (await listCourses({ publishedOnly: true })).map((c) => ({
     id: c.id,
     slug: c.slug,
     titleEn: c.titleEn,

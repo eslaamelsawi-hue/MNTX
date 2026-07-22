@@ -5,7 +5,7 @@ export const runtime = "nodejs"
 
 export async function GET(_req: Request, { params }: { params: Promise<{ slug: string }> }) {
   const { slug } = await params
-  const course = getCourse(slug)
+  const course = await getCourse(slug)
   if (!course || !course.published) {
     return NextResponse.json({ error: "Not found" }, { status: 404 })
   }
