@@ -3,18 +3,19 @@ import fs from "node:fs"
 import path from "node:path"
 import crypto from "node:crypto"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { uploadPrivateFile, getPrivateFileSignedUrl, deletePrivateFile } from "@/lib/storage"
 
 /**
  * Session recordings, each tied to a client's email. The uploaded video file
- * lives on disk in private-media/recordings/ (never in /public — it is only
- * reachable through the session-gated streaming route). Metadata is stored in
- * the Supabase `recordings` table, falling back to a local JSON file so it
- * works on localhost before the table exists.
+ * lives in the private-media Supabase Storage bucket under recordings/ (never
+ * local disk — Vercel's filesystem is read-only and ephemeral). Metadata is
+ * stored in the Supabase `recordings` table, falling back to a local JSON
+ * file so it works on localhost before the table exists.
  */
 
 const TABLE = "recordings"
 const FILE = path.join(process.cwd(), "data", "recordings.json")
-export const MEDIA_DIR = path.join(process.cwd(), "private-media", "recordings")
+const storageKey = (video: string) => `recordings/${path.basename(video)}`
 
 export type Recording = {
   id: string
@@ -46,17 +47,16 @@ export function newRecordingId(): string {
   return crypto.randomUUID().slice(0, 8)
 }
 
-/** Write uploaded bytes to private-media/recordings/<id>.<ext>; returns the filename. */
-export function saveRecordingFile(id: string, ext: string, bytes: Buffer): string {
-  fs.mkdirSync(MEDIA_DIR, { recursive: true })
+/** Upload the recording's bytes to private cloud storage; returns the filename. */
+export async function saveRecordingFile(id: string, ext: string, bytes: Buffer): Promise<string> {
   const video = `${id}.${ext}`
-  fs.writeFileSync(path.join(MEDIA_DIR, video), bytes)
+  await uploadPrivateFile(storageKey(video), bytes, contentTypeFor(video))
   return video
 }
 
-/** Absolute path to a recording's file, resolved safely (never raw user input). */
-export function recordingFilePath(video: string): string {
-  return path.join(MEDIA_DIR, path.basename(video))
+/** Short-lived signed URL for streaming; null if missing or storage is unreachable. */
+export async function getRecordingUrl(video: string): Promise<string | null> {
+  return getPrivateFileSignedUrl(storageKey(video))
 }
 
 function readFile(): Recording[] {
@@ -67,8 +67,12 @@ function readFile(): Recording[] {
   }
 }
 function writeFile(rows: Recording[]) {
-  fs.mkdirSync(path.dirname(FILE), { recursive: true })
-  fs.writeFileSync(FILE, JSON.stringify(rows, null, 2))
+  try {
+    fs.mkdirSync(path.dirname(FILE), { recursive: true })
+    fs.writeFileSync(FILE, JSON.stringify(rows, null, 2))
+  } catch (e) {
+    console.error("[recordings-store] local file fallback unavailable:", e)
+  }
 }
 
 export async function addRecording(input: {
@@ -148,7 +152,7 @@ export async function deleteRecording(id: string): Promise<void> {
   const existing = await findRecording(id)
   if (existing?.video) {
     try {
-      fs.unlinkSync(recordingFilePath(existing.video))
+      await deletePrivateFile(storageKey(existing.video))
     } catch {
       /* file may already be gone */
     }

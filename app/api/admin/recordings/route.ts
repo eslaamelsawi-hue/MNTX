@@ -42,13 +42,18 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "That file is not a video" }, { status: 400 })
   }
 
-  const id = newRecordingId()
-  const ext = extFromName(file.name)
-  const bytes = Buffer.from(await file.arrayBuffer())
-  const video = saveRecordingFile(id, ext, bytes)
+  try {
+    const id = newRecordingId()
+    const ext = extFromName(file.name)
+    const bytes = Buffer.from(await file.arrayBuffer())
+    const video = await saveRecordingFile(id, ext, bytes)
 
-  const { store } = await addRecording({ id, email, title, video })
-  return NextResponse.json({ success: true, store })
+    const { store } = await addRecording({ id, email, title, video })
+    return NextResponse.json({ success: true, store })
+  } catch (e) {
+    console.error("[admin/recordings] upload failed:", e)
+    return NextResponse.json({ error: "Upload failed" }, { status: 500 })
+  }
 }
 
 export async function DELETE(req: NextRequest) {
