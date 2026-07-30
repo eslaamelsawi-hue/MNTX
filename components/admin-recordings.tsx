@@ -36,29 +36,31 @@ export function AdminRecordings() {
     load()
   }, [])
 
-  /** fetch() doesn't expose upload progress, so use XHR for this one request. */
-  const uploadWithProgress = (
+  /**
+   * PUT the file bytes straight to Supabase Storage using a signed URL — this
+   * never touches our own server, which matters because Vercel caps
+   * serverless function request bodies at ~4.5MB regardless of what the
+   * route does with them. fetch() doesn't expose upload progress, so XHR.
+   */
+  const putWithProgress = (
     url: string,
-    body: FormData,
+    file: File,
+    contentType: string,
     onProgress: (pct: number) => void
-  ): Promise<{ ok: boolean; data: { error?: string; [k: string]: unknown } }> =>
+  ): Promise<void> =>
     new Promise((resolve, reject) => {
       const xhr = new XMLHttpRequest()
-      xhr.open("POST", url)
+      xhr.open("PUT", url)
+      xhr.setRequestHeader("Content-Type", contentType)
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100))
       }
       xhr.onload = () => {
-        let data: { error?: string } = {}
-        try {
-          data = JSON.parse(xhr.responseText)
-        } catch {
-          /* non-JSON response */
-        }
-        resolve({ ok: xhr.status >= 200 && xhr.status < 300, data })
+        if (xhr.status >= 200 && xhr.status < 300) resolve()
+        else reject(new Error(`Upload failed (${xhr.status})`))
       }
       xhr.onerror = () => reject(new Error("Network error"))
-      xhr.send(body)
+      xhr.send(file)
     })
 
   const add = async () => {
@@ -74,12 +76,29 @@ export function AdminRecordings() {
     setUploading(true)
     setProgress(0)
     try {
-      const body = new FormData()
-      body.append("email", email)
-      body.append("title", title)
-      body.append("file", file)
-      const { ok, data } = await uploadWithProgress("/api/admin/recordings", body, setProgress)
-      if (!ok) {
+      // 1. Get a signed upload URL for this file.
+      const ticketRes = await fetch("/api/admin/recordings/upload-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename: file.name }),
+      })
+      const ticket = await ticketRes.json().catch(() => ({}))
+      if (!ticketRes.ok) {
+        setError(ticket.error || "Could not start the upload")
+        return
+      }
+
+      // 2. Upload the video bytes directly to storage (bypasses our server).
+      await putWithProgress(ticket.signedUrl, file, ticket.contentType || file.type || "video/mp4", setProgress)
+
+      // 3. Record the (tiny) metadata now that the file is in place.
+      const res = await fetch("/api/admin/recordings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: ticket.id, email, title, video: ticket.video }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
         setError(data.error || "Upload failed")
         return
       }
@@ -88,8 +107,8 @@ export function AdminRecordings() {
       setFile(null)
       if (fileRef.current) fileRef.current.value = ""
       await load()
-    } catch {
-      setError("Upload failed")
+    } catch (e) {
+      setError(e instanceof Error ? e.message : "Upload failed")
     } finally {
       setUploading(false)
       setProgress(0)

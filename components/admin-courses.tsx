@@ -201,6 +201,7 @@ function LessonRow({ courseId, sectionId, lesson, onChanged }: { courseId: strin
   const [l, setL] = useState(lesson)
   useEffect(() => setL(lesson), [lesson])
   const [uploading, setUploading] = useState(false)
+  const [progress, setProgress] = useState(0)
   const fileRef = useRef<HTMLInputElement>(null)
 
   const save = async (patch: Partial<Lesson>) => {
@@ -212,16 +213,39 @@ function LessonRow({ courseId, sectionId, lesson, onChanged }: { courseId: strin
     await api("deleteLesson", { courseId, sectionId, lessonId: l.id })
     onChanged()
   }
+  /**
+   * PUT the file straight to Supabase Storage via a signed URL — Vercel caps
+   * serverless function bodies at ~4.5MB, so routing video through our own
+   * server never works past that size regardless of what it does with it.
+   */
+  const putWithProgress = (url: string, file: File, contentType: string): Promise<void> =>
+    new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      xhr.open("PUT", url)
+      xhr.setRequestHeader("Content-Type", contentType)
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100))
+      }
+      xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed (${xhr.status})`)))
+      xhr.onerror = () => reject(new Error("Network error"))
+      xhr.send(file)
+    })
   const upload = async (file: File) => {
     setUploading(true)
+    setProgress(0)
     try {
-      const fd = new FormData()
-      fd.append("file", file)
-      const res = await fetch("/api/admin/courses/upload", { method: "POST", body: fd })
-      const data = await res.json()
-      if (data.filename) await save({ video: data.filename })
+      const ticketRes = await fetch("/api/admin/courses/upload-url", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ filename: file.name }),
+      })
+      const ticket = await ticketRes.json().catch(() => ({}))
+      if (!ticketRes.ok) return
+      await putWithProgress(ticket.signedUrl, file, ticket.contentType || file.type || "video/mp4")
+      await save({ video: ticket.filename })
     } finally {
       setUploading(false)
+      setProgress(0)
     }
   }
 
@@ -237,7 +261,7 @@ function LessonRow({ courseId, sectionId, lesson, onChanged }: { courseId: strin
       <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
       <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading} className="h-8 gap-1.5">
         {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-        {l.video ? "Replace" : "Upload"}
+        {uploading ? `${progress}%` : l.video ? "Replace" : "Upload"}
       </Button>
       {l.video && <Video className="h-4 w-4 text-green-400" aria-label="has video" />}
       <Button size="sm" variant="ghost" onClick={remove} className="h-8 text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>

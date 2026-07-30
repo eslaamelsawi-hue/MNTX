@@ -1,13 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
-import {
-  addRecording,
-  listAllRecordings,
-  deleteRecording,
-  saveRecordingFile,
-  extFromName,
-  newRecordingId,
-} from "@/lib/recordings-store"
+import { addRecording, listAllRecordings, deleteRecording } from "@/lib/recordings-store"
 
 export const runtime = "nodejs"
 
@@ -22,38 +15,34 @@ export async function GET() {
   return NextResponse.json({ recordings, store })
 }
 
+/**
+ * Records the metadata row for a recording whose bytes were already PUT
+ * directly to Supabase Storage via a signed URL from /upload-url — this body
+ * is just { id, email, title, video }, never the video itself.
+ */
 export async function POST(req: NextRequest) {
   if (!(await isAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
 
-  const form = await req.formData().catch(() => null)
-  if (!form) return NextResponse.json({ error: "Expected a multipart form upload" }, { status: 400 })
+  const body = await req.json().catch(() => null)
+  if (!body) return NextResponse.json({ error: "Invalid request" }, { status: 400 })
 
-  const email = String(form.get("email") ?? "").trim()
-  const title = String(form.get("title") ?? "").trim()
-  const file = form.get("file")
+  const id = String(body.id ?? "").trim()
+  const email = String(body.email ?? "").trim()
+  const title = String(body.title ?? "").trim()
+  const video = String(body.video ?? "").trim()
 
   if (!email.includes("@") || !title) {
     return NextResponse.json({ error: "Valid email and title are required" }, { status: 400 })
   }
-  if (!(file instanceof File) || file.size === 0) {
-    return NextResponse.json({ error: "A video file is required" }, { status: 400 })
-  }
-  if (file.type && !file.type.startsWith("video/")) {
-    return NextResponse.json({ error: "That file is not a video" }, { status: 400 })
+  if (!id || !video) {
+    return NextResponse.json({ error: "Missing upload reference — try uploading again" }, { status: 400 })
   }
 
   try {
-    const id = newRecordingId()
-    const ext = extFromName(file.name)
-    const bytes = Buffer.from(await file.arrayBuffer())
-    const video = await saveRecordingFile(id, ext, bytes)
-
     const { store } = await addRecording({ id, email, title, video })
     return NextResponse.json({ success: true, store })
   } catch (e) {
-    console.error("[admin/recordings] upload failed:", e)
-    // TEMP: surface the real message (admin-only route) instead of a generic
-    // one, to diagnose the current upload failure. Tighten back up once fixed.
+    console.error("[admin/recordings] save metadata failed:", e)
     return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 })
   }
 }

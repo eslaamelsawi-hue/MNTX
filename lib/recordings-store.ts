@@ -3,14 +3,15 @@ import fs from "node:fs"
 import path from "node:path"
 import crypto from "node:crypto"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { uploadPrivateFile, getPrivateFileSignedUrl, deletePrivateFile } from "@/lib/storage"
+import { getPrivateFileSignedUrl, deletePrivateFile } from "@/lib/storage"
 
 /**
- * Session recordings, each tied to a client's email. The uploaded video file
- * lives in the private-media Supabase Storage bucket under recordings/ (never
- * local disk — Vercel's filesystem is read-only and ephemeral). Metadata is
- * stored in the Supabase `recordings` table, falling back to a local JSON
- * file so it works on localhost before the table exists.
+ * Session recordings, each tied to a client's email. Video bytes are PUT
+ * directly from the browser to the private-media Supabase Storage bucket
+ * (see /api/admin/recordings/upload-url) — never local disk, and never
+ * through this server, since Vercel caps function request bodies at ~4.5MB.
+ * Metadata is stored in the Supabase `recordings` table, falling back to a
+ * local JSON file so it works on localhost before the table exists.
  */
 
 const TABLE = "recordings"
@@ -45,13 +46,6 @@ export function contentTypeFor(video: string): string {
 
 export function newRecordingId(): string {
   return crypto.randomUUID().slice(0, 8)
-}
-
-/** Upload the recording's bytes to private cloud storage; returns the filename. */
-export async function saveRecordingFile(id: string, ext: string, bytes: Buffer): Promise<string> {
-  const video = `${id}.${ext}`
-  await uploadPrivateFile(storageKey(video), bytes, contentTypeFor(video))
-  return video
 }
 
 /** Short-lived signed URL for streaming; null if missing or storage is unreachable. */
