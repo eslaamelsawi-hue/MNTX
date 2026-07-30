@@ -32,9 +32,16 @@ function readFile(): Grant[] {
     return []
   }
 }
+// Serverless platforms (Vercel etc.) ship a read-only filesystem, so this
+// fallback only actually works on localhost. Swallow the error rather than
+// crash the caller — this store is best-effort once the DB table is missing.
 function writeFile(grants: Grant[]) {
-  fs.mkdirSync(path.dirname(FILE), { recursive: true })
-  fs.writeFileSync(FILE, JSON.stringify(grants, null, 2))
+  try {
+    fs.mkdirSync(path.dirname(FILE), { recursive: true })
+    fs.writeFileSync(FILE, JSON.stringify(grants, null, 2))
+  } catch (e) {
+    console.error("[course-access-store] local file fallback unavailable:", e)
+  }
 }
 
 export async function listGrants(): Promise<{ grants: Grant[]; store: Store }> {

@@ -14,8 +14,6 @@ import { COURSE_GRANT_PLAN } from "@/lib/course"
  * The email always comes from the authenticated session, never the request body.
  */
 export async function POST() {
-  // TEMP: whole handler wrapped so a crash returns its real message as JSON
-  // (status 200 on purpose) instead of an opaque empty 500. Remove once root-caused.
   try {
     const supabase = await createClient()
     const {
@@ -29,8 +27,6 @@ export async function POST() {
     const email = user.email
 
     let plan: string | null = null
-    let debugError: string | null = null
-    let debugSubs: unknown = null
     try {
       const admin = createAdminClient()
       const { data: subs, error } = await admin
@@ -39,26 +35,16 @@ export async function POST() {
         .ilike("client_email", email.trim())
         .order("created_at", { ascending: false })
         .limit(5)
-      if (error) {
-        console.error("[course/subscribe] user_subscriptions lookup failed:", error)
-        debugError = error.message
-      }
-      debugSubs = subs
+      if (error) console.error("[course/subscribe] user_subscriptions lookup failed:", error)
       const active = subs?.find((s) => (s.status ?? "").trim().toLowerCase() === "active")
       plan = active?.plan ?? null
     } catch (e) {
       console.error("[course/subscribe] user_subscriptions lookup threw:", e)
-      debugError = e instanceof Error ? e.message : String(e)
     }
 
-    const viaHasCourseAccess = plan === null ? await hasCourseAccess(email) : null
-    const entitled = plan !== null || !!viaHasCourseAccess
+    const entitled = plan !== null || (await hasCourseAccess(email))
     if (!entitled) {
-      return NextResponse.json({
-        access: false,
-        email,
-        debug: { queriedEmail: email.trim(), subs: debugSubs, queryError: debugError, viaHasCourseAccess },
-      })
+      return NextResponse.json({ access: false, email })
     }
 
     await grantAccess(email, plan ?? COURSE_GRANT_PLAN, "auto:subscribe")
@@ -75,14 +61,6 @@ export async function POST() {
     return NextResponse.json({ access: true, email })
   } catch (e) {
     console.error("[course/subscribe] handler crashed:", e)
-    return NextResponse.json(
-      {
-        access: false,
-        crashed: true,
-        error: e instanceof Error ? e.message : String(e),
-        stack: e instanceof Error ? e.stack : undefined,
-      },
-      { status: 200 },
-    )
+    return NextResponse.json({ access: false }, { status: 500 })
   }
 }
