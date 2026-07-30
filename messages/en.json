@@ -121,6 +121,35 @@
     "loading": "Loading…",
     "back": "Back to recordings"
   },
+  "notifications": {
+    "title": "Notifications",
+    "empty": "No notifications yet.",
+    "markAllRead": "Mark all as read",
+    "loading": "Loading…"
+  },
+  "invoices": {
+    "title": "Payments",
+    "subtitle": "Your invoices and installment schedule.",
+    "empty": "No invoices yet.",
+    "total": "Total",
+    "installments": "Installments",
+    "due": "Due",
+    "paid": "Paid",
+    "pending": "Pending",
+    "overdue": "Overdue",
+    "partiallyPaid": "Partially paid",
+    "cancelled": "Cancelled",
+    "loading": "Loading…"
+  },
+  "progress": {
+    "title": "Progress",
+    "subtitle": "Your mentorship activity over time.",
+    "hoursOverTime": "Hours used over time",
+    "sessionsPerMonth": "Sessions per month",
+    "completed": "Completed",
+    "cancelled": "Cancelled",
+    "noData": "Not enough data yet — it'll fill in as you complete sessions."
+  },
   "waitlist": {
     "heading": "Join the waitlist",
     "subtitle": "Enrollment is closed right now. Leave your details and we'll notify you the moment the next enrollment window opens.",

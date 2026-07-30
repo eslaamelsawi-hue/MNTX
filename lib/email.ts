@@ -148,3 +148,48 @@ export async function sendConfirmationEmail(opts: ConfirmationEmailOptions): Pro
     console.error("[email] Failed to send confirmation email:", error)
   }
 }
+
+/**
+ * Sends a simple notification email to a client (new invoice, installment
+ * due, etc). Best-effort — failures are logged, not thrown.
+ */
+export async function sendNotificationEmail(opts: { to: string; title: string; message: string }): Promise<void> {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) {
+    console.warn("[email] RESEND_API_KEY not set — skipping notification email")
+    return
+  }
+
+  const from = process.env.RESEND_FROM_EMAIL || "Mentix Trading <noreply@mentixtrading.com>"
+  const resend = new Resend(apiKey)
+  const year = new Date().getFullYear()
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background:#0a1628;font-family:Arial,Helvetica,sans-serif">
+  <div class="email-body" style="padding:40px 20px">
+    <table width="100%" cellpadding="0" cellspacing="0" style="max-width:520px;margin:0 auto;background:#0f1e35;border:1px solid #1e3a5f;border-radius:12px">
+      <tr>
+        <td style="padding:32px 28px">
+          <p style="margin:0 0 16px;font-size:19px;font-weight:700;color:#ffffff">${opts.title}</p>
+          <p style="margin:0;font-size:15px;color:#c7c7c7;line-height:1.7">${opts.message}</p>
+        </td>
+      </tr>
+    </table>
+    <p style="text-align:center;margin-top:24px;font-size:12px;color:#5b6b82">© ${year} Mentix Trading</p>
+  </div>
+</body>
+</html>`
+
+  const { error } = await resend.emails.send({
+    from,
+    to: opts.to,
+    subject: opts.title,
+    html,
+  })
+
+  if (error) {
+    console.error("[email] Failed to send notification email:", error)
+  }
+}

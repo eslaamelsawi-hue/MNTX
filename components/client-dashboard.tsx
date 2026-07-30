@@ -13,6 +13,7 @@ import {
   XCircle, AlertCircle, Award, Star, MessageCircle,
   LayoutDashboard, BookOpen, Repeat, RefreshCw,
   GraduationCap, Settings, Lock, Crown, ChevronsUpDown,
+  Receipt, TrendingUp,
 } from "lucide-react"
 import Link from "next/link"
 import { useLocale } from "next-intl"
@@ -21,6 +22,9 @@ import { GroupChat } from "@/components/chat/group-chat"
 import { DashboardAcademy } from "@/components/course/dashboard-academy"
 import { DashboardSettings } from "@/components/dashboard-settings"
 import { DashboardRecordings } from "@/components/dashboard-recordings"
+import { DashboardInvoices } from "@/components/dashboard-invoices"
+import { DashboardProgress } from "@/components/dashboard-progress"
+import { NotificationBell } from "@/components/notification-bell"
 import BookingCalendar from "@/components/booking-calendar"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -106,6 +110,12 @@ const t: Record<"en" | "ar", Record<string, string>> = {
     tabCommunity: "Community",
     tabWeeklyZoom: "Weekly Zoom",
     tabBooking: "Book Session",
+    tabProgress: "Progress",
+    tabPayments: "Payments",
+    progressSubtitle: "Your mentorship activity over time.",
+    progressNoData: "Not enough data yet — it'll fill in as you complete sessions.",
+    hoursOverTime: "Hours used over time",
+    sessionsPerMonth: "Sessions per month",
     lockedTitle: "Premium coaching content",
     lockedDesc: "This is part of the 1-on-1 mentorship program. Get a coaching plan to unlock your hours, private sessions, and weekly group calls.",
     lockedCta: "Join the mentorship",
@@ -175,6 +185,12 @@ const t: Record<"en" | "ar", Record<string, string>> = {
     tabCommunity: "المجتمع",
     tabWeeklyZoom: "زووم الأسبوعي",
     tabBooking: "احجز جلسة",
+    tabProgress: "التقدم",
+    tabPayments: "المدفوعات",
+    progressSubtitle: "نشاطك في برنامج الإرشاد عبر الوقت.",
+    progressNoData: "لا توجد بيانات كافية بعد — ستظهر تدريجيًا مع إتمام الجلسات.",
+    hoursOverTime: "الساعات المستخدمة عبر الوقت",
+    sessionsPerMonth: "الجلسات لكل شهر",
     lockedTitle: "محتوى إرشاد مميّز",
     lockedDesc: "هذا جزء من برنامج الإرشاد الفردي. احصل على خطة إرشاد لفتح ساعاتك وجلساتك الخاصة والمكالمات الجماعية الأسبوعية.",
     lockedCta: "انضم للإرشاد",
@@ -538,11 +554,17 @@ export function ClientDashboard() {
             <TabsTrigger value="mentorship" className={navItemCls}>
               <BookOpen className="h-[18px] w-[18px]" />{l.tabMentorship}
             </TabsTrigger>
+            <TabsTrigger value="progress" className={navItemCls}>
+              <TrendingUp className="h-[18px] w-[18px]" />{l.tabProgress}
+            </TabsTrigger>
             <TabsTrigger value="sessions" className={navItemCls}>
               <Calendar className="h-[18px] w-[18px]" />{l.tabSessions}
             </TabsTrigger>
             <TabsTrigger value="booking" className={navItemCls}>
               <CalendarPlus className="h-[18px] w-[18px]" />{l.tabBooking}
+            </TabsTrigger>
+            <TabsTrigger value="payments" className={navItemCls}>
+              <Receipt className="h-[18px] w-[18px]" />{l.tabPayments}
             </TabsTrigger>
 
             <div className="my-1.5 hidden h-px w-full bg-border lg:block" />
@@ -577,17 +599,28 @@ export function ClientDashboard() {
                 <p className="text-sm text-muted-foreground">{l.welcome}</p>
                 <h1 className="mt-0.5 text-2xl font-bold text-foreground sm:text-3xl">{displayName}</h1>
               </div>
-              {hasCoaching && ["overview", "mentorship", "sessions"].includes(activeTab) && (
-                <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3">
+                {hasCoaching && ["overview", "mentorship", "sessions"].includes(activeTab) && (
                   <StatusBadge status={activeSub?.status ?? "expired"} l={l} />
-                </div>
-              )}
+                )}
+                <NotificationBell onNavigate={setActiveTab} />
+              </div>
             </div>
           </div>
 
         {/* ── Academy ── */}
         <TabsContent value="academy" className="space-y-4">
           <DashboardAcademy email={email} />
+        </TabsContent>
+
+        {/* ── Progress ── */}
+        <TabsContent value="progress" className="space-y-4">
+          {!hasCoaching ? <LockedPanel l={l} locale={locale} /> : <DashboardProgress subscriptions={subscriptions} bookings={bookings} l={l} />}
+        </TabsContent>
+
+        {/* ── Payments ── */}
+        <TabsContent value="payments" className="space-y-4">
+          <DashboardInvoices email={email} />
         </TabsContent>
 
         {/* ── Book a 1-on-1 Session ── */}

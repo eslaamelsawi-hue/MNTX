@@ -11,6 +11,8 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { AdminSubscriptions } from "@/components/admin-subscriptions"
+import { AdminInvoices } from "@/components/admin-invoices"
+import { AdminNotifications } from "@/components/admin-notifications"
 import { AdminCourseAccess } from "@/components/admin-course-access"
 import { AdminCourses } from "@/components/admin-courses"
 import { AdminWaitlist } from "@/components/admin-waitlist"
@@ -1018,6 +1020,8 @@ export function AdminDashboard() {
                 <TabsTrigger value="orders">Orders</TabsTrigger>
                 <TabsTrigger value="coupons">Coupons</TabsTrigger>
                 <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
+                <TabsTrigger value="invoices">Invoices</TabsTrigger>
+                <TabsTrigger value="notifications">Notifications</TabsTrigger>
                 <TabsTrigger value="courses" className="gap-1.5">
                   <BookOpen className="h-3.5 w-3.5" /> Courses
                 </TabsTrigger>
@@ -2385,6 +2389,16 @@ export function AdminDashboard() {
           {/* Subscriptions Tab */}
           <TabsContent value="subscriptions" className="space-y-4">
             <AdminSubscriptions />
+          </TabsContent>
+
+          {/* Invoices Tab */}
+          <TabsContent value="invoices" className="space-y-4">
+            <AdminInvoices />
+          </TabsContent>
+
+          {/* Notifications Tab */}
+          <TabsContent value="notifications" className="space-y-4">
+            <AdminNotifications />
           </TabsContent>
 
           {/* Courses management Tab */}
