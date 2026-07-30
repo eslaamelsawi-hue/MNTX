@@ -157,7 +157,14 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
               />
             </div>
             <div className="space-y-1.5">
-              <Label htmlFor="auth-password">{t("password")}</Label>
+              <div className="flex items-center justify-between">
+                <Label htmlFor="auth-password">{t("password")}</Label>
+                {!isRegister && (
+                  <Link href="/forgot-password" className="text-xs font-medium text-primary hover:underline">
+                    {t("forgotPassword")}
+                  </Link>
+                )}
+              </div>
               <Input
                 id="auth-password"
                 type="password"

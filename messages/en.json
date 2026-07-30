@@ -96,7 +96,22 @@
     "errorNotConfirmed": "Please confirm your email first — check your inbox.",
     "errorWeak": "Password must be at least 6 characters.",
     "errorGeneric": "Something went wrong. Please try again.",
-    "dashboard": "Dashboard"
+    "dashboard": "Dashboard",
+    "forgotPassword": "Forgot password?",
+    "forgotTitle": "Reset your password",
+    "forgotSubtitle": "Enter your email and we'll send you a link to reset your password.",
+    "sendResetLink": "Send reset link",
+    "checkResetEmailTitle": "Check your email",
+    "checkResetEmailDesc": "If an account exists for {email}, we've sent a password reset link. Open it to choose a new password.",
+    "backToLogin": "Back to log in",
+    "resetTitle": "Choose a new password",
+    "resetSubtitle": "Enter and confirm your new password below.",
+    "newPassword": "New password",
+    "resetCta": "Update password",
+    "resetSuccessTitle": "Password updated",
+    "resetSuccessDesc": "Your password has been changed. Redirecting you to log in…",
+    "resetInvalidTitle": "This link has expired",
+    "resetInvalidDesc": "Password reset links only work once and expire after a while. Request a new one to continue."
   },
   "recordings": {
     "title": "Recordings",
