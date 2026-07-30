@@ -25,6 +25,7 @@ import {
 import { format, isSameDay, parseISO } from "date-fns"
 import { useTranslations } from "next-intl"
 import type { AvailabilitySlot } from "@/lib/types/appointments"
+import { createClient } from "@/lib/supabase/client"
 
 type Step = "calendar" | "slots" | "form" | "success"
 
@@ -72,7 +73,11 @@ function cairoToLocal(
 }
 
 export default function BookingCalendar(
-  { defaultEmail = "", lockEmail = false }: { defaultEmail?: string; lockEmail?: boolean } = {}
+  {
+    defaultEmail = "",
+    defaultName = "",
+    lockEmail = false,
+  }: { defaultEmail?: string; defaultName?: string; lockEmail?: boolean } = {}
 ) {
   const t = useTranslations("booking")
 
@@ -91,11 +96,14 @@ export default function BookingCalendar(
   } | null>(null)
 
   const [formData, setFormData] = useState({
-    client_name: "",
+    client_name: defaultName,
     client_email: defaultEmail,
     client_phone: "",
     client_message: "",
   })
+  // Tracks the "prefilled" name/email so resetBooking() (start another booking)
+  // restores these instead of blanking them out again.
+  const [prefill, setPrefill] = useState({ name: defaultName, email: defaultEmail })
 
   const [emailChecked, setEmailChecked] = useState(false)
   const [emailAllowed, setEmailAllowed] = useState(false)
@@ -106,6 +114,23 @@ export default function BookingCalendar(
 
   useEffect(() => {
     setUserTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone)
+  }, [])
+
+  // If the caller didn't pass a defaultEmail (e.g. the public /booking page),
+  // detect a logged-in session and prefill name/email from it — still editable,
+  // just saves a returning member from retyping their own details.
+  useEffect(() => {
+    if (defaultEmail) return
+    createClient()
+      .auth.getUser()
+      .then(({ data }) => {
+        const user = data.user
+        if (!user?.email) return
+        const name = (user.user_metadata?.first_name || user.user_metadata?.full_name || "") as string
+        setPrefill({ name, email: user.email })
+        setFormData((p) => ({ ...p, client_name: p.client_name || name, client_email: p.client_email || user.email! }))
+      })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
   const currentStepIndex = STEPS.indexOf(step)
@@ -133,12 +158,12 @@ export default function BookingCalendar(
     setVerifyingEmail(false)
   }
 
-  // When the email is pre-filled from the logged-in account, auto-verify hours
-  // as soon as a slot is chosen (the weekly-limit check depends on the slot date).
+  // When the email is pre-filled (prop or self-detected session), auto-verify
+  // hours as soon as a slot is chosen (the weekly-limit check depends on the slot date).
   useEffect(() => {
-    if (defaultEmail && selectedSlot) verifyEmail(defaultEmail)
+    if (prefill.email && selectedSlot) verifyEmail(prefill.email)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSlot?.id, defaultEmail])
+  }, [selectedSlot?.id, prefill.email])
 
   const fetchMonthSlots = useCallback(async (month: string) => {
     try {
@@ -251,7 +276,7 @@ export default function BookingCalendar(
     setSelectedDate(undefined)
     setSelectedSlot(null)
     setSlots([])
-    setFormData({ client_name: "", client_email: defaultEmail, client_phone: "", client_message: "" })
+    setFormData({ client_name: prefill.name, client_email: prefill.email, client_phone: "", client_message: "" })
     setError(null)
     setConfirmationData(null)
     setEmailChecked(false)

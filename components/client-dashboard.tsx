@@ -289,6 +289,7 @@ export function ClientDashboard() {
   const isRtl = locale === "ar"
 
   const [email, setEmail] = useState("")
+  const [name, setName] = useState("")
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("academy")
   const [loading, setLoading] = useState(false)
@@ -360,6 +361,7 @@ export function ClientDashboard() {
     const supabase = createClient()
     supabase.auth.getUser().then(({ data }) => {
       setAvatarUrl((data.user?.user_metadata?.avatar_url as string) || null)
+      setName((data.user?.user_metadata?.first_name || data.user?.user_metadata?.full_name || "") as string)
       const sessionEmail = data.user?.email || localStorage.getItem("mentix_user_email") || ""
       if (sessionEmail) {
         setEmail(sessionEmail)
@@ -590,7 +592,7 @@ export function ClientDashboard() {
 
         {/* ── Book a 1-on-1 Session ── */}
         <TabsContent value="booking" className="space-y-4">
-          {!hasCoaching ? <LockedPanel l={l} locale={locale} /> : <BookingCalendar defaultEmail={email} lockEmail />}
+          {!hasCoaching ? <LockedPanel l={l} locale={locale} /> : <BookingCalendar defaultEmail={email} defaultName={name} lockEmail />}
         </TabsContent>
 
         {/* ── Recordings ── */}
