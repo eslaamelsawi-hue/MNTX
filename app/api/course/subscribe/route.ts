@@ -26,6 +26,8 @@ export async function POST() {
   const email = user.email
 
   let plan: string | null = null
+  let debugError: string | null = null
+  let debugSubs: unknown = null
   try {
     const admin = createAdminClient()
     const { data: subs, error } = await admin
@@ -34,16 +36,26 @@ export async function POST() {
       .ilike("client_email", email.trim())
       .order("created_at", { ascending: false })
       .limit(5)
-    if (error) console.error("[course/subscribe] user_subscriptions lookup failed:", error)
+    if (error) {
+      console.error("[course/subscribe] user_subscriptions lookup failed:", error)
+      debugError = error.message
+    }
+    debugSubs = subs
     const active = subs?.find((s) => (s.status ?? "").trim().toLowerCase() === "active")
     plan = active?.plan ?? null
   } catch (e) {
     console.error("[course/subscribe] user_subscriptions lookup threw:", e)
+    debugError = e instanceof Error ? e.message : String(e)
   }
 
-  const entitled = plan !== null || (await hasCourseAccess(email))
+  const viaHasCourseAccess = plan === null ? await hasCourseAccess(email) : null
+  const entitled = plan !== null || !!viaHasCourseAccess
   if (!entitled) {
-    return NextResponse.json({ access: false, email })
+    return NextResponse.json({
+      access: false,
+      email,
+      debug: { queriedEmail: email.trim(), subs: debugSubs, queryError: debugError, viaHasCourseAccess },
+    })
   }
 
   await grantAccess(email, plan ?? COURSE_GRANT_PLAN, "auto:subscribe")
