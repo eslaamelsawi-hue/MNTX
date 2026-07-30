@@ -28,17 +28,17 @@ export async function POST() {
   let plan: string | null = null
   try {
     const admin = createAdminClient()
-    const { data: sub } = await admin
+    const { data: subs, error } = await admin
       .from("user_subscriptions")
-      .select("plan")
-      .eq("client_email", email.toLowerCase().trim())
-      .eq("status", "active")
+      .select("plan, status")
+      .ilike("client_email", email.trim())
       .order("created_at", { ascending: false })
-      .limit(1)
-      .single()
-    plan = sub?.plan ?? null
-  } catch {
-    // no active subscription row — fall through to the entitlement check below
+      .limit(5)
+    if (error) console.error("[course/subscribe] user_subscriptions lookup failed:", error)
+    const active = subs?.find((s) => (s.status ?? "").trim().toLowerCase() === "active")
+    plan = active?.plan ?? null
+  } catch (e) {
+    console.error("[course/subscribe] user_subscriptions lookup threw:", e)
   }
 
   const entitled = plan !== null || (await hasCourseAccess(email))
