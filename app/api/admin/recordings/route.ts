@@ -52,7 +52,9 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ success: true, store })
   } catch (e) {
     console.error("[admin/recordings] upload failed:", e)
-    return NextResponse.json({ error: "Upload failed" }, { status: 500 })
+    // TEMP: surface the real message (admin-only route) instead of a generic
+    // one, to diagnose the current upload failure. Tighten back up once fixed.
+    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 })
   }
 }
 
