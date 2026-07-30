@@ -34,8 +34,11 @@ export async function POST(req: NextRequest) {
   }
 
   const stored = `${crypto.randomUUID().slice(0, 8)}${ext}`
-  const ticket = await createPrivateUploadTicket(`course/${stored}`)
-  if (!ticket) return NextResponse.json({ error: "Could not create an upload URL" }, { status: 500 })
-
-  return NextResponse.json({ filename: stored, contentType: CONTENT_TYPE[ext], ...ticket })
+  try {
+    const ticket = await createPrivateUploadTicket(`course/${stored}`)
+    return NextResponse.json({ filename: stored, contentType: CONTENT_TYPE[ext], ...ticket })
+  } catch (e) {
+    console.error("[admin/courses/upload-url] failed:", e)
+    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 })
+  }
 }

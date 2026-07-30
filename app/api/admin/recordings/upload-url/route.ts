@@ -24,8 +24,11 @@ export async function POST(req: NextRequest) {
   const id = newRecordingId()
   const ext = extFromName(filename)
   const video = `${id}.${ext}`
-  const ticket = await createPrivateUploadTicket(`recordings/${video}`)
-  if (!ticket) return NextResponse.json({ error: "Could not create an upload URL" }, { status: 500 })
-
-  return NextResponse.json({ id, video, contentType: contentTypeFor(video), ...ticket })
+  try {
+    const ticket = await createPrivateUploadTicket(`recordings/${video}`)
+    return NextResponse.json({ id, video, contentType: contentTypeFor(video), ...ticket })
+  } catch (e) {
+    console.error("[admin/recordings/upload-url] failed:", e)
+    return NextResponse.json({ error: e instanceof Error ? e.message : String(e) }, { status: 500 })
+  }
 }

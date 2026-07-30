@@ -28,10 +28,10 @@ export async function uploadPrivateFile(key: string, bytes: Buffer, contentType?
  * (FUNCTION_PAYLOAD_TOO_LARGE), so routing video uploads through an API route
  * never works past that size regardless of what the route does with the bytes.
  */
-export async function createPrivateUploadTicket(key: string): Promise<{ signedUrl: string; token: string } | null> {
+export async function createPrivateUploadTicket(key: string): Promise<{ signedUrl: string; token: string }> {
   const supabase = createAdminClient()
   const { data, error } = await supabase.storage.from(PRIVATE_BUCKET).createSignedUploadUrl(key)
-  if (error || !data) return null
+  if (error || !data) throw error ?? new Error("No signed URL returned")
   return { signedUrl: data.signedUrl, token: data.token }
 }
 
