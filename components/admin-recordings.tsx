@@ -17,6 +17,7 @@ export function AdminRecordings() {
   const [title, setTitle] = useState("")
   const [file, setFile] = useState<File | null>(null)
   const [uploading, setUploading] = useState(false)
+  const [progress, setProgress] = useState(0)
   const [error, setError] = useState("")
   const fileRef = useRef<HTMLInputElement>(null)
 
@@ -35,6 +36,31 @@ export function AdminRecordings() {
     load()
   }, [])
 
+  /** fetch() doesn't expose upload progress, so use XHR for this one request. */
+  const uploadWithProgress = (
+    url: string,
+    body: FormData,
+    onProgress: (pct: number) => void
+  ): Promise<{ ok: boolean; data: { error?: string; [k: string]: unknown } }> =>
+    new Promise((resolve, reject) => {
+      const xhr = new XMLHttpRequest()
+      xhr.open("POST", url)
+      xhr.upload.onprogress = (e) => {
+        if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100))
+      }
+      xhr.onload = () => {
+        let data: { error?: string } = {}
+        try {
+          data = JSON.parse(xhr.responseText)
+        } catch {
+          /* non-JSON response */
+        }
+        resolve({ ok: xhr.status >= 200 && xhr.status < 300, data })
+      }
+      xhr.onerror = () => reject(new Error("Network error"))
+      xhr.send(body)
+    })
+
   const add = async () => {
     setError("")
     if (!email.includes("@") || !title.trim()) {
@@ -46,14 +72,14 @@ export function AdminRecordings() {
       return
     }
     setUploading(true)
+    setProgress(0)
     try {
       const body = new FormData()
       body.append("email", email)
       body.append("title", title)
       body.append("file", file)
-      const res = await fetch("/api/admin/recordings", { method: "POST", body })
-      const data = await res.json().catch(() => ({}))
-      if (!res.ok) {
+      const { ok, data } = await uploadWithProgress("/api/admin/recordings", body, setProgress)
+      if (!ok) {
         setError(data.error || "Upload failed")
         return
       }
@@ -62,8 +88,11 @@ export function AdminRecordings() {
       setFile(null)
       if (fileRef.current) fileRef.current.value = ""
       await load()
+    } catch {
+      setError("Upload failed")
     } finally {
       setUploading(false)
+      setProgress(0)
     }
   }
 
@@ -115,11 +144,19 @@ export function AdminRecordings() {
             )}
           </div>
 
-          <div className="flex items-center gap-3">
+          <div className="flex flex-wrap items-center gap-3">
             <Button onClick={add} disabled={uploading} className="gap-1.5">
               {uploading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Upload className="h-4 w-4" />}
-              {uploading ? "Uploading…" : "Upload recording"}
+              {uploading ? `Uploading… ${progress}%` : "Upload recording"}
             </Button>
+            {uploading && (
+              <div className="h-1.5 w-40 overflow-hidden rounded-full bg-muted">
+                <div
+                  className="h-full rounded-full bg-primary transition-all duration-150"
+                  style={{ width: `${progress}%` }}
+                />
+              </div>
+            )}
             {error && <span className="text-sm text-destructive">{error}</span>}
           </div>
           <p className="text-xs text-muted-foreground">
@@ -131,8 +168,9 @@ export function AdminRecordings() {
 
       {store === "file" && (
         <div className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 px-4 py-3 text-xs text-yellow-200">
-          Videos are stored on the local disk (<code>private-media/recordings/</code>) and metadata in a local file. Great
-          for local testing; production needs object storage (the disk is wiped on redeploy).
+          Recording metadata is falling back to a local file instead of the database — the <code>recordings</code> table
+          may be missing in Supabase. This won&apos;t persist correctly in production; run
+          scripts/093_create_recordings.sql.
         </div>
       )}
 
