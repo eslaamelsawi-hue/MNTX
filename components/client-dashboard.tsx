@@ -563,9 +563,6 @@ export function ClientDashboard() {
             <TabsTrigger value="booking" className={navItemCls}>
               <CalendarPlus className="h-[18px] w-[18px]" />{l.tabBooking}
             </TabsTrigger>
-            <TabsTrigger value="payments" className={navItemCls}>
-              <Receipt className="h-[18px] w-[18px]" />{l.tabPayments}
-            </TabsTrigger>
 
             <div className="my-1.5 hidden h-px w-full bg-border lg:block" />
 
@@ -584,6 +581,9 @@ export function ClientDashboard() {
 
             <div className="my-1.5 hidden h-px w-full bg-border lg:block" />
 
+            <TabsTrigger value="payments" className={navItemCls}>
+              <Receipt className="h-[18px] w-[18px]" />{l.tabPayments}
+            </TabsTrigger>
             <TabsTrigger value="settings" className={navItemCls}>
               <Settings className="h-[18px] w-[18px]" />{isRtl ? "الإعدادات" : "Settings"}
             </TabsTrigger>
@@ -618,11 +618,6 @@ export function ClientDashboard() {
           {!hasCoaching ? <LockedPanel l={l} locale={locale} /> : <DashboardProgress subscriptions={subscriptions} bookings={bookings} l={l} />}
         </TabsContent>
 
-        {/* ── Payments ── */}
-        <TabsContent value="payments" className="space-y-4">
-          <DashboardInvoices email={email} />
-        </TabsContent>
-
         {/* ── Book a 1-on-1 Session ── */}
         <TabsContent value="booking" className="space-y-4">
           {!hasCoaching ? <LockedPanel l={l} locale={locale} /> : <BookingCalendar defaultEmail={email} defaultName={name} lockEmail />}
@@ -631,6 +626,11 @@ export function ClientDashboard() {
         {/* ── Recordings ── */}
         <TabsContent value="recordings" className="space-y-4">
           <DashboardRecordings email={email} />
+        </TabsContent>
+
+        {/* ── Payments ── */}
+        <TabsContent value="payments" className="space-y-4">
+          <DashboardInvoices email={email} />
         </TabsContent>
 
         {/* ── Settings ── */}

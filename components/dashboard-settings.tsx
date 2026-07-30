@@ -1,16 +1,20 @@
 "use client"
 
 import { useEffect, useRef, useState } from "react"
-import { useTranslations } from "next-intl"
-import { User, Lock, Loader2, Check, ShieldCheck, Mail, Camera } from "lucide-react"
+import { useTranslations, useLocale } from "next-intl"
+import { useRouter } from "next/navigation"
+import { User, Lock, Loader2, Check, ShieldCheck, Mail, Camera, Bell, LogOut } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
 import { createClient } from "@/lib/supabase/client"
 
 export function DashboardSettings() {
   const t = useTranslations("settings")
+  const locale = useLocale()
+  const router = useRouter()
 
   const [email, setEmail] = useState("")
   const [name, setName] = useState("")
@@ -29,6 +33,44 @@ export function DashboardSettings() {
   const [pwLoading, setPwLoading] = useState(false)
   const [pwError, setPwError] = useState("")
   const [pwDone, setPwDone] = useState(false)
+
+  // Notification preference
+  const [emailNotifications, setEmailNotifications] = useState(true)
+  const [notifLoading, setNotifLoading] = useState(true)
+  const [notifSaved, setNotifSaved] = useState(false)
+
+  // Sign out
+  const [signingOut, setSigningOut] = useState(false)
+
+  useEffect(() => {
+    fetch("/api/preferences")
+      .then((r) => (r.ok ? r.json() : { email_notifications: true }))
+      .then((d) => setEmailNotifications(d.email_notifications ?? true))
+      .catch(() => {})
+      .finally(() => setNotifLoading(false))
+  }, [])
+
+  const toggleEmailNotifications = async (checked: boolean) => {
+    setEmailNotifications(checked)
+    setNotifSaved(false)
+    try {
+      await fetch("/api/preferences", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email_notifications: checked }),
+      })
+      setNotifSaved(true)
+      setTimeout(() => setNotifSaved(false), 2000)
+    } catch {
+      setEmailNotifications(!checked)
+    }
+  }
+
+  const handleSignOut = async () => {
+    setSigningOut(true)
+    await createClient().auth.signOut()
+    router.push(`/${locale}/login`)
+  }
 
   useEffect(() => {
     createClient()
@@ -235,6 +277,44 @@ export function DashboardSettings() {
               {pwError && <p className="text-sm text-destructive">{pwError}</p>}
             </>
           )}
+        </CardContent>
+      </Card>
+
+      {/* Notification preferences */}
+      <Card className="border-border bg-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <Bell className="h-4 w-4 text-primary" /> {t("notifTitle")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">{t("notifDesc")}</p>
+          <div className="flex items-center justify-between rounded-lg border border-border p-3">
+            <Label htmlFor="email-notifications" className="cursor-pointer">{t("emailNotifications")}</Label>
+            <Switch
+              id="email-notifications"
+              checked={emailNotifications}
+              disabled={notifLoading}
+              onCheckedChange={toggleEmailNotifications}
+            />
+          </div>
+          {notifSaved && <p className="text-sm text-green-400">{t("notifSaved")}</p>}
+        </CardContent>
+      </Card>
+
+      {/* Account */}
+      <Card className="border-border bg-card">
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2 text-base">
+            <LogOut className="h-4 w-4 text-primary" /> {t("accountTitle")}
+          </CardTitle>
+        </CardHeader>
+        <CardContent className="space-y-4">
+          <p className="text-sm text-muted-foreground">{t("accountDesc")}</p>
+          <Button variant="outline" onClick={handleSignOut} disabled={signingOut} className="gap-2">
+            {signingOut ? <Loader2 className="h-4 w-4 animate-spin" /> : <LogOut className="h-4 w-4" />}
+            {signingOut ? t("signingOut") : t("signOut")}
+          </Button>
         </CardContent>
       </Card>
     </div>

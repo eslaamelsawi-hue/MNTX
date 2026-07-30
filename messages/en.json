@@ -192,7 +192,15 @@
     "sending": "Sending…",
     "processing": "Please wait…",
     "resend": "Resend code",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "notifTitle": "Notifications",
+    "notifDesc": "Choose whether we email you about new invoices, payments and other updates. You'll always see them in the notification bell either way.",
+    "emailNotifications": "Email notifications",
+    "notifSaved": "Preference saved",
+    "accountTitle": "Account",
+    "accountDesc": "Sign out of your account on this device.",
+    "signOut": "Sign out",
+    "signingOut": "Signing out…"
   },
   "paymentSuccess": {
     "badge": "Payment received",
