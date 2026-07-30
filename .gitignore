@@ -11,6 +11,10 @@ node_modules/
 .env*.local
 .DS_Store
 .vercel
+tsconfig.tsbuildinfo
+
+# Claude Code local-only settings
+.claude/settings.local.json
 
 # Protected course media (not committed)
 private-media/

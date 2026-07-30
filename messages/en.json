@@ -24,6 +24,8 @@
     "noAccessTitle": "No purchase found for this email",
     "noAccessDesc": "We couldn't find a course purchase for that address. Get the course for instant access — or try the email you paid with.",
     "buyCta": "Get the course",
+    "subscribeCta": "Subscribe",
+    "subscribing": "Checking your plan…",
     "unlockedBadge": "Unlocked",
     "watch": "Watch",
     "watchPreview": "Watch free preview",

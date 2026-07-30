@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react"
 import { useLocale, useTranslations } from "next-intl"
-import { Link } from "@/i18n/navigation"
+import { useRouter } from "@/i18n/navigation"
 import { Lock, PlayCircle, GraduationCap, Loader2, Crown, ListVideo, Layers, ArrowLeft } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
@@ -19,12 +19,14 @@ export function DashboardAcademy({ email }: { email: string }) {
   const t = useTranslations("course")
   const locale = useLocale()
   const isAr = locale === "ar"
+  const router = useRouter()
 
   const [cats, setCats] = useState<Cat[] | null>(null)
   const [slug, setSlug] = useState<string | null>(null) // null = show course list
   const [course, setCourse] = useState<Course | null>(null)
   const [access, setAccess] = useState<boolean | null>(null)
   const [lessonId, setLessonId] = useState<string | null>(null)
+  const [subscribing, setSubscribing] = useState(false)
 
   useEffect(() => {
     fetch("/api/course/catalog")
@@ -58,6 +60,21 @@ export function DashboardAcademy({ email }: { email: string }) {
   const unlocked = access === true
   const canPlay = !!current && (unlocked || current.freePreview)
 
+  async function handleSubscribe() {
+    setSubscribing(true)
+    try {
+      const res = await fetch("/api/course/subscribe", { method: "POST" })
+      const data = await res.json().catch(() => ({ access: false }))
+      if (data.access) {
+        setAccess(true)
+      } else {
+        router.push("/checkout?plan=coaching")
+      }
+    } finally {
+      setSubscribing(false)
+    }
+  }
+
   if (cats === null) {
     return (
       <div className="flex justify-center py-16">
@@ -74,7 +91,9 @@ export function DashboardAcademy({ email }: { email: string }) {
       <p className="inline-flex items-center gap-2 text-sm text-yellow-200">
         <Crown className="h-4 w-4" /> {t("noAccessDesc")}
       </p>
-      <Button asChild size="sm"><Link href="/enroll">{t("buyCta")}</Link></Button>
+      <Button size="sm" disabled={subscribing} onClick={handleSubscribe}>
+        {subscribing ? t("subscribing") : t("subscribeCta")}
+      </Button>
     </div>
   )
 
