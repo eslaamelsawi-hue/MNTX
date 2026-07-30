@@ -64,12 +64,18 @@ export function DashboardAcademy({ email }: { email: string }) {
     setSubscribing(true)
     try {
       const res = await fetch("/api/course/subscribe", { method: "POST" })
-      const data = await res.json().catch(() => ({ access: false }))
+      const text = await res.text()
+      // TEMP DEBUG: show the raw response before deciding anything, so we can
+      // see exactly what the server returned without needing DevTools.
+      alert(`status ${res.status}\n\n${text}`)
+      const data = JSON.parse(text)
       if (data.access) {
         setAccess(true)
       } else {
         router.push("/checkout?plan=coaching")
       }
+    } catch (e) {
+      alert(`request failed: ${e}`)
     } finally {
       setSubscribing(false)
     }
