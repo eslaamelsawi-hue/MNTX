@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { grantAccess } from "@/lib/course-access-store"
 import { createStarterInviteLink } from "@/lib/tg-invite"
 import { COURSE_GRANT_PLAN } from "@/lib/course"
+import { createInvoiceForPlan } from "@/lib/invoicing"
 
 /** Mentorship hours granted by the 1-on-1 Coaching Plan (10 sessions = 10 hours). */
 export const COACHING_HOURS = 10
@@ -23,13 +24,15 @@ export const EXTEND_PLAN_HOURS: Record<string, number> = {
 export async function grantExtendHours(
   email: string,
   planId: string,
-  name?: string
+  name?: string,
+  amount?: number
 ): Promise<void> {
   const hours = EXTEND_PLAN_HOURS[planId]
   if (!hours) return // not an extend plan
 
   const supabase = createAdminClient()
   const normalizedEmail = email.toLowerCase().trim()
+  const clientName = name || normalizedEmail.split("@")[0]
 
   const { data: existing } = await supabase
     .from("user_subscriptions")
@@ -51,13 +54,15 @@ export async function grantExtendHours(
   } else {
     await supabase.from("user_subscriptions").insert({
       client_email: normalizedEmail,
-      client_name: name || normalizedEmail.split("@")[0],
+      client_name: clientName,
       plan: planId,
       total_hours: hours,
       used_hours: 0,
       status: "active",
     })
   }
+
+  await createInvoiceForPlan({ clientEmail: normalizedEmail, clientName, plan: planId, amount })
 }
 
 /**
@@ -107,6 +112,7 @@ export async function grantCoaching(
   email: string,
   orderRef: string,
   name?: string,
+  amount?: number,
 ): Promise<{ tgInviteLink: string | null; alreadyFulfilled: boolean }> {
   const supabase = createAdminClient()
   const normalizedEmail = email.toLowerCase().trim()
@@ -146,6 +152,8 @@ export async function grantCoaching(
       notes: `Coaching ${orderRef} — 10 sessions (4 months)`,
     })
   }
+
+  await createInvoiceForPlan({ clientEmail: normalizedEmail, clientName: name || normalizedEmail.split("@")[0], plan: "coaching", amount })
 
   // 2) on-site academy / course access (idempotent upsert)
   try {

@@ -118,7 +118,7 @@ export async function PATCH(request: Request) {
     })
 
     // Grant hours if this is an extend plan
-    await grantExtendHours(order.email, order.plan)
+    await grantExtendHours(order.email, order.plan, undefined, parseFloat(order.amount))
 
     // Claim a TG token and send confirmation email for starter / coaching plan
     const planLabel = order.plan.charAt(0).toUpperCase() + order.plan.slice(1).replace(/-/g, " ")
@@ -127,7 +127,7 @@ export async function PATCH(request: Request) {
       tgInviteLink = await createStarterInviteLink(orderId)
     } else if (order.plan === "coaching") {
       // Grant 10 hours + academy access + a Telegram course link.
-      const res = await grantCoaching(order.email, orderId)
+      const res = await grantCoaching(order.email, orderId, undefined, parseFloat(order.amount))
       tgInviteLink = res.tgInviteLink
     }
     await sendConfirmationEmail({

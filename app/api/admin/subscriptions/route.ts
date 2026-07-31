@@ -1,55 +1,11 @@
 import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { createNotification } from "@/lib/notifications"
-import { PLAN_PRICES } from "@/lib/plan-pricing"
+import { createInvoiceForPlan } from "@/lib/invoicing"
 
 async function isAdmin() {
   const cookieStore = await cookies()
   return !!cookieStore.get("admin_session")?.value
-}
-
-/** Auto-generates a full-payment invoice for a newly created subscription,
- *  priced from the plan's known rate. Best-effort: a failure here shouldn't
- *  fail subscription creation, since the subscription already succeeded. */
-async function createInvoiceForSubscription(
-  supabase: ReturnType<typeof createAdminClient>,
-  sub: { client_email: string; client_name: string; plan: string }
-) {
-  const priceInfo = PLAN_PRICES[sub.plan]
-  if (!priceInfo) return
-
-  const today = new Date().toISOString().slice(0, 10)
-  const { data: invoice, error } = await supabase
-    .from("invoices")
-    .insert({
-      client_email: sub.client_email,
-      client_name: sub.client_name,
-      title: priceInfo.description,
-      total_amount: priceInfo.amount,
-      currency: "USD",
-      notes: "Auto-generated from subscription creation.",
-    })
-    .select()
-    .single()
-  if (error || !invoice) {
-    console.error("[subscriptions] Failed to auto-create invoice:", error)
-    return
-  }
-
-  const { error: instError } = await supabase
-    .from("invoice_installments")
-    .insert({ invoice_id: invoice.id, amount: priceInfo.amount, due_date: today })
-  if (instError) console.error("[subscriptions] Failed to auto-create invoice installment:", instError)
-
-  await createNotification({
-    clientEmail: invoice.client_email,
-    title: "New invoice",
-    message: `A new invoice "${invoice.title}" for ${invoice.currency} ${invoice.total_amount} has been added to your account.`,
-    type: "invoice",
-    link: "payments",
-    sendEmail: true,
-  })
 }
 
 export async function GET() {
@@ -77,7 +33,12 @@ export async function POST(req: NextRequest) {
   }).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
 
-  await createInvoiceForSubscription(supabase, data)
+  await createInvoiceForPlan({
+    clientEmail: data.client_email,
+    clientName: data.client_name,
+    plan: data.plan,
+    notes: "Auto-generated from subscription creation.",
+  })
 
   return NextResponse.json({ subscription: data })
 }

@@ -128,7 +128,7 @@ export async function POST(request: Request) {
     })
 
     // Grant hours if this is an extend plan
-    await grantExtendHours(order.email, order.plan)
+    await grantExtendHours(order.email, order.plan, undefined, parseFloat(order.amount))
 
     // Generate Telegram invite link for starter / coaching subscribers
     let tgInviteLink: string | null = null
@@ -139,7 +139,7 @@ export async function POST(request: Request) {
       }
     } else if (order.plan === "coaching") {
       // Grant 10 hours + academy access + a Telegram course link.
-      const res = await grantCoaching(order.email, orderId)
+      const res = await grantCoaching(order.email, orderId, undefined, parseFloat(order.amount))
       tgInviteLink = res.tgInviteLink
     }
 
