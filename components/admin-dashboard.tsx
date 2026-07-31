@@ -14,6 +14,7 @@ import { AdminSubscriptions } from "@/components/admin-subscriptions"
 import { AdminInvoices } from "@/components/admin-invoices"
 import { AdminNotifications } from "@/components/admin-notifications"
 import { AdminCourseAccess } from "@/components/admin-course-access"
+import { AdminMentorship } from "@/components/admin-mentorship"
 import { AdminCourses } from "@/components/admin-courses"
 import { AdminWaitlist } from "@/components/admin-waitlist"
 import { AdminRecordings } from "@/components/admin-recordings"
@@ -128,6 +129,7 @@ type Coupon = {
 
 export function AdminDashboard() {
   const [bookings, setBookings] = useState<Booking[]>([])
+  const [bookingSearchQuery, setBookingSearchQuery] = useState("")
   const [slots, setSlots] = useState<Slot[]>([])
   const [loadingBookings, setLoadingBookings] = useState(true)
   const [loadingSlots, setLoadingSlots] = useState(true)
@@ -1020,6 +1022,9 @@ export function AdminDashboard() {
                 <TabsTrigger value="orders">Orders</TabsTrigger>
                 <TabsTrigger value="coupons">Coupons</TabsTrigger>
                 <TabsTrigger value="subscriptions">Subscriptions</TabsTrigger>
+                <TabsTrigger value="mentorship" className="gap-1.5">
+                  <Crown className="h-3.5 w-3.5" /> Mentorship
+                </TabsTrigger>
                 <TabsTrigger value="invoices">Invoices</TabsTrigger>
                 <TabsTrigger value="notifications">Notifications</TabsTrigger>
                 <TabsTrigger value="courses" className="gap-1.5">
@@ -1044,9 +1049,15 @@ export function AdminDashboard() {
 
           {/* Bookings Tab */}
           <TabsContent value="bookings" className="space-y-4">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
               <h2 className="text-xl font-semibold text-foreground">All Bookings</h2>
-              <div className="flex items-center gap-2">
+              <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                <Input
+                  value={bookingSearchQuery}
+                  onChange={(e) => setBookingSearchQuery(e.target.value)}
+                  placeholder="Search by client email..."
+                  className="sm:w-64"
+                />
                 {selectedCancelledIds.size > 0 && (
                   <Button
                     variant="destructive"
@@ -1075,18 +1086,31 @@ export function AdminDashboard() {
                   <p className="text-muted-foreground">No bookings yet.</p>
                 </CardContent>
               </Card>
-            ) : (
+            ) : (() => {
+              const filteredBookings = bookingSearchQuery.trim()
+                ? bookings.filter((b) =>
+                    b.client_email?.toLowerCase().includes(bookingSearchQuery.trim().toLowerCase())
+                  )
+                : bookings
+              return filteredBookings.length === 0 ? (
+                <Card className="border-border bg-card">
+                  <CardContent className="py-12 text-center">
+                    <Users className="mx-auto mb-3 h-10 w-10 text-muted-foreground opacity-50" />
+                    <p className="text-muted-foreground">No bookings match &quot;{bookingSearchQuery}&quot;.</p>
+                  </CardContent>
+                </Card>
+              ) : (
               <Card className="border-border bg-card overflow-hidden">
                 <div className="overflow-x-auto">
                   <Table>
                     <TableHeader>
                       <TableRow className="border-border">
                         <TableHead className="w-10">
-                          {bookings.some(b => b.status === "cancelled") && (
+                          {filteredBookings.some(b => b.status === "cancelled") && (
                             <input
                               type="checkbox"
                               className="h-4 w-4 rounded border-border"
-                              checked={selectedCancelledIds.size === bookings.filter(b => b.status === "cancelled").length && bookings.some(b => b.status === "cancelled")}
+                              checked={selectedCancelledIds.size === filteredBookings.filter(b => b.status === "cancelled").length && filteredBookings.some(b => b.status === "cancelled")}
                               onChange={toggleSelectAllCancelled}
                               title="Select all cancelled"
                             />
@@ -1101,7 +1125,7 @@ export function AdminDashboard() {
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {bookings.map((booking) => (
+                      {filteredBookings.map((booking) => (
                         <TableRow key={booking.id} className={`border-border ${booking.status === "cancelled" && selectedCancelledIds.has(booking.id) ? "bg-red-500/5" : ""}`}>
                           <TableCell>
                             {booking.status === "cancelled" && (
@@ -1229,7 +1253,8 @@ export function AdminDashboard() {
                   </Table>
                 </div>
               </Card>
-            )}
+              )
+            })()}
           </TabsContent>
 
           {/* Availability Tab */}
@@ -2389,6 +2414,11 @@ export function AdminDashboard() {
           {/* Subscriptions Tab */}
           <TabsContent value="subscriptions" className="space-y-4">
             <AdminSubscriptions />
+          </TabsContent>
+
+          {/* Mentorship Tab */}
+          <TabsContent value="mentorship" className="space-y-4">
+            <AdminMentorship />
           </TabsContent>
 
           {/* Invoices Tab */}
