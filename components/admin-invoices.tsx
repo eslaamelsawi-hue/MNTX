@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Trash2, RefreshCw, Edit, ChevronDown, ChevronRight, CheckCircle2 } from "lucide-react"
+import { Plus, Trash2, RefreshCw, Edit, ChevronDown, ChevronRight, CheckCircle2, Wallet, CalendarClock } from "lucide-react"
 
 type Installment = { id: string; invoice_id: string; amount: number; due_date: string; status: string; paid_at: string | null }
 type Invoice = {
@@ -42,6 +42,7 @@ export function AdminInvoices() {
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editing, setEditing] = useState<Invoice | null>(null)
   const [form, setForm] = useState(defaultForm)
+  const [paymentType, setPaymentType] = useState<"full" | "installments">("full")
   const [rows, setRows] = useState<{ amount: string; due_date: string }[]>([{ amount: "", due_date: new Date().toISOString().slice(0, 10) }])
   const [split, setSplit] = useState(defaultSplit)
   const [actionLoading, setActionLoading] = useState<string | null>(null)
@@ -64,6 +65,7 @@ export function AdminInvoices() {
 
   const resetForm = () => {
     setForm(defaultForm)
+    setPaymentType("full")
     setRows([{ amount: "", due_date: new Date().toISOString().slice(0, 10) }])
     setSplit(defaultSplit)
     setEditing(null)
@@ -85,10 +87,14 @@ export function AdminInvoices() {
     setActionLoading("save")
     setSaveError("")
     try {
+      const installments =
+        paymentType === "full"
+          ? [{ amount: form.total_amount, due_date: new Date().toISOString().slice(0, 10) }]
+          : rows
       const res = await fetch("/api/admin/invoices", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ...form, installments: rows }),
+        body: JSON.stringify({ ...form, installments }),
       })
       const result = await res.json()
       if (!res.ok) {
@@ -268,33 +274,60 @@ export function AdminInvoices() {
 
                 {!editing && (
                   <div className="space-y-3 rounded-lg border border-border p-3">
-                    <p className="text-sm font-medium">Installments</p>
-                    <div className="flex items-end gap-2">
-                      <div className="flex-1">
-                        <Label className="text-xs">Split into N months</Label>
-                        <Input type="number" min="1" value={split.count} onChange={(e) => setSplit({ ...split, count: e.target.value })} />
-                      </div>
-                      <div className="flex-1">
-                        <Label className="text-xs">Starting</Label>
-                        <Input type="date" value={split.start_date} onChange={(e) => setSplit({ ...split, start_date: e.target.value })} />
-                      </div>
-                      <Button type="button" variant="outline" onClick={applySplit}>Generate</Button>
-                    </div>
-
-                    <div className="space-y-2">
-                      {rows.map((r, i) => (
-                        <div key={i} className="flex items-center gap-2">
-                          <Input type="number" step="0.01" placeholder="Amount" value={r.amount} onChange={(e) => setRows(rows.map((row, idx) => idx === i ? { ...row, amount: e.target.value } : row))} />
-                          <Input type="date" value={r.due_date} onChange={(e) => setRows(rows.map((row, idx) => idx === i ? { ...row, due_date: e.target.value } : row))} />
-                          <Button type="button" size="icon" variant="outline" className="h-9 w-9 shrink-0" onClick={() => setRows(rows.filter((_, idx) => idx !== i))} disabled={rows.length === 1}>
-                            <Trash2 className="h-3.5 w-3.5" />
-                          </Button>
-                        </div>
-                      ))}
-                      <Button type="button" variant="outline" size="sm" onClick={() => setRows([...rows, { amount: "", due_date: new Date().toISOString().slice(0, 10) }])}>
-                        <Plus className="mr-1 h-3 w-3" /> Add installment row
+                    <p className="text-sm font-medium">Payment</p>
+                    <div className="grid grid-cols-2 gap-2">
+                      <Button
+                        type="button"
+                        variant={paymentType === "full" ? "default" : "outline"}
+                        className="gap-1.5"
+                        onClick={() => setPaymentType("full")}
+                      >
+                        <Wallet className="h-4 w-4" /> Full payment
+                      </Button>
+                      <Button
+                        type="button"
+                        variant={paymentType === "installments" ? "default" : "outline"}
+                        className="gap-1.5"
+                        onClick={() => setPaymentType("installments")}
+                      >
+                        <CalendarClock className="h-4 w-4" /> Installments
                       </Button>
                     </div>
+
+                    {paymentType === "full" ? (
+                      <p className="text-xs text-muted-foreground">
+                        Creates a single invoice for the full amount, due today.
+                      </p>
+                    ) : (
+                      <>
+                        <div className="flex items-end gap-2">
+                          <div className="flex-1">
+                            <Label className="text-xs">Split into N months</Label>
+                            <Input type="number" min="1" value={split.count} onChange={(e) => setSplit({ ...split, count: e.target.value })} />
+                          </div>
+                          <div className="flex-1">
+                            <Label className="text-xs">Starting</Label>
+                            <Input type="date" value={split.start_date} onChange={(e) => setSplit({ ...split, start_date: e.target.value })} />
+                          </div>
+                          <Button type="button" variant="outline" onClick={applySplit}>Generate</Button>
+                        </div>
+
+                        <div className="space-y-2">
+                          {rows.map((r, i) => (
+                            <div key={i} className="flex items-center gap-2">
+                              <Input type="number" step="0.01" placeholder="Amount" value={r.amount} onChange={(e) => setRows(rows.map((row, idx) => idx === i ? { ...row, amount: e.target.value } : row))} />
+                              <Input type="date" value={r.due_date} onChange={(e) => setRows(rows.map((row, idx) => idx === i ? { ...row, due_date: e.target.value } : row))} />
+                              <Button type="button" size="icon" variant="outline" className="h-9 w-9 shrink-0" onClick={() => setRows(rows.filter((_, idx) => idx !== i))} disabled={rows.length === 1}>
+                                <Trash2 className="h-3.5 w-3.5" />
+                              </Button>
+                            </div>
+                          ))}
+                          <Button type="button" variant="outline" size="sm" onClick={() => setRows([...rows, { amount: "", due_date: new Date().toISOString().slice(0, 10) }])}>
+                            <Plus className="mr-1 h-3 w-3" /> Add installment row
+                          </Button>
+                        </div>
+                      </>
+                    )}
                   </div>
                 )}
 
