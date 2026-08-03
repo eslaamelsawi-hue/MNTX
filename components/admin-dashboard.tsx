@@ -966,7 +966,7 @@ export function AdminDashboard() {
   const totalSlots = slots.length
   const availableSlots = slots.filter(s => !s.is_booked).length
 
-  const navItemClass = "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-[13px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+  const navItemClass = "flex w-full items-center justify-start gap-2.5 rounded-md px-2.5 py-2 text-left text-[13px] font-normal text-muted-foreground transition-colors hover:bg-muted hover:text-foreground data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
   const navGroupLabelClass = "px-2.5 pb-1.5 pt-3 text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground/70"
   const NAV_SECTIONS: { label: string; items: { value: string; label: string; icon: typeof LayoutDashboard }[] }[] = [
     { label: "", items: [{ value: "overview", label: "Overview", icon: LayoutDashboard }] },
@@ -1026,20 +1026,18 @@ export function AdminDashboard() {
         <Tabs value={activeTab} onValueChange={setActiveTab} className={uiVersion === "new" && !isMentor ? "flex w-full items-start gap-6" : "w-full space-y-6"}>
         {uiVersion === "new" && !isMentor && (
           <aside className="hidden w-56 shrink-0 lg:block">
-            <div className="sticky top-20 space-y-1">
+            <TabsList className="sticky top-20 flex h-auto flex-col items-stretch justify-start gap-1 rounded-none bg-transparent p-0 text-inherit">
               {NAV_SECTIONS.map((section, i) => (
                 <div key={i}>
                   {section.label && <p className={navGroupLabelClass}>{section.label}</p>}
                   {section.items.map((item) => (
-                    <TabsTrigger key={item.value} value={item.value} asChild>
-                      <button className={navItemClass}>
-                        <item.icon className="h-3.5 w-3.5" /> {item.label}
-                      </button>
+                    <TabsTrigger key={item.value} value={item.value} className={navItemClass}>
+                      <item.icon className="h-3.5 w-3.5" /> {item.label}
                     </TabsTrigger>
                   ))}
                 </div>
               ))}
-            </div>
+            </TabsList>
           </aside>
         )}
         <div className={uiVersion === "new" && !isMentor ? "min-w-0 flex-1" : ""}>
