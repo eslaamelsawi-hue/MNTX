@@ -1,7 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { NextRequest, NextResponse } from "next/server"
 
-const ALLOWED_KEYS = ["weekly_booking_limit", "discord_invite", "telegram_group", "weekly_zoom_link"]
+const ALLOWED_KEYS = ["weekly_booking_limit", "discord_invite", "telegram_group", "weekly_zoom_link", "dashboard_ui"]
 
 export async function GET() {
   const supabase = createAdminClient()
@@ -40,6 +40,10 @@ export async function POST(req: NextRequest) {
     }
   }
 
+  if (key === "dashboard_ui" && !["new", "legacy"].includes(String(value))) {
+    return NextResponse.json({ error: "Invalid dashboard_ui value" }, { status: 400 })
+  }
+
   const supabase = createAdminClient()
   const { error } = await supabase
     .from("admin_settings")
@@ -71,6 +75,10 @@ export async function PATCH(req: NextRequest) {
     if (isNaN(num) || num < 1 || num > 20) {
       return NextResponse.json({ error: "Limit must be between 1 and 20" }, { status: 400 })
     }
+  }
+
+  if (key === "dashboard_ui" && !["new", "legacy"].includes(String(value))) {
+    return NextResponse.json({ error: "Invalid dashboard_ui value" }, { status: 400 })
   }
 
   const supabase = createAdminClient()

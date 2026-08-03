@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
+import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
@@ -15,6 +16,7 @@ import { AdminInvoices } from "@/components/admin-invoices"
 import { AdminNotifications } from "@/components/admin-notifications"
 import { AdminCourseAccess } from "@/components/admin-course-access"
 import { AdminMentorship } from "@/components/admin-mentorship"
+import { AdminOverview } from "@/components/admin-overview"
 import { AdminCourses } from "@/components/admin-courses"
 import { AdminWaitlist } from "@/components/admin-waitlist"
 import { AdminRecordings } from "@/components/admin-recordings"
@@ -54,6 +56,9 @@ import {
   MessageCircle,
   HelpCircle,
   MessageSquare,
+  LayoutDashboard,
+  GraduationCap,
+  Newspaper,
 } from "lucide-react"
 
 type Slot = {
@@ -212,6 +217,11 @@ export function AdminDashboard() {
   const [hideAllGroupChats, setHideAllGroupChats] = useState(false)
   const [hiddenGroupSessions, setHiddenGroupSessions] = useState<Set<string>>(new Set())
 
+  // Dashboard layout (new sidebar UI vs. legacy tabs UI)
+  const [uiVersion, setUiVersion] = useState<"new" | "legacy">("new")
+  const [activeTab, setActiveTab] = useState("overview")
+  const [uiVersionSaving, setUiVersionSaving] = useState(false)
+
   // Mentor state
   const [isMentor, setIsMentor] = useState(false)
   const [mentorId, setMentorId] = useState<string>("")
@@ -239,9 +249,17 @@ export function AdminDashboard() {
         }
         console.log("Mentor detected:", { mId, mName, mEmail })
         console.log("LocalStorage mentor_email:", localStorage.getItem("mentor_email"))
+        setActiveTab("mentor-messages")
       }
     }
   }, [])
+
+  // Keep the active tab valid when the layout preference changes — the
+  // "overview" tab only exists in the new sidebar UI.
+  useEffect(() => {
+    if (isMentor) return
+    setActiveTab((prev) => (uiVersion === "legacy" && prev === "overview" ? "bookings" : prev))
+  }, [uiVersion, isMentor])
 
   useEffect(() => {
     if (isMentor && mentorId) {
@@ -271,10 +289,30 @@ export function AdminDashboard() {
         setWeeklyLimit(data.settings.weekly_booking_limit)
         setWeeklyLimitInput(data.settings.weekly_booking_limit)
       }
+      if (data.settings?.dashboard_ui === "legacy") {
+        setUiVersion("legacy")
+        setActiveTab((prev) => (prev === "overview" ? "bookings" : prev))
+      }
     } catch (e) {
       console.error("Failed to fetch settings:", e)
     }
   }, [])
+
+  const handleToggleUiVersion = async (next: "new" | "legacy") => {
+    setUiVersion(next)
+    setActiveTab(next === "new" ? "overview" : "bookings")
+    setUiVersionSaving(true)
+    try {
+      await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "dashboard_ui", value: next }),
+      })
+    } catch (e) {
+      console.error("Failed to save dashboard layout preference:", e)
+    }
+    setUiVersionSaving(false)
+  }
 
   const handleSaveWeeklyLimit = async () => {
     const num = parseInt(weeklyLimitInput)
@@ -928,6 +966,37 @@ export function AdminDashboard() {
   const totalSlots = slots.length
   const availableSlots = slots.filter(s => !s.is_booked).length
 
+  const navItemClass = "flex w-full items-center gap-2.5 rounded-md px-2.5 py-2 text-left text-[13px] text-muted-foreground transition-colors hover:bg-muted hover:text-foreground data-[state=active]:bg-primary/10 data-[state=active]:text-primary"
+  const navGroupLabelClass = "px-2.5 pb-1.5 pt-3 text-[10.5px] font-semibold uppercase tracking-wider text-muted-foreground/70"
+  const NAV_SECTIONS: { label: string; items: { value: string; label: string; icon: typeof LayoutDashboard }[] }[] = [
+    { label: "", items: [{ value: "overview", label: "Overview", icon: LayoutDashboard }] },
+    { label: "Scheduling", items: [
+      { value: "bookings", label: "Bookings", icon: CalendarIcon },
+      { value: "slots", label: "Availability", icon: Clock },
+      { value: "group-sessions", label: "Group Sessions", icon: Users },
+    ] },
+    { label: "Clients", items: [
+      { value: "mentorship", label: "Mentorship", icon: GraduationCap },
+      { value: "subscriptions", label: "Subscriptions", icon: DollarSign },
+      { value: "invoices", label: "Invoices", icon: FileText },
+    ] },
+    { label: "Commerce", items: [
+      { value: "orders", label: "Orders", icon: ShoppingCart },
+      { value: "coupons", label: "Coupons", icon: Tag },
+    ] },
+    { label: "Content", items: [
+      { value: "articles", label: "Gold Articles", icon: Newspaper },
+      { value: "courses", label: "Courses", icon: BookOpen },
+      { value: "course-access", label: "MNTX Elite", icon: Crown },
+      { value: "waitlist", label: "Waitlist", icon: ClipboardList },
+      { value: "recordings", label: "Recordings", icon: Video },
+    ] },
+    { label: "System", items: [
+      { value: "notifications", label: "Notifications", icon: MessageSquare },
+      { value: "settings", label: "Settings", icon: Settings },
+    ] },
+  ]
+
   return (
     <div className="min-h-screen bg-background">
       {/* Header */}
@@ -953,7 +1022,29 @@ export function AdminDashboard() {
         </div>
       </header>
 
-      <div className="mx-auto max-w-7xl px-4 py-8">
+      <div className={uiVersion === "new" && !isMentor ? "mx-auto flex max-w-[1400px] items-start gap-6 px-4 py-6" : "mx-auto max-w-7xl px-4 py-8"}>
+        <Tabs value={activeTab} onValueChange={setActiveTab} className={uiVersion === "new" && !isMentor ? "flex w-full items-start gap-6" : "w-full space-y-6"}>
+        {uiVersion === "new" && !isMentor && (
+          <aside className="hidden w-56 shrink-0 lg:block">
+            <div className="sticky top-20 space-y-1">
+              {NAV_SECTIONS.map((section, i) => (
+                <div key={i}>
+                  {section.label && <p className={navGroupLabelClass}>{section.label}</p>}
+                  {section.items.map((item) => (
+                    <TabsTrigger key={item.value} value={item.value} asChild>
+                      <button className={navItemClass}>
+                        <item.icon className="h-3.5 w-3.5" /> {item.label}
+                      </button>
+                    </TabsTrigger>
+                  ))}
+                </div>
+              ))}
+            </div>
+          </aside>
+        )}
+        <div className={uiVersion === "new" && !isMentor ? "min-w-0 flex-1" : ""}>
+        {(uiVersion === "legacy" || isMentor) && (
+        <>
         {/* Stats cards */}
         <div className="mb-8 grid gap-4 sm:grid-cols-4">
           <Card className="border-border bg-card">
@@ -1001,8 +1092,10 @@ export function AdminDashboard() {
             </CardContent>
           </Card>
         </div>
+        </>
+        )}
 
-        <Tabs defaultValue={isMentor ? "mentor-messages" : "bookings"} className="space-y-6">
+          {(uiVersion === "legacy" || isMentor) && (
           <TabsList className="bg-muted flex flex-wrap h-auto gap-1">
             {isMentor ? (
               <>
@@ -1046,6 +1139,13 @@ export function AdminDashboard() {
               </>
             )}
           </TabsList>
+          )}
+
+          {uiVersion === "new" && !isMentor && (
+            <TabsContent value="overview" className="space-y-6">
+              <AdminOverview bookings={bookings} slots={slots} orders={orders} />
+            </TabsContent>
+          )}
 
           {/* Bookings Tab */}
           <TabsContent value="bookings" className="space-y-4">
@@ -2458,6 +2558,35 @@ export function AdminDashboard() {
             <Card>
               <CardHeader>
                 <CardTitle className="flex items-center gap-2">
+                  <LayoutDashboard className="h-5 w-5 text-primary" />
+                  Dashboard Layout
+                </CardTitle>
+                <CardDescription>
+                  Switch between the new sidebar dashboard and the classic tabs layout.
+                </CardDescription>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-center justify-between rounded-lg border border-border p-4">
+                  <div>
+                    <p className="text-sm font-medium text-foreground">Use new dashboard design</p>
+                    <p className="text-xs text-muted-foreground">
+                      {uiVersion === "new"
+                        ? "You're on the new sidebar layout. Turn this off to switch back to the old dashboard."
+                        : "You're on the classic tabs layout. Turn this on to try the new sidebar dashboard."}
+                    </p>
+                  </div>
+                  <Switch
+                    checked={uiVersion === "new"}
+                    disabled={uiVersionSaving}
+                    onCheckedChange={(checked) => handleToggleUiVersion(checked ? "new" : "legacy")}
+                  />
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center gap-2">
                   <CalendarDays className="h-5 w-5 text-primary" />
                   Booking Rules
                 </CardTitle>
@@ -2768,6 +2897,7 @@ export function AdminDashboard() {
               <MentorSupport />
             </TabsContent>
           )}
+        </div>
         </Tabs>
       </div>
     </div>
