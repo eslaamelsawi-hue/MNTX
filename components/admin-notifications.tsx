@@ -12,6 +12,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { Plus, Trash2, RefreshCw } from "lucide-react"
+import { StatusPill } from "@/components/admin-status-pill"
 
 type Notification = {
   id: string; client_email: string; title: string; message: string
@@ -168,7 +169,7 @@ export function AdminNotifications() {
                   <TableCell className="text-sm">{n.client_email}</TableCell>
                   <TableCell><div className="font-medium">{n.title}</div><div className="text-xs text-muted-foreground line-clamp-1">{n.message}</div></TableCell>
                   <TableCell><Badge variant="outline" className="capitalize">{n.type}</Badge></TableCell>
-                  <TableCell>{n.read ? <Badge className="bg-emerald-500/20 text-emerald-400">Read</Badge> : <Badge className="bg-gray-500/20 text-gray-400">Unread</Badge>}</TableCell>
+                  <TableCell><StatusPill status={n.read ? "read" : "unread"} /></TableCell>
                   <TableCell className="text-sm">{new Date(n.created_at).toLocaleString()}</TableCell>
                   <TableCell>
                     <Button size="sm" variant="outline" className="h-7 text-xs border-red-500/30 text-red-400 hover:bg-red-500/10" disabled={actionLoading === n.id} onClick={() => handleDelete(n.id)}>

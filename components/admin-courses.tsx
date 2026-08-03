@@ -7,7 +7,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { Badge } from "@/components/ui/badge"
+import { StatusPill } from "@/components/admin-status-pill"
 
 type Lesson = { id: string; titleEn: string; titleAr: string; duration: string; video: string; freePreview: boolean }
 type Section = { id: string; titleEn: string; titleAr: string; lessons: Lesson[] }
@@ -118,9 +118,7 @@ function CourseRow({ course, open, onToggle, onChanged }: { course: Course; open
         <button onClick={onToggle} className="flex w-full items-center gap-3 p-4 text-start">
           {open ? <ChevronDown className="h-4 w-4 text-muted-foreground" /> : <ChevronRight className="h-4 w-4 text-muted-foreground" />}
           <span className="flex-1 font-medium text-foreground">{c.titleEn}</span>
-          <Badge variant="outline" className={c.published ? "border-green-500/30 text-green-400" : "border-border text-muted-foreground"}>
-            {c.published ? "Published" : "Draft"}
-          </Badge>
+          <StatusPill status={c.published ? "published" : "draft"} />
           <span className="text-xs text-muted-foreground">{c.sections.reduce((n, s) => n + s.lessons.length, 0)} lessons</span>
         </button>
 

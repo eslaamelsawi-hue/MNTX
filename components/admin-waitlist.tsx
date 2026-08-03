@@ -97,7 +97,7 @@ export function AdminWaitlist() {
                     <div className="mt-0.5 flex flex-wrap items-center gap-x-4 gap-y-0.5 text-xs text-muted-foreground">
                       <span className="inline-flex items-center gap-1"><Mail className="h-3 w-3" /> {e.email}</span>
                       <span className="inline-flex items-center gap-1"><Phone className="h-3 w-3" /> {e.phone}</span>
-                      <span>{new Date(e.created_at).toLocaleDateString()}</span>
+                      <span className="font-mono">{new Date(e.created_at).toLocaleDateString()}</span>
                       <Badge variant="outline" className="border-border text-[10px]">{e.source}</Badge>
                     </div>
                   </div>

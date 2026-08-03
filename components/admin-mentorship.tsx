@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { StatusPill } from "@/components/admin-status-pill"
 import {
   Crown,
   RefreshCw,
@@ -415,22 +416,20 @@ export function AdminMentorship() {
                             ))}
                           </div>
                         </TableCell>
-                        <TableCell className="font-bold">{client.totalHours}</TableCell>
-                        <TableCell className={`font-bold ${client.remainingHours <= 1 ? "text-red-400" : "text-emerald-400"}`}>
+                        <TableCell className="font-mono font-bold tabular-nums">{client.totalHours}</TableCell>
+                        <TableCell className={`font-mono font-bold tabular-nums ${client.remainingHours <= 1 ? "text-red-400" : "text-emerald-400"}`}>
                           {client.remainingHours}
                         </TableCell>
-                        <TableCell>{client.bookingCount}</TableCell>
+                        <TableCell className="font-mono tabular-nums">{client.bookingCount}</TableCell>
                         <TableCell>
                           {client.daysSinceSecondSession === null ? (
                             <span className="text-xs text-muted-foreground">-</span>
                           ) : (
-                            <span className="font-medium">{client.daysSinceSecondSession}d</span>
+                            <span className="font-mono font-medium tabular-nums">{client.daysSinceSecondSession}d</span>
                           )}
                         </TableCell>
                         <TableCell>
-                          <Badge className={client.isActive ? "bg-emerald-500/20 text-emerald-400" : "bg-gray-500/20 text-gray-400"}>
-                            {client.isActive ? "active" : "inactive"}
-                          </Badge>
+                          <StatusPill status={client.isActive ? "active" : "inactive"} />
                         </TableCell>
                         <TableCell className="text-sm">
                           {client.latestExpiry ? new Date(client.latestExpiry).toLocaleDateString() : "-"}
@@ -481,15 +480,15 @@ export function AdminMentorship() {
                                       <TableBody>
                                         {sortedBookings.map((b) => (
                                           <TableRow key={b.id} className="border-border">
-                                            <TableCell className="text-sm">
+                                            <TableCell className="font-mono text-sm">
                                               {sessionDate(b) ? formatDate(sessionDate(b) as string) : "-"}
                                             </TableCell>
-                                            <TableCell className="text-sm">
+                                            <TableCell className="font-mono text-sm">
                                               {b.availability_slots ? formatTime(b.availability_slots.start_time) : "-"}
                                             </TableCell>
-                                            <TableCell className="text-sm">{b.duration} min</TableCell>
+                                            <TableCell className="font-mono text-sm tabular-nums">{b.duration} min</TableCell>
                                             <TableCell>
-                                              <Badge variant="outline" className="text-xs capitalize">{b.status}</Badge>
+                                              <StatusPill status={b.status} />
                                             </TableCell>
                                           </TableRow>
                                         ))}

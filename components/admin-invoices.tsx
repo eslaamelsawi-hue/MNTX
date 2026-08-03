@@ -5,12 +5,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { Plus, Trash2, RefreshCw, Edit, ChevronDown, ChevronRight, CheckCircle2, Wallet, CalendarClock } from "lucide-react"
+import { StatusPill } from "@/components/admin-status-pill"
 
 type Installment = { id: string; invoice_id: string; amount: number; due_date: string; status: string; paid_at: string | null }
 type Invoice = {
@@ -21,14 +21,6 @@ type Invoice = {
 
 const defaultForm = { client_email: "", client_name: "", title: "", total_amount: "", currency: "USD", notes: "", send_email: true }
 const defaultSplit = { count: "1", start_date: new Date().toISOString().slice(0, 10) }
-
-const statusColor: Record<string, string> = {
-  pending: "bg-gray-500/20 text-gray-400",
-  partially_paid: "bg-amber-500/20 text-amber-400",
-  paid: "bg-emerald-500/20 text-emerald-400",
-  overdue: "bg-red-500/20 text-red-400",
-  cancelled: "bg-gray-500/20 text-gray-500",
-}
 
 function addMonths(dateStr: string, months: number) {
   const d = new Date(dateStr)
@@ -371,9 +363,9 @@ export function AdminInvoices() {
                     <TableCell>{expanded.has(inv.id) ? <ChevronDown className="h-4 w-4" /> : <ChevronRight className="h-4 w-4" />}</TableCell>
                     <TableCell><div className="font-medium">{inv.client_name || "-"}</div><div className="text-xs text-muted-foreground">{inv.client_email}</div></TableCell>
                     <TableCell>{inv.title}</TableCell>
-                    <TableCell className="font-bold">{inv.currency} {inv.total_amount}</TableCell>
-                    <TableCell><Badge className={statusColor[inv.status] || "bg-gray-500/20 text-gray-400"}>{inv.status.replace(/_/g, " ")}</Badge></TableCell>
-                    <TableCell className="text-sm">{new Date(inv.created_at).toLocaleDateString()}</TableCell>
+                    <TableCell className="font-mono font-bold tabular-nums">{inv.currency} {inv.total_amount}</TableCell>
+                    <TableCell><StatusPill status={inv.status} /></TableCell>
+                    <TableCell className="font-mono text-sm">{new Date(inv.created_at).toLocaleDateString()}</TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <div className="flex items-center gap-1">
                         <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleEditInvoice(inv)}><Edit className="mr-1 h-3 w-3" /> Edit</Button>
@@ -391,7 +383,7 @@ export function AdminInvoices() {
                             <div key={i.id} className="flex items-center gap-2">
                               <Input type="number" step="0.01" className="w-28" value={rowEdits[i.id]?.amount ?? String(i.amount)} onChange={(e) => setRowEdits({ ...rowEdits, [i.id]: { ...rowEdits[i.id], amount: e.target.value, due_date: rowEdits[i.id]?.due_date ?? i.due_date } })} />
                               <Input type="date" className="w-40" value={rowEdits[i.id]?.due_date ?? i.due_date} onChange={(e) => setRowEdits({ ...rowEdits, [i.id]: { ...rowEdits[i.id], due_date: e.target.value, amount: rowEdits[i.id]?.amount ?? String(i.amount) } })} />
-                              <Badge className={i.status === "paid" ? "bg-emerald-500/20 text-emerald-400" : i.due_date < new Date().toISOString().slice(0, 10) ? "bg-red-500/20 text-red-400" : "bg-gray-500/20 text-gray-400"}>{i.status}</Badge>
+                              <StatusPill status={i.status === "paid" ? "paid" : i.due_date < new Date().toISOString().slice(0, 10) ? "overdue" : "pending"} label={i.status} />
                               <Button size="sm" variant="outline" className="h-7 text-xs" disabled={actionLoading === i.id} onClick={() => saveInstallment(i.id)}>Save</Button>
                               {i.status !== "paid" && (
                                 <Button size="sm" variant="outline" className="h-7 text-xs border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10" disabled={actionLoading === i.id} onClick={() => markPaid(i.id)}>

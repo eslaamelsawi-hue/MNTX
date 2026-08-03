@@ -17,6 +17,7 @@ import { AdminNotifications } from "@/components/admin-notifications"
 import { AdminCourseAccess } from "@/components/admin-course-access"
 import { AdminMentorship } from "@/components/admin-mentorship"
 import { AdminOverview } from "@/components/admin-overview"
+import { StatusPill } from "@/components/admin-status-pill"
 import { AdminCourses } from "@/components/admin-courses"
 import { AdminWaitlist } from "@/components/admin-waitlist"
 import { AdminRecordings } from "@/components/admin-recordings"
@@ -952,16 +953,6 @@ export function AdminDashboard() {
     }
   }
 
-  const statusColor = (status: string) => {
-    switch (status) {
-      case "confirmed": return "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-      case "cancelled": return "bg-red-500/20 text-red-400 border-red-500/30"
-      case "completed": return "bg-blue-500/20 text-blue-400 border-blue-500/30"
-      case "rescheduled": return "bg-amber-500/20 text-amber-400 border-amber-500/30"
-      default: return ""
-    }
-  }
-
   const confirmedCount = bookings.filter(b => b.status === "confirmed").length
   const totalSlots = slots.length
   const availableSlots = slots.filter(s => !s.is_booked).length
@@ -1051,7 +1042,7 @@ export function AdminDashboard() {
                 <Users className="h-6 w-6 text-primary" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{confirmedCount}</p>
+                <p className="font-mono text-2xl font-bold tabular-nums text-foreground">{confirmedCount}</p>
                 <p className="text-sm text-muted-foreground">Upcoming Sessions</p>
               </div>
             </CardContent>
@@ -1062,7 +1053,7 @@ export function AdminDashboard() {
                 <CalendarDays className="h-6 w-6 text-emerald-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{availableSlots}</p>
+                <p className="font-mono text-2xl font-bold tabular-nums text-foreground">{availableSlots}</p>
                 <p className="text-sm text-muted-foreground">Available Slots</p>
               </div>
             </CardContent>
@@ -1073,7 +1064,7 @@ export function AdminDashboard() {
                 <CalendarIcon className="h-6 w-6 text-blue-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{totalSlots}</p>
+                <p className="font-mono text-2xl font-bold tabular-nums text-foreground">{totalSlots}</p>
                 <p className="text-sm text-muted-foreground">Total Slots</p>
               </div>
             </CardContent>
@@ -1084,7 +1075,7 @@ export function AdminDashboard() {
                 <ShoppingCart className="h-6 w-6 text-yellow-400" />
               </div>
               <div>
-                <p className="text-2xl font-bold text-foreground">{orders.filter(o => o.status === "paid").length}</p>
+                <p className="font-mono text-2xl font-bold tabular-nums text-foreground">{orders.filter(o => o.status === "paid").length}</p>
                 <p className="text-sm text-muted-foreground">Paid Orders</p>
               </div>
             </CardContent>
@@ -1255,12 +1246,10 @@ export function AdminDashboard() {
                             </div>
                           </TableCell>
                           <TableCell>
-                            <span className="text-foreground">{booking.duration} min</span>
+                            <span className="font-mono tabular-nums text-foreground">{booking.duration} min</span>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={statusColor(booking.status)}>
-                              {booking.status}
-                            </Badge>
+                            <StatusPill status={booking.status} />
                           </TableCell>
                           <TableCell>
                             {booking.zoom_start_url ? (
@@ -1530,16 +1519,10 @@ export function AdminDashboard() {
                             </span>
                           </TableCell>
                           <TableCell>
-                            <span className="text-foreground">{slot.duration} min</span>
+                            <span className="font-mono tabular-nums text-foreground">{slot.duration} min</span>
                           </TableCell>
                           <TableCell>
-                            <Badge variant="outline" className={
-                              slot.is_booked
-                                ? "bg-amber-500/20 text-amber-400 border-amber-500/30"
-                                : "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                            }>
-                              {slot.is_booked ? "Booked" : "Available"}
-                            </Badge>
+                            <StatusPill status={slot.is_booked ? "booked" : "available"} />
                           </TableCell>
                           <TableCell className="text-right">
                             {!slot.is_booked && (
@@ -1672,9 +1655,7 @@ export function AdminDashboard() {
                               {formatTime(session.start_time)} - {formatTime(session.end_time)}
                             </span>
                             {session.max_participants && <span>{session.max_participants} max</span>}
-                            <Badge variant="outline" className={session.status === "scheduled" ? "bg-blue-500/20 text-blue-400" : "bg-gray-500/20 text-gray-400"}>
-                              {session.status}
-                            </Badge>
+                            <StatusPill status={session.status} />
                           </div>
                         </div>
                         <div className="flex gap-1 ml-4">
@@ -1978,12 +1959,7 @@ export function AdminDashboard() {
                           )}
                         </div>
                         <div className="flex items-center gap-1 ml-4">
-                          <Badge variant="outline" className={article.published
-                            ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                            : "bg-zinc-500/20 text-zinc-400 border-zinc-500/30"
-                          }>
-                            {article.published ? "Published" : "Draft"}
-                          </Badge>
+                          <StatusPill status={article.published ? "published" : "draft"} />
                         </div>
                       </div>
                     </CardHeader>
@@ -2097,8 +2073,8 @@ export function AdminDashboard() {
               ].map(stat => (
                 <Card key={stat.label} className="border-border bg-card">
                   <CardContent className="p-4">
-                    <p className={`text-2xl font-bold ${stat.color}`}>{stat.value}</p>
-                    <p className="text-xs text-muted-foreground">{stat.label}</p>
+                    <p className={`font-mono text-2xl font-bold tabular-nums ${stat.color}`}>{stat.value}</p>
+                    <p className="text-xs uppercase tracking-wide text-muted-foreground">{stat.label}</p>
                   </CardContent>
                 </Card>
               ))}
@@ -2174,22 +2150,12 @@ export function AdminDashboard() {
                               {order.plan.replace(/-/g, " ")}
                             </span>
                           </TableCell>
-                          <TableCell className="font-semibold text-yellow-400">{order.amount} USDT</TableCell>
+                          <TableCell className="font-mono font-semibold tabular-nums text-yellow-400">{order.amount} USDT</TableCell>
                           <TableCell className="text-xs text-muted-foreground">{order.chain || "—"}</TableCell>
                           <TableCell>
-                            <Badge
-                              className={
-                                order.status === "paid"
-                                  ? "bg-green-500/20 text-green-400 border-green-500/30"
-                                  : order.status === "pending"
-                                  ? "bg-yellow-500/20 text-yellow-400 border-yellow-500/30"
-                                  : "bg-red-500/20 text-red-400 border-red-500/30"
-                              }
-                            >
-                              {order.status}
-                            </Badge>
+                            <StatusPill status={order.status} />
                             {order.paidAt && (
-                              <div className="mt-1 text-xs text-muted-foreground">{new Date(order.paidAt).toLocaleDateString()}</div>
+                              <div className="mt-1 font-mono text-xs text-muted-foreground">{new Date(order.paidAt).toLocaleDateString()}</div>
                             )}
                           </TableCell>
                           <TableCell>
@@ -2439,14 +2405,14 @@ export function AdminDashboard() {
                           </div>
                         </TableCell>
                         <TableCell>
-                          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30">
+                          <Badge variant="outline" className="bg-primary/10 text-primary border-primary/30 font-mono tabular-nums">
                             {coupon.discount_type === "percent" ? `${coupon.discount_value}%` : `$${coupon.discount_value}`}
                           </Badge>
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
+                        <TableCell className="font-mono text-sm tabular-nums text-muted-foreground">
                           {coupon.used_count}{coupon.max_uses !== null ? ` / ${coupon.max_uses}` : " / ∞"}
                         </TableCell>
-                        <TableCell className="text-sm text-muted-foreground">
+                        <TableCell className="font-mono text-sm tabular-nums text-muted-foreground">
                           {coupon.min_order_cents > 0 ? `$${(coupon.min_order_cents / 100).toFixed(0)}` : "—"}
                         </TableCell>
                         <TableCell>
@@ -2466,12 +2432,7 @@ export function AdminDashboard() {
                             : "Never"}
                         </TableCell>
                         <TableCell>
-                          <Badge className={coupon.is_active
-                            ? "bg-emerald-500/20 text-emerald-400 border-emerald-500/30"
-                            : "bg-zinc-500/20 text-zinc-400 border-zinc-500/30"
-                          }>
-                            {coupon.is_active ? "Active" : "Inactive"}
-                          </Badge>
+                          <StatusPill status={coupon.is_active ? "active" : "inactive"} />
                         </TableCell>
                         <TableCell>
                           <div className="flex items-center justify-end gap-1">

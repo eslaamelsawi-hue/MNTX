@@ -159,7 +159,7 @@ export function AdminCourseAccess() {
                   <div className="min-w-0">
                     <p className="truncate font-medium text-foreground">{g.email}</p>
                     <p className="text-xs text-muted-foreground">
-                      {new Date(g.granted_at).toLocaleDateString()}
+                      <span className="font-mono">{new Date(g.granted_at).toLocaleDateString()}</span>
                       {g.note ? ` · ${g.note}` : ""}
                     </p>
                   </div>

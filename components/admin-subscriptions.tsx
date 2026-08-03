@@ -5,12 +5,12 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { Plus, Trash2, RefreshCw, Edit } from "lucide-react"
+import { StatusPill } from "@/components/admin-status-pill"
 
 type Sub = {
   id: string; client_email: string; client_name: string; plan: string
@@ -185,10 +185,10 @@ export function AdminSubscriptions() {
                 <TableRow key={sub.id}>
                   <TableCell><div className="font-medium">{sub.client_name || "-"}</div><div className="text-xs text-muted-foreground">{sub.client_email}</div></TableCell>
                   <TableCell className="capitalize">{sub.plan.replace(/-/g, " ")}</TableCell>
-                  <TableCell className="font-bold">{sub.total_hours}</TableCell>
-                  <TableCell className="text-orange-400 font-bold">{sub.used_hours}</TableCell>
-                  <TableCell className={`font-bold ${sub.remaining_hours <= 1 ? "text-red-400" : "text-emerald-400"}`}>{sub.remaining_hours}</TableCell>
-                  <TableCell><Badge className={sub.status === "active" ? "bg-emerald-500/20 text-emerald-400" : sub.status === "expired" ? "bg-red-500/20 text-red-400" : "bg-gray-500/20 text-gray-400"}>{sub.status}</Badge></TableCell>
+                  <TableCell className="font-mono font-bold tabular-nums">{sub.total_hours}</TableCell>
+                  <TableCell className="font-mono font-bold tabular-nums text-orange-400">{sub.used_hours}</TableCell>
+                  <TableCell className={`font-mono font-bold tabular-nums ${sub.remaining_hours <= 1 ? "text-red-400" : "text-emerald-400"}`}>{sub.remaining_hours}</TableCell>
+                  <TableCell><StatusPill status={sub.status} /></TableCell>
                   <TableCell className="text-sm">{sub.expires_at ? new Date(sub.expires_at).toLocaleDateString() : "-"}</TableCell>
                   <TableCell>
                     <div className="flex items-center gap-1">

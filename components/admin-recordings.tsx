@@ -215,7 +215,7 @@ export function AdminRecordings() {
                     <p className="truncate font-medium text-foreground">{r.title}</p>
                     <div className="mt-0.5 flex flex-wrap items-center gap-x-3 gap-y-0.5 text-xs text-muted-foreground">
                       <span>{r.email}</span>
-                      <span>{new Date(r.created_at).toLocaleDateString()}</span>
+                      <span className="font-mono">{new Date(r.created_at).toLocaleDateString()}</span>
                       <span className="inline-flex items-center gap-1 text-muted-foreground">
                         <FileVideo className="h-3 w-3" /> {r.video}
                       </span>
