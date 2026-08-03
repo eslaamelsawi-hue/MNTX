@@ -44,6 +44,29 @@
     --sidebar-border: 0 0% 15%;
     --sidebar-ring: 43 100% 50%;
   }
+
+  /* Scoped re-theme for the admin dashboard only (does not affect the
+   * public site): a warmer near-black ground and a more muted, premium
+   * gold accent, matching the admin redesign mockup. */
+  .admin-shell {
+    --background: 30 12% 4%;
+    --foreground: 40 20% 93%;
+    --card: 25 10% 7%;
+    --card-foreground: 40 20% 93%;
+    --popover: 25 10% 7%;
+    --popover-foreground: 40 20% 93%;
+    --primary: 38 72% 56%;
+    --primary-foreground: 30 12% 4%;
+    --secondary: 25 10% 11%;
+    --secondary-foreground: 40 20% 93%;
+    --muted: 25 10% 11%;
+    --muted-foreground: 35 10% 57%;
+    --accent: 38 72% 56%;
+    --accent-foreground: 30 12% 4%;
+    --border: 32 14% 14%;
+    --input: 32 14% 14%;
+    --ring: 38 72% 56%;
+  }
 }
 
 @layer base {
