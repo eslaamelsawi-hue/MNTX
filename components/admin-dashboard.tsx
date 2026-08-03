@@ -10,6 +10,7 @@ import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { AdminSubscriptions } from "@/components/admin-subscriptions"
 import { AdminInvoices } from "@/components/admin-invoices"
@@ -60,6 +61,7 @@ import {
   LayoutDashboard,
   GraduationCap,
   Newspaper,
+  Menu,
 } from "lucide-react"
 
 type Slot = {
@@ -222,6 +224,7 @@ export function AdminDashboard() {
   const [uiVersion, setUiVersion] = useState<"new" | "legacy">("new")
   const [activeTab, setActiveTab] = useState("overview")
   const [uiVersionSaving, setUiVersionSaving] = useState(false)
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
 
   // Mentor state
   const [isMentor, setIsMentor] = useState(false)
@@ -261,6 +264,11 @@ export function AdminDashboard() {
     if (isMentor) return
     setActiveTab((prev) => (uiVersion === "legacy" && prev === "overview" ? "bookings" : prev))
   }, [uiVersion, isMentor])
+
+  // Close the mobile nav drawer whenever a tab is picked.
+  useEffect(() => {
+    setMobileNavOpen(false)
+  }, [activeTab])
 
   useEffect(() => {
     if (isMentor && mentorId) {
@@ -994,6 +1002,17 @@ export function AdminDashboard() {
       <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
         <div className="mx-auto flex max-w-7xl items-center justify-between px-4 py-4">
           <div className="flex items-center gap-2">
+            {uiVersion === "new" && !isMentor && (
+              <Button
+                variant="ghost"
+                size="sm"
+                className="-ml-2 mr-1 px-2 lg:hidden"
+                onClick={() => setMobileNavOpen(true)}
+                aria-label="Open navigation"
+              >
+                <Menu className="h-5 w-5" />
+              </Button>
+            )}
             <TrendingUp className="h-5 w-5 text-primary" />
             <span className="text-lg font-bold text-foreground">
               {isMentor ? `Mentor Dashboard - ${mentorName}` : "Mentix Admin"}
@@ -1030,6 +1049,25 @@ export function AdminDashboard() {
               ))}
             </TabsList>
           </aside>
+        )}
+        {uiVersion === "new" && !isMentor && (
+          <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+            <SheetContent side="left" className="w-72 overflow-y-auto p-4">
+              <SheetTitle className="sr-only">Navigation</SheetTitle>
+              <TabsList className="flex h-auto flex-col items-stretch justify-start gap-1 rounded-none bg-transparent p-0 text-inherit">
+                {NAV_SECTIONS.map((section, i) => (
+                  <div key={i}>
+                    {section.label && <p className={navGroupLabelClass}>{section.label}</p>}
+                    {section.items.map((item) => (
+                      <TabsTrigger key={item.value} value={item.value} className={navItemClass}>
+                        <item.icon className="h-3.5 w-3.5" /> {item.label}
+                      </TabsTrigger>
+                    ))}
+                  </div>
+                ))}
+              </TabsList>
+            </SheetContent>
+          </Sheet>
         )}
         <div className={uiVersion === "new" && !isMentor ? "min-w-0 flex-1" : ""}>
         {(uiVersion === "legacy" || isMentor) && (
