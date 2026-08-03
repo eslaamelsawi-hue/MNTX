@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   Crown,
@@ -18,6 +19,7 @@ import {
   ChevronUp,
   Mail,
   Save,
+  CalendarPlus,
 } from "lucide-react"
 
 type Sub = {
@@ -27,6 +29,8 @@ type Sub = {
 }
 
 type BookingSlot = { date: string; start_time: string; end_time: string; duration: number }
+
+type AvailSlot = { id: string; date: string; start_time: string; end_time: string; duration: number; is_booked: boolean }
 
 type Booking = {
   id: string
@@ -77,6 +81,7 @@ function formatTime(time: string) {
 export function AdminMentorship() {
   const [subs, setSubs] = useState<Sub[]>([])
   const [bookings, setBookings] = useState<Booking[]>([])
+  const [slots, setSlots] = useState<AvailSlot[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState("")
   const [planFilter, setPlanFilter] = useState("all")
@@ -87,18 +92,25 @@ export function AdminMentorship() {
   const [notesDrafts, setNotesDrafts] = useState<Record<string, string>>({})
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [savingNotesFor, setSavingNotesFor] = useState<string | null>(null)
+  const [bookingFor, setBookingFor] = useState<MentorshipClient | null>(null)
+  const [selectedSlotId, setSelectedSlotId] = useState("")
+  const [bookingError, setBookingError] = useState("")
+  const [bookingLoading, setBookingLoading] = useState(false)
 
   const load = useCallback(async () => {
     setLoading(true)
     try {
-      const [subsRes, bookingsRes] = await Promise.all([
+      const [subsRes, bookingsRes, slotsRes] = await Promise.all([
         fetch("/api/admin/subscriptions"),
         fetch("/api/admin/bookings"),
+        fetch("/api/admin/slots"),
       ])
       const subsData = await subsRes.json()
       const bookingsData = await bookingsRes.json()
+      const slotsData = await slotsRes.json()
       if (subsData.subscriptions) setSubs(subsData.subscriptions)
       if (bookingsData.bookings) setBookings(bookingsData.bookings)
+      if (slotsData.slots) setSlots(slotsData.slots)
     } catch (e) {
       console.error("Failed to fetch mentorship data:", e)
     }
@@ -169,6 +181,11 @@ export function AdminMentorship() {
 
   const uniquePlans = useMemo(() => Array.from(new Set(subs.map((s) => s.plan))).sort(), [subs])
 
+  const availableSlots = useMemo(
+    () => slots.filter((s) => !s.is_booked).sort((a, b) => (a.date + a.start_time).localeCompare(b.date + b.start_time)),
+    [slots]
+  )
+
   const visibleClients = useMemo(() => {
     const q = search.trim().toLowerCase()
     let result = clients.filter((c) => {
@@ -234,6 +251,44 @@ export function AdminMentorship() {
       console.error("Failed to deactivate client:", e)
     }
     setActionLoading(null)
+  }
+
+  const BOOKING_ERROR_MESSAGES: Record<string, string> = {
+    noHoursRemaining: "This client has no remaining mentorship hours.",
+    weeklyLimitReached: "This client has reached their weekly session limit.",
+  }
+
+  const handleBookSession = async () => {
+    if (!bookingFor || !selectedSlotId) return
+    const slot = availableSlots.find((s) => s.id === selectedSlotId)
+    if (!slot) return
+    setBookingLoading(true)
+    setBookingError("")
+    try {
+      const res = await fetch("/api/bookings", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          slot_id: slot.id,
+          client_name: bookingFor.name,
+          client_email: bookingFor.email,
+          duration: slot.duration,
+        }),
+      })
+      const result = await res.json()
+      if (!res.ok) {
+        setBookingError(BOOKING_ERROR_MESSAGES[result.error] || result.error || "Failed to book session.")
+        setBookingLoading(false)
+        return
+      }
+      setBookingFor(null)
+      setSelectedSlotId("")
+      await load()
+    } catch (e) {
+      console.error("Failed to book session:", e)
+      setBookingError("Network error - please try again")
+    }
+    setBookingLoading(false)
   }
 
   const handleSaveNotes = async (client: MentorshipClient) => {
@@ -381,17 +436,27 @@ export function AdminMentorship() {
                           {client.latestExpiry ? new Date(client.latestExpiry).toLocaleDateString() : "-"}
                         </TableCell>
                         <TableCell className="text-right">
-                          {client.isActive && (
+                          <div className="flex items-center justify-end gap-1">
                             <Button
                               size="sm"
                               variant="outline"
-                              className="h-7 border-red-500/30 text-xs text-red-400 hover:bg-red-500/10"
-                              disabled={actionLoading === client.email}
-                              onClick={() => handleDeactivate(client)}
+                              className="h-7 text-xs"
+                              onClick={() => { setBookingFor(client); setSelectedSlotId(""); setBookingError("") }}
                             >
-                              <XCircle className="mr-1 h-3 w-3" /> Deactivate
+                              <CalendarPlus className="mr-1 h-3 w-3" /> Book
                             </Button>
-                          )}
+                            {client.isActive && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 border-red-500/30 text-xs text-red-400 hover:bg-red-500/10"
+                                disabled={actionLoading === client.email}
+                                onClick={() => handleDeactivate(client)}
+                              >
+                                <XCircle className="mr-1 h-3 w-3" /> Deactivate
+                              </Button>
+                            )}
+                          </div>
                         </TableCell>
                       </TableRow>
                       {isExpanded && (
@@ -463,6 +528,46 @@ export function AdminMentorship() {
           </div>
         </Card>
       )}
+
+      <Dialog
+        open={!!bookingFor}
+        onOpenChange={(open) => {
+          if (!open) { setBookingFor(null); setSelectedSlotId(""); setBookingError("") }
+        }}
+      >
+        <DialogContent className="bg-card border-border">
+          <DialogHeader>
+            <DialogTitle>Book a session for {bookingFor?.name}</DialogTitle>
+            <DialogDescription>{bookingFor?.email}</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            {availableSlots.length === 0 ? (
+              <p className="text-sm text-muted-foreground">
+                No available slots. Add one in the Availability tab first.
+              </p>
+            ) : (
+              <Select value={selectedSlotId} onValueChange={setSelectedSlotId}>
+                <SelectTrigger><SelectValue placeholder="Select an available slot" /></SelectTrigger>
+                <SelectContent>
+                  {availableSlots.map((s) => (
+                    <SelectItem key={s.id} value={s.id}>
+                      {formatDate(s.date)} at {formatTime(s.start_time)} ({s.duration} min)
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            )}
+            {bookingError && <p className="text-sm text-red-400">{bookingError}</p>}
+            <Button
+              className="w-full"
+              disabled={!selectedSlotId || bookingLoading}
+              onClick={handleBookSession}
+            >
+              {bookingLoading ? "Booking..." : "Book Session"}
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
