@@ -4,21 +4,13 @@ import { useEffect, useState } from "react"
 import { useTranslations } from "next-intl"
 import { Receipt, CheckCircle2, Clock, AlertCircle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { StatusPill } from "@/components/status-pill"
 
 type Installment = { id: string; amount: number; due_date: string; status: string; paid_at: string | null }
 type Invoice = {
   id: string; title: string; total_amount: number; currency: string
   status: string; notes: string | null; created_at: string
   invoice_installments: Installment[]
-}
-
-const statusColor: Record<string, string> = {
-  pending: "bg-gray-500/20 text-gray-400",
-  partially_paid: "bg-amber-500/20 text-amber-400",
-  paid: "bg-emerald-500/20 text-emerald-400",
-  overdue: "bg-red-500/20 text-red-400",
-  cancelled: "bg-gray-500/20 text-gray-500",
 }
 
 const installmentIcon: Record<string, React.ReactNode> = {
@@ -73,9 +65,9 @@ export function DashboardInvoices({ email }: { email: string }) {
               <CardHeader className="pb-2">
                 <div className="flex items-center justify-between gap-2">
                   <CardTitle className="text-base">{inv.title}</CardTitle>
-                  <Badge className={statusColor[inv.status] || "bg-gray-500/20 text-gray-400"}>{statusLabel(inv.status)}</Badge>
+                  <StatusPill status={inv.status} label={statusLabel(inv.status)} />
                 </div>
-                <p className="text-2xl font-bold text-foreground">{inv.currency} {inv.total_amount}</p>
+                <p className="font-mono text-2xl font-bold tabular-nums text-foreground">{inv.currency} {inv.total_amount}</p>
               </CardHeader>
               <CardContent className="space-y-2">
                 <p className="text-xs font-medium text-muted-foreground">{t("installments")}</p>
@@ -84,9 +76,9 @@ export function DashboardInvoices({ email }: { email: string }) {
                     <div key={i.id} className="flex items-center justify-between rounded-lg border border-border/60 px-3 py-2 text-sm">
                       <span className="flex items-center gap-2">
                         {installmentIcon[i.status] || installmentIcon.pending}
-                        <span className="text-muted-foreground">{t("due")}: {new Date(i.due_date).toLocaleDateString()}</span>
+                        <span className="font-mono text-muted-foreground">{t("due")}: {new Date(i.due_date).toLocaleDateString()}</span>
                       </span>
-                      <span className="font-medium">{inv.currency} {i.amount}</span>
+                      <span className="font-mono font-medium tabular-nums">{inv.currency} {i.amount}</span>
                     </div>
                   ))}
                 </div>

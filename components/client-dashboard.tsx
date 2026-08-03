@@ -26,6 +26,7 @@ import { DashboardInvoices } from "@/components/dashboard-invoices"
 import { DashboardProgress } from "@/components/dashboard-progress"
 import { NotificationBell } from "@/components/notification-bell"
 import BookingCalendar from "@/components/booking-calendar"
+import { StatusPill } from "@/components/status-pill"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -250,27 +251,18 @@ const t: Record<"en" | "ar", Record<string, string>> = {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function StatusBadge({ status, l }: { status: string; l: Record<string, string> }) {
-  if (status === "active")
-    return <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">{l.active}</Badge>
-  if (status === "expired")
-    return <Badge className="bg-red-500/20 text-red-400 border-red-500/30">{l.expired}</Badge>
-  return <Badge className="bg-gray-500/20 text-gray-400 border-gray-500/30">{l.cancelled}</Badge>
+  const label = status === "active" ? l.active : status === "expired" ? l.expired : l.cancelled
+  return <StatusPill status={status} label={label} />
 }
 
 function SessionStatusBadge({ status, l }: { status: string; l: Record<string, string> }) {
-  const map: Record<string, string> = {
-    confirmed: "bg-blue-500/20 text-blue-400 border-blue-500/30",
-    completed: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-    cancelled: "bg-red-500/20 text-red-400 border-red-500/30",
-    rescheduled: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-  }
   const labels: Record<string, string> = {
     confirmed: l.confirmed,
     completed: l.completed,
     cancelled: l.sessionCancelled,
     rescheduled: l.rescheduled,
   }
-  return <Badge className={map[status] ?? "bg-gray-500/20 text-gray-400 border-gray-500/30"}>{labels[status] ?? status}</Badge>
+  return <StatusPill status={status} label={labels[status] ?? status} />
 }
 
 // Shown in place of coaching-only tabs when the member has no active subscription.
@@ -648,21 +640,21 @@ export function ClientDashboard() {
                 <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary"><Clock className="h-3.5 w-3.5" /></span>
                 {l.remainingHours}
               </div>
-              <p className={`mt-3 text-3xl font-bold tracking-tight ${(activeSub?.remaining_hours ?? 0) <= 1 ? "text-red-400" : "text-foreground"}`}>{activeSub?.remaining_hours ?? 0}</p>
+              <p className={`mt-3 font-mono text-3xl font-bold tabular-nums tracking-tight ${(activeSub?.remaining_hours ?? 0) <= 1 ? "text-red-400" : "text-foreground"}`}>{activeSub?.remaining_hours ?? 0}</p>
             </div>
             <div className="rounded-2xl border border-border bg-card p-4 transition-colors hover:border-primary/40">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary"><Activity className="h-3.5 w-3.5" /></span>
                 {l.usedHours}
               </div>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-foreground">{activeSub?.used_hours ?? 0}</p>
+              <p className="mt-3 font-mono text-3xl font-bold tabular-nums tracking-tight text-foreground">{activeSub?.used_hours ?? 0}</p>
             </div>
             <div className="rounded-2xl border border-border bg-card p-4 transition-colors hover:border-primary/40">
               <div className="flex items-center gap-2 text-xs text-muted-foreground">
                 <span className="flex h-7 w-7 items-center justify-center rounded-lg bg-primary/10 text-primary"><Calendar className="h-3.5 w-3.5" /></span>
                 {l.totalSessions}
               </div>
-              <p className="mt-3 text-3xl font-bold tracking-tight text-foreground">{bookings.length}</p>
+              <p className="mt-3 font-mono text-3xl font-bold tabular-nums tracking-tight text-foreground">{bookings.length}</p>
             </div>
           </div>
           <div className="grid gap-4 sm:grid-cols-2">
@@ -1073,8 +1065,8 @@ export function ClientDashboard() {
           {!hasCoaching ? <LockedPanel l={l} locale={locale} /> : (<>
           <div className="mb-6 flex items-center justify-between">
             <div>
-              <h3 className="text-2xl font-bold text-white mb-1">{l.weeklyZoomTitle}</h3>
-              <p className="text-slate-400">{l.weeklyZoomDesc}</p>
+              <h3 className="mb-1 text-2xl font-bold text-foreground">{l.weeklyZoomTitle}</h3>
+              <p className="text-muted-foreground">{l.weeklyZoomDesc}</p>
             </div>
             <Button
               variant="outline"
@@ -1091,15 +1083,15 @@ export function ClientDashboard() {
           </div>
 
           {groupSessions.length === 0 ? (
-            <Card className="border-slate-700/50 bg-gradient-to-br from-slate-900/50 to-slate-800/50">
+            <Card className="border-border bg-card">
               <CardContent className="py-16 text-center">
                 <div className="flex justify-center mb-4">
-                  <div className="p-4 rounded-2xl bg-blue-500/10">
-                    <Video className="w-8 h-8 text-blue-400" />
+                  <div className="p-4 rounded-2xl bg-primary/10">
+                    <Video className="w-8 h-8 text-primary" />
                   </div>
                 </div>
-                <p className="text-slate-300 text-lg font-medium mb-2">No upcoming sessions</p>
-                <p className="text-slate-500">Check back soon for scheduled group sessions!</p>
+                <p className="mb-2 text-lg font-medium text-foreground">No upcoming sessions</p>
+                <p className="text-muted-foreground">Check back soon for scheduled group sessions!</p>
               </CardContent>
             </Card>
           ) : (
@@ -1110,45 +1102,45 @@ export function ClientDashboard() {
                 const daysAway = Math.ceil((sessionDate.getTime() - new Date().getTime()) / (1000 * 60 * 60 * 24))
 
                 return (
-                  <Card key={session.id} className="border-slate-700/50 bg-gradient-to-br from-slate-900/80 to-slate-800/40 hover:border-blue-500/50 transition overflow-hidden group">
+                  <Card key={session.id} className="group overflow-hidden border-border bg-card transition hover:border-primary/50">
                     <CardContent className="p-6">
                       <div className="flex items-start justify-between gap-6">
                         <div className="flex-1">
                           <div className="flex items-start gap-4 mb-3">
-                            <div className="p-3 rounded-lg bg-blue-500/20 mt-0.5 shrink-0">
-                              <Video className="w-5 h-5 text-blue-400" />
+                            <div className="p-3 rounded-lg bg-primary/15 mt-0.5 shrink-0">
+                              <Video className="w-5 h-5 text-primary" />
                             </div>
                             <div className="flex-1">
-                              <h4 className="text-lg font-bold text-white mb-1 group-hover:text-blue-400 transition">{session.title}</h4>
-                              {session.description && <p className="text-sm text-slate-400 mb-3">{session.description}</p>}
+                              <h4 className="mb-1 text-lg font-bold text-foreground transition group-hover:text-primary">{session.title}</h4>
+                              {session.description && <p className="mb-3 text-sm text-muted-foreground">{session.description}</p>}
                             </div>
                           </div>
 
                           <div className="flex flex-wrap gap-4 text-sm">
-                            <div className="flex items-center gap-2 text-slate-300">
-                              <Calendar className="w-4 h-4 text-blue-400" />
-                              <span className="font-medium">{sessionDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
+                            <div className="flex items-center gap-2 text-foreground/80">
+                              <Calendar className="w-4 h-4 text-primary" />
+                              <span className="font-mono font-medium">{sessionDate.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}</span>
                             </div>
-                            <div className="flex items-center gap-2 text-slate-300">
-                              <Clock className="w-4 h-4 text-blue-400" />
-                              <span className="font-medium">{session.start_time.slice(0, 5)} - {session.end_time.slice(0, 5)}</span>
+                            <div className="flex items-center gap-2 text-foreground/80">
+                              <Clock className="w-4 h-4 text-primary" />
+                              <span className="font-mono font-medium">{session.start_time.slice(0, 5)} - {session.end_time.slice(0, 5)}</span>
                             </div>
                             {session.max_participants && (
-                              <div className="flex items-center gap-2 text-slate-300">
-                                <Users className="w-4 h-4 text-blue-400" />
-                                <span className="font-medium">Max {session.max_participants}</span>
+                              <div className="flex items-center gap-2 text-foreground/80">
+                                <Users className="w-4 h-4 text-primary" />
+                                <span className="font-mono font-medium">Max {session.max_participants}</span>
                               </div>
                             )}
-                            {daysAway === 0 && <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Today</Badge>}
-                            {daysAway === 1 && <Badge className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">Tomorrow</Badge>}
-                            {daysAway > 1 && <Badge className="bg-blue-500/20 text-blue-400 border-blue-500/30">{daysAway} days</Badge>}
+                            {daysAway === 0 && <StatusPill status="active" label="Today" />}
+                            {daysAway === 1 && <StatusPill status="active" label="Tomorrow" />}
+                            {daysAway > 1 && <StatusPill status="scheduled" label={`${daysAway} days`} />}
                           </div>
                         </div>
 
                         <div className="flex gap-2 shrink-0 flex-col sm:flex-row">
                           {session.zoom_join_url && isRegistered && (
                             <a href={session.zoom_join_url} target="_blank" rel="noopener noreferrer" className="block">
-                              <Button size="sm" className="gap-2 bg-emerald-600 hover:bg-emerald-700 w-full sm:w-auto">
+                              <Button size="sm" className="w-full gap-2 bg-emerald-600 hover:bg-emerald-700 sm:w-auto">
                                 <Video className="w-4 h-4" />
                                 Join Now
                               </Button>
@@ -1184,7 +1176,7 @@ export function ClientDashboard() {
                             }}
                             disabled={isRegistered}
                             variant={isRegistered ? "secondary" : "default"}
-                            className={isRegistered ? "bg-slate-700 text-slate-300 cursor-default" : "bg-blue-600 hover:bg-blue-700"}
+                            className={isRegistered ? "cursor-default" : ""}
                           >
                             {isRegistered ? "✓ Registered" : "Register"}
                           </Button>

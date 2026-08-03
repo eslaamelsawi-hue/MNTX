@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { Plus, Trash2, RefreshCw, Edit } from "lucide-react"
-import { StatusPill } from "@/components/admin-status-pill"
+import { StatusPill } from "@/components/status-pill"
 
 type Sub = {
   id: string; client_email: string; client_name: string; plan: string

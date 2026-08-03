@@ -10,7 +10,7 @@ import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, Di
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
 import { Plus, Trash2, RefreshCw, Edit, ChevronDown, ChevronRight, CheckCircle2, Wallet, CalendarClock } from "lucide-react"
-import { StatusPill } from "@/components/admin-status-pill"
+import { StatusPill } from "@/components/status-pill"
 
 type Installment = { id: string; invoice_id: string; amount: number; due_date: string; status: string; paid_at: string | null }
 type Invoice = {

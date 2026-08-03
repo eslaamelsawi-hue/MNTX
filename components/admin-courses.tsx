@@ -7,7 +7,7 @@ import {
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
-import { StatusPill } from "@/components/admin-status-pill"
+import { StatusPill } from "@/components/status-pill"
 
 type Lesson = { id: string; titleEn: string; titleAr: string; duration: string; video: string; freePreview: boolean }
 type Section = { id: string; titleEn: string; titleAr: string; lessons: Lesson[] }
