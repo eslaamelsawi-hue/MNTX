@@ -1,11 +1,12 @@
 "use client"
 
-import { useState, useMemo, useEffect } from "react"
+import { Fragment, useState, useMemo, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Sheet, SheetContent, SheetTitle } from "@/components/ui/sheet"
 import { Progress } from "@/components/ui/progress"
 import {
   Clock, Calendar, Mail, Loader2, CalendarPlus, Video,
@@ -13,7 +14,7 @@ import {
   XCircle, AlertCircle, Award, Star, MessageCircle,
   LayoutDashboard, BookOpen, Repeat, RefreshCw,
   GraduationCap, Settings, Lock, Crown, ChevronsUpDown,
-  Receipt, TrendingUp,
+  Receipt, TrendingUp, Menu,
 } from "lucide-react"
 import Link from "next/link"
 import { useLocale } from "next-intl"
@@ -300,6 +301,7 @@ export function ClientDashboard() {
   const [name, setName] = useState("")
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("academy")
+  const [mobileNavOpen, setMobileNavOpen] = useState(false)
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState("")
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
@@ -380,6 +382,10 @@ export function ClientDashboard() {
     })
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  useEffect(() => {
+    setMobileNavOpen(false)
+  }, [activeTab])
 
   const activeSub = useMemo(
     () => subscriptions.find((s) => s.status === "active") ?? subscriptions[0],
@@ -496,10 +502,38 @@ export function ClientDashboard() {
   const displayName = userName || email.split("@")[0] || "Member"
   const initials = displayName.trim().slice(0, 2).toUpperCase()
   const navItemCls =
-    "w-auto shrink-0 justify-start gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground data-[state=active]:bg-muted data-[state=active]:text-foreground data-[state=active]:shadow-sm lg:w-full"
+    "w-full shrink-0 justify-start gap-3 whitespace-nowrap rounded-lg px-3 py-2.5 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground data-[state=active]:bg-muted data-[state=active]:text-foreground data-[state=active]:shadow-sm"
   const hoursUsedPct = activeSub
     ? Math.min(100, (activeSub.used_hours / activeSub.total_hours) * 100)
     : 0
+
+  const NAV_ITEMS: { value: string; icon: typeof LayoutDashboard; label: string; dividerAfter?: boolean }[] = [
+    { value: "academy", icon: GraduationCap, label: isRtl ? "دوراتي" : "My Courses", dividerAfter: true },
+    { value: "overview", icon: LayoutDashboard, label: l.tabOverview },
+    { value: "mentorship", icon: BookOpen, label: l.tabMentorship },
+    { value: "progress", icon: TrendingUp, label: l.tabProgress },
+    { value: "sessions", icon: Calendar, label: l.tabSessions },
+    { value: "booking", icon: CalendarPlus, label: l.tabBooking, dividerAfter: true },
+    { value: "recordings", icon: Video, label: isRtl ? "التسجيلات" : "Recordings" },
+    { value: "feed", icon: Rss, label: l.tabFeed },
+    { value: "community", icon: Users, label: l.tabCommunity },
+    { value: "weekly-zoom", icon: Repeat, label: l.tabWeeklyZoom, dividerAfter: true },
+    { value: "payments", icon: Receipt, label: l.tabPayments },
+    { value: "settings", icon: Settings, label: isRtl ? "الإعدادات" : "Settings" },
+  ]
+  const renderNavItems = () => (
+    <>
+      {NAV_ITEMS.map((item) => (
+        <Fragment key={item.value}>
+          <TabsTrigger value={item.value} className={navItemCls}>
+            <item.icon className="h-[18px] w-[18px]" />{item.label}
+          </TabsTrigger>
+          {item.dividerAfter && <div className="my-1.5 h-px w-full bg-border" />}
+        </Fragment>
+      ))}
+    </>
+  )
+  const currentNavItem = NAV_ITEMS.find((item) => item.value === activeTab)
 
   return (
     <Tabs
@@ -509,8 +543,8 @@ export function ClientDashboard() {
       dir={isRtl ? "rtl" : "ltr"}
     >
       <div className="flex flex-col lg:flex-row">
-        {/* Sidebar */}
-        <aside className="shrink-0 border-b border-border bg-card/40 p-3 lg:flex lg:min-h-screen lg:w-64 lg:flex-col lg:border-b-0 lg:border-e lg:border-border lg:p-4">
+        {/* Sidebar (desktop) */}
+        <aside className="hidden shrink-0 lg:flex lg:min-h-screen lg:w-64 lg:flex-col lg:border-e lg:border-border lg:p-4">
           {/* Account chip */}
           <div className="mb-2 flex items-center gap-3 rounded-xl px-1.5 py-1.5">
             <div className="relative shrink-0">
@@ -531,56 +565,48 @@ export function ClientDashboard() {
             <ChevronsUpDown className="h-4 w-4 shrink-0 text-muted-foreground" />
           </div>
 
-          <div className="mb-2 hidden h-px w-full bg-border lg:block" />
+          <div className="mb-2 h-px w-full bg-border" />
 
-          <TabsList className="flex h-auto w-full gap-0.5 overflow-x-auto bg-transparent p-0 lg:flex-col">
-            <TabsTrigger value="academy" className={navItemCls}>
-              <GraduationCap className="h-[18px] w-[18px]" />{isRtl ? "دوراتي" : "My Courses"}
-            </TabsTrigger>
-
-            <div className="my-1.5 hidden h-px w-full bg-border lg:block" />
-
-            <TabsTrigger value="overview" className={navItemCls}>
-              <LayoutDashboard className="h-[18px] w-[18px]" />{l.tabOverview}
-            </TabsTrigger>
-            <TabsTrigger value="mentorship" className={navItemCls}>
-              <BookOpen className="h-[18px] w-[18px]" />{l.tabMentorship}
-            </TabsTrigger>
-            <TabsTrigger value="progress" className={navItemCls}>
-              <TrendingUp className="h-[18px] w-[18px]" />{l.tabProgress}
-            </TabsTrigger>
-            <TabsTrigger value="sessions" className={navItemCls}>
-              <Calendar className="h-[18px] w-[18px]" />{l.tabSessions}
-            </TabsTrigger>
-            <TabsTrigger value="booking" className={navItemCls}>
-              <CalendarPlus className="h-[18px] w-[18px]" />{l.tabBooking}
-            </TabsTrigger>
-
-            <div className="my-1.5 hidden h-px w-full bg-border lg:block" />
-
-            <TabsTrigger value="recordings" className={navItemCls}>
-              <Video className="h-[18px] w-[18px]" />{isRtl ? "التسجيلات" : "Recordings"}
-            </TabsTrigger>
-            <TabsTrigger value="feed" className={navItemCls}>
-              <Rss className="h-[18px] w-[18px]" />{l.tabFeed}
-            </TabsTrigger>
-            <TabsTrigger value="community" className={navItemCls}>
-              <Users className="h-[18px] w-[18px]" />{l.tabCommunity}
-            </TabsTrigger>
-            <TabsTrigger value="weekly-zoom" className={navItemCls}>
-              <Repeat className="h-[18px] w-[18px]" />{l.tabWeeklyZoom}
-            </TabsTrigger>
-
-            <div className="my-1.5 hidden h-px w-full bg-border lg:block" />
-
-            <TabsTrigger value="payments" className={navItemCls}>
-              <Receipt className="h-[18px] w-[18px]" />{l.tabPayments}
-            </TabsTrigger>
-            <TabsTrigger value="settings" className={navItemCls}>
-              <Settings className="h-[18px] w-[18px]" />{isRtl ? "الإعدادات" : "Settings"}
-            </TabsTrigger>
+          <TabsList className="flex h-auto w-full flex-col gap-0.5 bg-transparent p-0">
+            {renderNavItems()}
           </TabsList>
         </aside>
+
+        {/* Mobile top bar: account chip + menu trigger */}
+        <div className="flex items-center gap-3 border-b border-border bg-card/40 p-3 lg:hidden">
+          <div className="relative shrink-0">
+            {avatarUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={avatarUrl} alt="" className="h-9 w-9 rounded-lg object-cover" />
+            ) : (
+              <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-primary to-amber-600 text-sm font-bold text-primary-foreground">
+                {initials}
+              </div>
+            )}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="truncate text-sm font-semibold text-foreground">{displayName}</p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0 gap-2"
+            onClick={() => setMobileNavOpen(true)}
+            aria-label="Open navigation"
+          >
+            {currentNavItem && <currentNavItem.icon className="h-4 w-4" />}
+            <Menu className="h-4 w-4" />
+          </Button>
+        </div>
+
+        <Sheet open={mobileNavOpen} onOpenChange={setMobileNavOpen}>
+          <SheetContent side={isRtl ? "right" : "left"} className="w-72 overflow-y-auto p-4">
+            <SheetTitle className="sr-only">Navigation</SheetTitle>
+            <TabsList className="flex h-auto w-full flex-col gap-0.5 bg-transparent p-0">
+              {renderNavItems()}
+            </TabsList>
+          </SheetContent>
+        </Sheet>
 
         {/* Main content */}
         <main className="min-w-0 flex-1 p-4 lg:p-8">
