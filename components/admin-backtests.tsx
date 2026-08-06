@@ -51,9 +51,9 @@ const putWithProgress = (
     }
     xhr.onload = () => {
       if (xhr.status >= 200 && xhr.status < 300) resolve()
-      else reject(new Error(`Upload failed (${xhr.status})`))
+      else reject(new Error(`Upload failed (${xhr.status}): ${xhr.responseText || xhr.statusText || "Unknown error"}`))
     }
-    xhr.onerror = () => reject(new Error("Network error"))
+    xhr.onerror = () => reject(new Error("Network error during upload — check your connection and try again."))
     xhr.send(file)
   })
 
@@ -299,7 +299,7 @@ export function AdminBacktests() {
                           setForm((f) => ({ ...f, video: ticket.filename }))
                         } catch (err) {
                           console.error("Video upload error:", err)
-                          setVideoError("Upload failed. Please try again.")
+                          setVideoError(err instanceof Error ? err.message : "Upload failed. Please try again.")
                         } finally {
                           setUploadingVideo(false)
                         }
