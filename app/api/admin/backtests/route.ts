@@ -30,7 +30,7 @@ export async function POST(req: NextRequest) {
   const {
     title, description, symbol, timeframe, period_start, period_end,
     win_rate, total_trades, profit_factor, net_profit_pct, max_drawdown_pct,
-    cover_image_url, trades, published,
+    cover_image_url, video, trades, published,
   } = body
   if (!title || !symbol || !timeframe) {
     return NextResponse.json({ error: "title, symbol, and timeframe are required" }, { status: 400 })
@@ -49,6 +49,7 @@ export async function POST(req: NextRequest) {
     net_profit_pct: net_profit_pct ?? null,
     max_drawdown_pct: max_drawdown_pct ?? null,
     cover_image_url: cover_image_url || null,
+    video: video || null,
     trades: Array.isArray(trades) ? trades : [],
     published: published ?? false,
   }).select().single()
@@ -64,7 +65,7 @@ export async function PATCH(req: NextRequest) {
   const allowed = [
     "title", "description", "symbol", "timeframe", "period_start", "period_end",
     "win_rate", "total_trades", "profit_factor", "net_profit_pct", "max_drawdown_pct",
-    "cover_image_url", "trades", "published",
+    "cover_image_url", "video", "trades", "published",
   ]
   const filtered: Record<string, unknown> = {}
   for (const key of allowed) { if (key in updates) filtered[key] = updates[key] }

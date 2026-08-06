@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/chart"
 import { AreaChart, Area, XAxis, CartesianGrid } from "recharts"
 import { LineChart, ArrowLeft, Eye, TrendingUp, TrendingDown, Percent, Activity } from "lucide-react"
+import { CoursePlayer } from "@/components/course/course-player"
 
 type Trade = { date: string; direction: "buy" | "sell"; entry: string; exit: string; pnl: string; result: "win" | "loss" | "be" }
 type BacktestSummary = {
@@ -22,7 +23,7 @@ type BacktestSummary = {
   net_profit_pct: number | null; max_drawdown_pct: number | null
   cover_image_url: string | null; view_count: number; created_at: string
 }
-type Backtest = BacktestSummary & { trades: Trade[] }
+type Backtest = BacktestSummary & { trades: Trade[]; video: string | null }
 
 const equityChartConfig = {
   equity: { label: "Cumulative return %", color: "hsl(var(--primary))" },
@@ -100,6 +101,12 @@ function BacktestDetail({ id, email, onBack, l }: { id: string; email: string; o
           <Eye className="h-3 w-3" /> {bt.view_count} {l.views || "views"}
         </p>
       </div>
+
+      {bt.video && (
+        <div className="overflow-hidden rounded-xl border border-border">
+          <CoursePlayer lesson={{ id: bt.id }} email={email} src={`/api/backtests/${bt.id}/video`} />
+        </div>
+      )}
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile icon={<Percent className="h-3.5 w-3.5" />} label={l.winRate || "Win rate"} value={bt.win_rate != null ? `${bt.win_rate}%` : "-"} tone={bt.win_rate != null && bt.win_rate >= 50 ? "good" : undefined} />

@@ -10,7 +10,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StatusPill } from "@/components/status-pill"
-import { Plus, Trash2, RefreshCw, Edit, Eye, EyeOff, Upload, LineChart } from "lucide-react"
+import { Plus, Trash2, RefreshCw, Edit, Eye, EyeOff, Upload, LineChart, FileVideo, X } from "lucide-react"
 
 type Trade = { date: string; direction: "buy" | "sell"; entry: string; exit: string; pnl: string; result: "win" | "loss" | "be" }
 type Backtest = {
@@ -18,7 +18,7 @@ type Backtest = {
   period_start: string | null; period_end: string | null
   win_rate: number | null; total_trades: number; profit_factor: number | null
   net_profit_pct: number | null; max_drawdown_pct: number | null
-  cover_image_url: string | null; trades: Trade[]; published: boolean
+  cover_image_url: string | null; video: string | null; trades: Trade[]; published: boolean
   view_count: number; created_at: string
 }
 
@@ -26,9 +26,36 @@ const defaultForm = {
   title: "", description: "", symbol: "", timeframe: "H1",
   period_start: "", period_end: "",
   win_rate: "", profit_factor: "", net_profit_pct: "", max_drawdown_pct: "",
-  cover_image_url: "", published: false,
+  cover_image_url: "", video: "", published: false,
 }
 const emptyTrade: Trade = { date: new Date().toISOString().slice(0, 10), direction: "buy", entry: "", exit: "", pnl: "", result: "win" }
+
+/**
+ * PUT the file bytes straight to Supabase Storage using a signed URL — this
+ * never touches our own server, which matters because Vercel caps serverless
+ * function request bodies at ~4.5MB regardless of what the route does with
+ * them. fetch() doesn't expose upload progress, so XHR.
+ */
+const putWithProgress = (
+  url: string,
+  file: File,
+  contentType: string,
+  onProgress: (pct: number) => void
+): Promise<void> =>
+  new Promise((resolve, reject) => {
+    const xhr = new XMLHttpRequest()
+    xhr.open("PUT", url)
+    xhr.setRequestHeader("Content-Type", contentType)
+    xhr.upload.onprogress = (e) => {
+      if (e.lengthComputable) onProgress(Math.round((e.loaded / e.total) * 100))
+    }
+    xhr.onload = () => {
+      if (xhr.status >= 200 && xhr.status < 300) resolve()
+      else reject(new Error(`Upload failed (${xhr.status})`))
+    }
+    xhr.onerror = () => reject(new Error("Network error"))
+    xhr.send(file)
+  })
 
 export function AdminBacktests() {
   const [backtests, setBacktests] = useState<Backtest[]>([])
@@ -38,6 +65,9 @@ export function AdminBacktests() {
   const [form, setForm] = useState(defaultForm)
   const [trades, setTrades] = useState<Trade[]>([])
   const [uploadingImage, setUploadingImage] = useState(false)
+  const [uploadingVideo, setUploadingVideo] = useState(false)
+  const [videoProgress, setVideoProgress] = useState(0)
+  const [videoError, setVideoError] = useState("")
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [saveError, setSaveError] = useState("")
 
@@ -108,7 +138,7 @@ export function AdminBacktests() {
       period_start: bt.period_start || "", period_end: bt.period_end || "",
       win_rate: bt.win_rate?.toString() || "", profit_factor: bt.profit_factor?.toString() || "",
       net_profit_pct: bt.net_profit_pct?.toString() || "", max_drawdown_pct: bt.max_drawdown_pct?.toString() || "",
-      cover_image_url: bt.cover_image_url || "", published: bt.published,
+      cover_image_url: bt.cover_image_url || "", video: bt.video || "", published: bt.published,
     })
     setTrades(bt.trades || [])
     setSaveError("")
@@ -234,6 +264,57 @@ export function AdminBacktests() {
                     // eslint-disable-next-line @next/next/no-img-element
                     <img src={form.cover_image_url} alt="" className="mt-2 h-24 w-full rounded object-cover" />
                   )}
+                </div>
+
+                <div>
+                  <Label className="mb-1.5 block">Walkthrough Video (optional)</Label>
+                  {form.video ? (
+                    <div className="flex items-center gap-2 rounded-lg border border-border p-2 text-sm">
+                      <FileVideo className="h-4 w-4 shrink-0 text-primary" />
+                      <span className="flex-1 truncate font-mono text-xs text-muted-foreground">{form.video}</span>
+                      <Button type="button" size="icon" variant="ghost" className="h-6 w-6 shrink-0" onClick={() => setForm((f) => ({ ...f, video: "" }))}>
+                        <X className="h-3.5 w-3.5" />
+                      </Button>
+                    </div>
+                  ) : (
+                    <Input
+                      type="file"
+                      accept="video/mp4,video/quicktime,video/webm,video/x-m4v,.mp4,.mov,.webm,.m4v"
+                      disabled={uploadingVideo}
+                      onChange={async (e) => {
+                        const file = e.target.files?.[0]
+                        if (!file) return
+                        setVideoError("")
+                        setUploadingVideo(true)
+                        setVideoProgress(0)
+                        try {
+                          const ticketRes = await fetch("/api/admin/backtests/upload-url", {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ filename: file.name }),
+                          })
+                          const ticket = await ticketRes.json().catch(() => ({}))
+                          if (!ticketRes.ok) { setVideoError(ticket.error || "Could not start the upload"); return }
+                          await putWithProgress(ticket.signedUrl, file, ticket.contentType || file.type || "video/mp4", setVideoProgress)
+                          setForm((f) => ({ ...f, video: ticket.filename }))
+                        } catch (err) {
+                          console.error("Video upload error:", err)
+                          setVideoError("Upload failed. Please try again.")
+                        } finally {
+                          setUploadingVideo(false)
+                        }
+                      }}
+                    />
+                  )}
+                  {uploadingVideo && (
+                    <div className="mt-2 space-y-1">
+                      <div className="h-1.5 w-full overflow-hidden rounded-full bg-muted">
+                        <div className="h-full bg-primary transition-all" style={{ width: `${videoProgress}%` }} />
+                      </div>
+                      <p className="text-xs text-muted-foreground">Uploading… {videoProgress}%</p>
+                    </div>
+                  )}
+                  {videoError && <p className="mt-1 text-xs text-red-400">{videoError}</p>}
                 </div>
 
                 <div className="space-y-2 rounded-lg border border-border p-3">
