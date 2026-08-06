@@ -14,7 +14,7 @@ import {
   XCircle, AlertCircle, Award, Star, MessageCircle,
   LayoutDashboard, BookOpen, Repeat, RefreshCw,
   GraduationCap, Settings, Lock, Crown, ChevronsUpDown,
-  Receipt, TrendingUp, Menu,
+  Receipt, TrendingUp, Menu, LineChart,
 } from "lucide-react"
 import Link from "next/link"
 import { useLocale } from "next-intl"
@@ -25,6 +25,7 @@ import { DashboardSettings } from "@/components/dashboard-settings"
 import { DashboardRecordings } from "@/components/dashboard-recordings"
 import { DashboardInvoices } from "@/components/dashboard-invoices"
 import { DashboardProgress } from "@/components/dashboard-progress"
+import { DashboardBacktests } from "@/components/dashboard-backtests"
 import { NotificationBell } from "@/components/notification-bell"
 import BookingCalendar from "@/components/booking-calendar"
 import { StatusPill } from "@/components/status-pill"
@@ -113,7 +114,23 @@ const t: Record<"en" | "ar", Record<string, string>> = {
     tabWeeklyZoom: "Weekly Zoom",
     tabBooking: "Book Session",
     tabProgress: "Progress",
+    tabBacktests: "Strategy Backtests",
     tabPayments: "Payments",
+    backtestsSubtitle: "Published backtest reports for our trading strategies.",
+    backtestsEmpty: "No backtest reports published yet.",
+    backtestNotFound: "Backtest not found.",
+    winRate: "Win rate",
+    profitFactor: "Profit factor",
+    netProfit: "Net profit",
+    maxDrawdown: "Max drawdown",
+    equityCurve: "Equity curve",
+    trades: "Trades",
+    allResults: "All results",
+    allDirections: "All directions",
+    newestFirst: "Newest first",
+    oldestFirst: "Oldest first",
+    views: "views",
+    back: "Back",
     progressSubtitle: "Your mentorship activity over time.",
     progressNoData: "Not enough data yet — it'll fill in as you complete sessions.",
     hoursOverTime: "Hours used over time",
@@ -188,7 +205,23 @@ const t: Record<"en" | "ar", Record<string, string>> = {
     tabWeeklyZoom: "زووم الأسبوعي",
     tabBooking: "احجز جلسة",
     tabProgress: "التقدم",
+    tabBacktests: "اختبار الاستراتيجيات",
     tabPayments: "المدفوعات",
+    backtestsSubtitle: "تقارير اختبار الاستراتيجيات المنشورة.",
+    backtestsEmpty: "لم يتم نشر أي تقارير اختبار بعد.",
+    backtestNotFound: "لم يتم العثور على التقرير.",
+    winRate: "نسبة الفوز",
+    profitFactor: "معامل الربح",
+    netProfit: "صافي الربح",
+    maxDrawdown: "أقصى تراجع",
+    equityCurve: "منحنى رأس المال",
+    trades: "الصفقات",
+    allResults: "كل النتائج",
+    allDirections: "كل الاتجاهات",
+    newestFirst: "الأحدث أولاً",
+    oldestFirst: "الأقدم أولاً",
+    views: "مشاهدات",
+    back: "رجوع",
     progressSubtitle: "نشاطك في برنامج الإرشاد عبر الوقت.",
     progressNoData: "لا توجد بيانات كافية بعد — ستظهر تدريجيًا مع إتمام الجلسات.",
     hoursOverTime: "الساعات المستخدمة عبر الوقت",
@@ -512,6 +545,7 @@ export function ClientDashboard() {
     { value: "overview", icon: LayoutDashboard, label: l.tabOverview },
     { value: "mentorship", icon: BookOpen, label: l.tabMentorship },
     { value: "progress", icon: TrendingUp, label: l.tabProgress },
+    { value: "backtests", icon: LineChart, label: l.tabBacktests || "Strategy Backtests" },
     { value: "sessions", icon: Calendar, label: l.tabSessions },
     { value: "booking", icon: CalendarPlus, label: l.tabBooking, dividerAfter: true },
     { value: "recordings", icon: Video, label: isRtl ? "التسجيلات" : "Recordings" },
@@ -634,6 +668,11 @@ export function ClientDashboard() {
         {/* ── Progress ── */}
         <TabsContent value="progress" className="space-y-4">
           {!hasCoaching ? <LockedPanel l={l} locale={locale} /> : <DashboardProgress subscriptions={subscriptions} bookings={bookings} l={l} />}
+        </TabsContent>
+
+        {/* ── Strategy Backtests ── */}
+        <TabsContent value="backtests" className="space-y-4">
+          {!hasCoaching ? <LockedPanel l={l} locale={locale} /> : <DashboardBacktests email={email} l={l} />}
         </TabsContent>
 
         {/* ── Book a 1-on-1 Session ── */}

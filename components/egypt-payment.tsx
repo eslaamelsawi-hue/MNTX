@@ -48,6 +48,10 @@ export function EgyptPayment() {
             </span>
           </h2>
 
+          <p className="mb-6 rounded-lg bg-red-500/10 p-3 text-center text-sm text-red-400">
+            ⚠️ All payments are final and non-refundable.
+          </p>
+
           <h3 className="mb-6 text-lg font-bold text-foreground">{t('howToPay')}</h3>
 
           <ol className="mb-8 space-y-5">

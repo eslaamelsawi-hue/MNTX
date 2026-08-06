@@ -18,6 +18,7 @@ import { AdminNotifications } from "@/components/admin-notifications"
 import { AdminCourseAccess } from "@/components/admin-course-access"
 import { AdminMentorship } from "@/components/admin-mentorship"
 import { AdminOverview } from "@/components/admin-overview"
+import { AdminBacktests } from "@/components/admin-backtests"
 import { StatusPill } from "@/components/status-pill"
 import { AdminCourses } from "@/components/admin-courses"
 import { AdminWaitlist } from "@/components/admin-waitlist"
@@ -62,6 +63,7 @@ import {
   GraduationCap,
   Newspaper,
   Menu,
+  LineChart,
 } from "lucide-react"
 
 type Slot = {
@@ -986,6 +988,7 @@ export function AdminDashboard() {
     { label: "Content", items: [
       { value: "articles", label: "Gold Articles", icon: Newspaper },
       { value: "courses", label: "Courses", icon: BookOpen },
+      { value: "backtests", label: "Strategy Backtests", icon: LineChart },
       { value: "course-access", label: "MNTX Elite", icon: Crown },
       { value: "waitlist", label: "Waitlist", icon: ClipboardList },
       { value: "recordings", label: "Recordings", icon: Video },
@@ -1149,6 +1152,9 @@ export function AdminDashboard() {
                 <TabsTrigger value="notifications">Notifications</TabsTrigger>
                 <TabsTrigger value="courses" className="gap-1.5">
                   <BookOpen className="h-3.5 w-3.5" /> Courses
+                </TabsTrigger>
+                <TabsTrigger value="backtests" className="gap-1.5">
+                  <LineChart className="h-3.5 w-3.5" /> Strategy Backtests
                 </TabsTrigger>
                 <TabsTrigger value="course-access" className="gap-1.5">
                   <Crown className="h-3.5 w-3.5" /> MNTX Elite
@@ -2531,6 +2537,11 @@ export function AdminDashboard() {
           {/* Courses management Tab */}
           <TabsContent value="courses" className="space-y-4">
             <AdminCourses />
+          </TabsContent>
+
+          {/* Strategy Backtests Tab */}
+          <TabsContent value="backtests" className="space-y-4">
+            <AdminBacktests />
           </TabsContent>
 
           {/* MNTX Elite / Course Access Tab */}

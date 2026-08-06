@@ -29,6 +29,8 @@ const t = (locale: string, key: string) => {
     enterEmailContinue: "أدخل بريدك الإلكتروني للمتابعة",
     continueToPayment: "متابعة الدفع",
     loading: "جاري التحميل…",
+    noRefundNotice: "جميع المدفوعات نهائية وغير قابلة للاسترداد.",
+    noRefundAgree: "أوافق على أن هذه الدفعة نهائية وغير قابلة للاسترداد.",
   };
   const en: Record<string, string> = {
     payWithOKX: "Pay with OKX",
@@ -53,6 +55,8 @@ const t = (locale: string, key: string) => {
     enterEmailContinue: "Enter your email to continue",
     continueToPayment: "Continue to Payment",
     loading: "Loading…",
+    noRefundNotice: "All payments are final and non-refundable.",
+    noRefundAgree: "I understand this payment is final and non-refundable.",
   };
   return (locale === "ar" ? ar[key] : en[key]) || en[key] || key;
 };
@@ -92,25 +96,7 @@ function OKXPayModal({
   const [payInfo, setPayInfo] = useState<OKXPayData | null>(null)
   const [copied, setCopied] = useState(false)
   const [verifyResult, setVerifyResult] = useState<{ status: string; message: string; tgInviteLink?: string } | null>(null)
-
-  // If prefillEmail given, fetch address immediately on mount
-  const [autoFetched, setAutoFetched] = useState(false)
-  if (prefillEmail && !autoFetched && !payInfo && !loading) {
-    setAutoFetched(true)
-    setLoading(true)
-    fetch("/api/okx-pay", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ plan, email: prefillEmail, telegram, couponCode }),
-    })
-      .then((r) => r.json())
-      .then((data) => {
-        if (data.address) setPayInfo(data)
-        else alert(data.error || "Something went wrong.")
-      })
-      .catch(() => alert("Something went wrong. Please try again."))
-      .finally(() => setLoading(false))
-  }
+  const [agreed, setAgreed] = useState(false)
 
   const copy = (text: string) => {
     navigator.clipboard.writeText(text)
@@ -119,13 +105,15 @@ function OKXPayModal({
   }
 
   const handleGetDetails = async () => {
-    if (!email || !email.includes("@")) { alert("Please enter a valid email."); return }
+    const useEmail = prefillEmail || email
+    if (!useEmail || !useEmail.includes("@")) { alert("Please enter a valid email."); return }
+    if (!agreed) return
     setLoading(true)
     try {
       const res = await fetch("/api/okx-pay", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, email, telegram, couponCode }),
+        body: JSON.stringify({ plan, email: useEmail, telegram, couponCode }),
       })
       const data = await res.json()
       if (data.address) setPayInfo(data)
@@ -160,23 +148,34 @@ function OKXPayModal({
           </div>
         ) : !payInfo ? (
           <>
-            <p className="mb-4 text-center text-sm text-muted-foreground">{t(locale, "enterEmail")}</p>
-            <input
-              type="email"
-              placeholder="your@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
-            />
-            <input
-              type="text"
-              placeholder="Telegram username (optional)"
-              value={telegram}
-              onChange={(e) => setTelegram(e.target.value)}
-              className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
-            />
-            <Button type="button" className="mb-2 w-full bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" onClick={handleGetDetails}>
-              Get Payment Details
+            {!prefillEmail && (
+              <>
+                <p className="mb-4 text-center text-sm text-muted-foreground">{t(locale, "enterEmail")}</p>
+                <input
+                  type="email"
+                  placeholder="your@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
+                />
+                <input
+                  type="text"
+                  placeholder="Telegram username (optional)"
+                  value={telegram}
+                  onChange={(e) => setTelegram(e.target.value)}
+                  className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
+                />
+              </>
+            )}
+            <p className="mb-3 rounded-lg bg-red-500/10 p-3 text-center text-xs text-red-400">
+              ⚠️ {t(locale, "noRefundNotice")}
+            </p>
+            <label className="mb-3 flex items-start gap-2 text-xs text-muted-foreground">
+              <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 shrink-0" />
+              <span>{t(locale, "noRefundAgree")}</span>
+            </label>
+            <Button type="button" className="mb-2 w-full bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" onClick={handleGetDetails} disabled={!agreed}>
+              {prefillEmail ? t(locale, "continueToPayment") : t(locale, "getPaymentDetails")}
             </Button>
             <button type="button" onClick={onClose} className="w-full rounded-lg border border-[hsl(210,60%,50%)]/30 py-2 text-sm text-muted-foreground hover:bg-[hsl(210,60%,50%)]/10">{t(locale, "cancel")}</button>
           </>
@@ -286,14 +285,18 @@ export function NowPaymentsButton({
   const [email, setEmail] = useState(prefillEmail || "")
   const [telegram, setTelegram] = useState(prefillTelegram || "")
   const [loading, setLoading] = useState(false)
+  const [agreed, setAgreed] = useState(false)
 
-  const handlePay = async (emailToUse: string) => {
+  const handlePay = async () => {
+    const useEmail = prefillEmail || email
+    if (!useEmail || !useEmail.includes("@")) { alert("Please enter a valid email."); return }
+    if (!agreed) return
     setLoading(true)
     try {
       const res = await fetch("/api/nowpayments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, email: emailToUse, telegram, couponCode, locale }),
+        body: JSON.stringify({ plan, email: useEmail, telegram, couponCode, locale }),
       })
       const data = await res.json()
       if (data.url) window.location.href = data.url
@@ -302,10 +305,7 @@ export function NowPaymentsButton({
     finally { setLoading(false) }
   }
 
-  const handleClick = () => {
-    if (prefillEmail) { handlePay(prefillEmail); return }
-    setOpen(true)
-  }
+  const handleClick = () => setOpen(true)
 
   return (
     <>
@@ -313,22 +313,33 @@ export function NowPaymentsButton({
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setOpen(false)}>
           <div className="w-full max-w-sm rounded-xl border border-[hsl(210,60%,50%)]/30 bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
             <h3 className="mb-1 text-center text-lg font-bold text-foreground">{t(locale, "payWithCrypto")}</h3>
-            <p className="mb-4 text-center text-sm text-muted-foreground">{t(locale, "enterEmailContinue")}</p>
-            <input
-              type="email"
-              placeholder="your@email.com"
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
-            />
-            <input
-              type="text"
-              placeholder="Telegram username (optional)"
-              value={telegram}
-              onChange={(e) => setTelegram(e.target.value)}
-              className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
-            />
-            <Button type="button" className="mb-2 w-full bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" onClick={() => handlePay(email)} disabled={loading}>
+            {!prefillEmail && (
+              <>
+                <p className="mb-4 text-center text-sm text-muted-foreground">{t(locale, "enterEmailContinue")}</p>
+                <input
+                  type="email"
+                  placeholder="your@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
+                />
+                <input
+                  type="text"
+                  placeholder="Telegram username (optional)"
+                  value={telegram}
+                  onChange={(e) => setTelegram(e.target.value)}
+                  className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
+                />
+              </>
+            )}
+            <p className="mb-3 rounded-lg bg-red-500/10 p-3 text-center text-xs text-red-400">
+              ⚠️ {t(locale, "noRefundNotice")}
+            </p>
+            <label className="mb-3 flex items-start gap-2 text-xs text-muted-foreground">
+              <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 shrink-0" />
+              <span>{t(locale, "noRefundAgree")}</span>
+            </label>
+            <Button type="button" className="mb-2 w-full bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" onClick={handlePay} disabled={loading || !agreed}>
               {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t(locale, "loading")}</> : t(locale, "continueToPayment")}
             </Button>
             <button type="button" onClick={() => setOpen(false)} className="w-full rounded-lg border border-[hsl(210,60%,50%)]/30 py-2 text-sm text-muted-foreground hover:bg-[hsl(210,60%,50%)]/10">{t(locale, "cancel")}</button>
