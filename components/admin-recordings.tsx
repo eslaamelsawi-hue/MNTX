@@ -57,9 +57,9 @@ export function AdminRecordings() {
       }
       xhr.onload = () => {
         if (xhr.status >= 200 && xhr.status < 300) resolve()
-        else reject(new Error(`Upload failed (${xhr.status})`))
+        else reject(new Error(`Upload failed (${xhr.status}): ${xhr.responseText || xhr.statusText || "Unknown error"}`))
       }
-      xhr.onerror = () => reject(new Error("Network error"))
+      xhr.onerror = () => reject(new Error("Network error during upload — check your connection and try again."))
       xhr.send(file)
     })
 

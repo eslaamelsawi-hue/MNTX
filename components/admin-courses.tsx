@@ -224,8 +224,8 @@ function LessonRow({ courseId, sectionId, lesson, onChanged }: { courseId: strin
       xhr.upload.onprogress = (e) => {
         if (e.lengthComputable) setProgress(Math.round((e.loaded / e.total) * 100))
       }
-      xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed (${xhr.status})`)))
-      xhr.onerror = () => reject(new Error("Network error"))
+      xhr.onload = () => (xhr.status >= 200 && xhr.status < 300 ? resolve() : reject(new Error(`Upload failed (${xhr.status}): ${xhr.responseText || xhr.statusText || "Unknown error"}`)))
+      xhr.onerror = () => reject(new Error("Network error during upload — check your connection and try again."))
       xhr.send(file)
     })
   const upload = async (file: File) => {
@@ -238,9 +238,11 @@ function LessonRow({ courseId, sectionId, lesson, onChanged }: { courseId: strin
         body: JSON.stringify({ filename: file.name }),
       })
       const ticket = await ticketRes.json().catch(() => ({}))
-      if (!ticketRes.ok) return
+      if (!ticketRes.ok) { alert(ticket.error || "Could not start the upload"); return }
       await putWithProgress(ticket.signedUrl, file, ticket.contentType || file.type || "video/mp4")
       await save({ video: ticket.filename })
+    } catch (e) {
+      alert(e instanceof Error ? e.message : "Upload failed")
     } finally {
       setUploading(false)
       setProgress(0)
