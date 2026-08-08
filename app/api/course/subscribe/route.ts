@@ -10,7 +10,7 @@ import { COURSE_GRANT_PLAN } from "@/lib/course"
  * Handles a "Subscribe" click on a course: if the signed-in user already has
  * an active premium plan (user_subscriptions) or any other course entitlement
  * (admin grant / paid order), grant them course access. Otherwise report back
- * so the client can forward them to the $900 1-on-1 coaching checkout.
+ * so the client can forward them to the $999 1-on-1 coaching checkout.
  * The email always comes from the authenticated session, never the request body.
  */
 export async function POST() {

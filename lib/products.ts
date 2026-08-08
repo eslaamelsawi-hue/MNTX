@@ -18,7 +18,7 @@ export const PRODUCTS: Product[] = [
     name: "1-on-1 Coaching Plan",
     description:
       "Full courses lessons (MNTX Theory), 50+ video lessons, passing funded acc challenge strategy, private Discord & Telegram communities, trading playbook & templates, weekly 1-on-1 zoom sessions (4 months, 10 sessions total). One-time payment, lifetime access.",
-    priceInCents: 90000, // $900.00
+    priceInCents: 99900, // $999.00
   },
   {
     id: "extend-1m",

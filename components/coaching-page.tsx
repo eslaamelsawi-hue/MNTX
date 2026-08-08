@@ -209,7 +209,7 @@ export function CoachingPage() {
               <CardTitle className="text-2xl text-foreground">1-on-1 Coaching</CardTitle>
               <div className="mt-4 flex items-baseline justify-center gap-2">
                 <span className="text-lg text-muted-foreground line-through">$1599</span>
-                <span className="text-5xl font-bold text-primary">$900</span>
+                <span className="text-5xl font-bold text-primary">$999</span>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
                 One-time payment, lifetime access
