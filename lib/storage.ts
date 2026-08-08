@@ -27,6 +27,13 @@ function client() {
     region: "auto",
     endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
     credentials: { accessKeyId, secretAccessKey },
+    // Newer SDK versions default to signing a checksum requirement into every
+    // request (incl. presigned URLs) even when one isn't explicitly asked
+    // for. Our browser upload never sends that checksum header, which would
+    // fail signature validation on R2. This restores the old behavior:
+    // only compute/require a checksum when a command explicitly asks for one.
+    requestChecksumCalculation: "WHEN_REQUIRED",
+    responseChecksumValidation: "WHEN_REQUIRED",
   })
 }
 
