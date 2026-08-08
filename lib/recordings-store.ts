@@ -7,9 +7,10 @@ import { getPrivateFileSignedUrl, deletePrivateFile } from "@/lib/storage"
 
 /**
  * Session recordings, each tied to a client's email. Video bytes are PUT
- * directly from the browser to the private-media Supabase Storage bucket
- * (see /api/admin/recordings/upload-url) — never local disk, and never
- * through this server, since Vercel caps function request bodies at ~4.5MB.
+ * directly from the browser to the private-media R2 bucket (see
+ * /api/admin/recordings/upload-url, lib/storage.ts) — never local disk, and
+ * never through this server, since Vercel caps function request bodies at
+ * ~4.5MB.
  * Metadata is stored in the Supabase `recordings` table, falling back to a
  * local JSON file so it works on localhost before the table exists.
  */

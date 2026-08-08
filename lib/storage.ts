@@ -1,49 +1,70 @@
 import "server-only"
-import { createAdminClient } from "@/lib/supabase/admin"
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3"
+import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 
 /**
- * Private video storage (session recordings, course lesson videos), backed by
- * a non-public Supabase Storage bucket. Local disk doesn't work here — Vercel's
- * filesystem is read-only and ephemeral, so uploads must go to real object
- * storage. Only ever touched via the service-role admin client, so no bucket
- * RLS policies are needed (service role bypasses Storage RLS the same way it
- * bypasses table RLS); access control lives in the API routes instead, which
- * mint short-lived signed URLs after checking auth/ownership.
+ * Private video storage (session recordings, course lesson videos, backtest
+ * walkthroughs), backed by a Cloudflare R2 bucket — not Supabase Storage.
+ * R2 is S3-compatible, has no per-file size cap tied to a pricing plan (unlike
+ * Supabase's project-wide Storage limit, which silently overrides any
+ * bucket-level file_size_limit and caps uploads regardless), and has zero
+ * egress fees, which matters for video. Access control is unchanged: this
+ * bucket is never public — API routes mint short-lived presigned URLs after
+ * checking auth/subscription status, same as before.
  */
-export const PRIVATE_BUCKET = "private-media"
+export const PRIVATE_BUCKET = process.env.R2_BUCKET_NAME || "private-media"
+
+function client() {
+  const accountId = process.env.R2_ACCOUNT_ID
+  const accessKeyId = process.env.R2_ACCESS_KEY_ID
+  const secretAccessKey = process.env.R2_SECRET_ACCESS_KEY
+  if (!accountId || !accessKeyId || !secretAccessKey) {
+    throw new Error(
+      "R2 storage is not configured — set R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, and R2_SECRET_ACCESS_KEY (and optionally R2_BUCKET_NAME) in your environment variables."
+    )
+  }
+  return new S3Client({
+    region: "auto",
+    endpoint: `https://${accountId}.r2.cloudflarestorage.com`,
+    credentials: { accessKeyId, secretAccessKey },
+  })
+}
 
 export async function uploadPrivateFile(key: string, bytes: Buffer, contentType?: string): Promise<void> {
-  const supabase = createAdminClient()
-  const { error } = await supabase.storage.from(PRIVATE_BUCKET).upload(key, bytes, {
-    contentType,
-    upsert: true,
-  })
-  if (error) throw error
+  const s3 = client()
+  await s3.send(new PutObjectCommand({ Bucket: PRIVATE_BUCKET, Key: key, Body: bytes, ContentType: contentType }))
 }
 
 /**
- * A one-time signed URL the browser can PUT the file bytes to directly,
+ * A one-time presigned URL the browser can PUT the file bytes to directly,
  * bypassing our own server entirely. Required for anything beyond a few MB —
  * Vercel serverless functions hard-cap request bodies at ~4.5MB
  * (FUNCTION_PAYLOAD_TOO_LARGE), so routing video uploads through an API route
  * never works past that size regardless of what the route does with the bytes.
+ * Content-Type is intentionally NOT baked into the signature so the browser
+ * is free to send whatever content-type header it detects for the file.
  */
-export async function createPrivateUploadTicket(key: string): Promise<{ signedUrl: string; token: string }> {
-  const supabase = createAdminClient()
-  const { data, error } = await supabase.storage.from(PRIVATE_BUCKET).createSignedUploadUrl(key)
-  if (error || !data) throw error ?? new Error("No signed URL returned")
-  return { signedUrl: data.signedUrl, token: data.token }
+export async function createPrivateUploadTicket(key: string): Promise<{ signedUrl: string }> {
+  const s3 = client()
+  const command = new PutObjectCommand({ Bucket: PRIVATE_BUCKET, Key: key })
+  // 4 hours — generous enough for a slow connection uploading a long video.
+  const signedUrl = await getSignedUrl(s3, command, { expiresIn: 60 * 60 * 4 })
+  return { signedUrl }
 }
 
 /** Null if the object is missing or storage is unreachable. */
 export async function getPrivateFileSignedUrl(key: string, expiresInSeconds = 60 * 60): Promise<string | null> {
-  const supabase = createAdminClient()
-  const { data, error } = await supabase.storage.from(PRIVATE_BUCKET).createSignedUrl(key, expiresInSeconds)
-  if (error || !data?.signedUrl) return null
-  return data.signedUrl
+  try {
+    const s3 = client()
+    const command = new GetObjectCommand({ Bucket: PRIVATE_BUCKET, Key: key })
+    return await getSignedUrl(s3, command, { expiresIn: expiresInSeconds })
+  } catch (e) {
+    console.error("[storage] Failed to sign a playback URL:", e)
+    return null
+  }
 }
 
 export async function deletePrivateFile(key: string): Promise<void> {
-  const supabase = createAdminClient()
-  await supabase.storage.from(PRIVATE_BUCKET).remove([key])
+  const s3 = client()
+  await s3.send(new DeleteObjectCommand({ Bucket: PRIVATE_BUCKET, Key: key }))
 }
