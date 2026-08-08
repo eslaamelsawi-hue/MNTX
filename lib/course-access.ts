@@ -47,8 +47,15 @@ export function verifyAccessToken(token: string | undefined): string | null {
 /**
  * Does this email own the course? Layered so it's testable locally:
  *  1) COURSE_ACCESS_EMAILS allowlist (manual / testing grants)
- *  2) a paid order for the required plan in okx_orders
+ *  2) an active mentorship/coaching subscription in user_subscriptions
+ *  3) a paid order for the required plan in okx_orders
  * NowPayments / Stripe buyers can be added to the query later.
+ *
+ * This is the single source of truth for course entitlement — every route
+ * that needs to know "can this email watch the course" (the access-check
+ * the dashboard UI uses to show locked/unlocked, the subscribe endpoint,
+ * the video stream route's cookie) must go through this function, not a
+ * partial re-implementation, or they drift out of sync with each other.
  */
 export async function hasCourseAccess(email: string): Promise<boolean> {
   const e = normalize(email)
@@ -62,6 +69,21 @@ export async function hasCourseAccess(email: string): Promise<boolean> {
 
   // Admin-granted access (the MNTX ELITE list)
   if (await isGranted(e)) return true
+
+  // Any active mentorship/coaching subscription unlocks the academy too.
+  try {
+    const admin = createAdminClient()
+    const { data: sub } = await admin
+      .from("user_subscriptions")
+      .select("id")
+      .ilike("client_email", e)
+      .eq("status", "active")
+      .limit(1)
+      .maybeSingle()
+    if (sub) return true
+  } catch {
+    // DB unavailable — fall through
+  }
 
   // A paid order for any plan that unlocks the course
   try {

@@ -26,6 +26,9 @@ export async function POST() {
 
     const email = user.email
 
+    // Look up their active plan name (if any) purely for the grantAccess
+    // record below — hasCourseAccess() below is the actual entitlement
+    // decision, and already checks for an active subscription itself.
     let plan: string | null = null
     try {
       const admin = createAdminClient()
@@ -42,7 +45,7 @@ export async function POST() {
       console.error("[course/subscribe] user_subscriptions lookup threw:", e)
     }
 
-    const entitled = plan !== null || (await hasCourseAccess(email))
+    const entitled = await hasCourseAccess(email)
     if (!entitled) {
       return NextResponse.json({ access: false, email })
     }
