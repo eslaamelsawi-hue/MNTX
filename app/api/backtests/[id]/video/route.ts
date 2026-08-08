@@ -7,10 +7,13 @@ export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
 
 /**
- * Verifies the logged-in user has an active subscription (the same "premium"
- * gate used for the Strategy Backtest tab itself), then redirects to a
- * short-lived signed URL for the video — the browser's <video> element
- * follows the redirect transparently, including for Range/seek requests.
+ * Verifies the logged-in user has a subscription on file — the same
+ * "premium" gate the Strategy Backtest tab itself uses (hasCoaching =
+ * subscriptions.length > 0 client-side, not filtered by status), so a
+ * client who can see the tab and the report can also play its video.
+ * Then redirects to a short-lived signed URL for the video — the browser's
+ * <video> element follows the redirect transparently, including for
+ * Range/seek requests.
  */
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
@@ -27,7 +30,6 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     .from("user_subscriptions")
     .select("id")
     .eq("client_email", user.email.toLowerCase().trim())
-    .eq("status", "active")
     .limit(1)
     .maybeSingle()
   if (!sub) return new Response("Forbidden", { status: 403 })
