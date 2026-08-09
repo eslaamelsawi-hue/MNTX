@@ -4,6 +4,7 @@ import { useState } from "react"
 import { useLocale } from "next-intl"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
+import { usePaymentSettings } from "@/hooks/use-payment-settings"
 
 const t = (locale: string, key: string) => {
   const ar: Record<string, string> = {
@@ -31,6 +32,8 @@ const t = (locale: string, key: string) => {
     loading: "جاري التحميل…",
     noRefundNotice: "جميع المدفوعات نهائية وغير قابلة للاسترداد.",
     noRefundAgree: "أوافق على أن هذه الدفعة نهائية وغير قابلة للاسترداد.",
+    methodUnavailable: "طريقة الدفع هذه غير متاحة حالياً",
+    subscriptionsClosed: "لا نقبل اشتراكات جديدة حالياً. يرجى المحاولة لاحقاً.",
   };
   const en: Record<string, string> = {
     payWithOKX: "Pay with OKX",
@@ -57,6 +60,8 @@ const t = (locale: string, key: string) => {
     loading: "Loading…",
     noRefundNotice: "All payments are final and non-refundable.",
     noRefundAgree: "I understand this payment is final and non-refundable.",
+    methodUnavailable: "This payment method is currently unavailable",
+    subscriptionsClosed: "We're not accepting new subscriptions right now. Please check back later.",
   };
   return (locale === "ar" ? ar[key] : en[key]) || en[key] || key;
 };
@@ -251,6 +256,11 @@ export function OKXPayButton({
 }) {
   const locale = useLocale()
   const [open, setOpen] = useState(false)
+  const { settings, loading } = usePaymentSettings()
+  const disabled = !loading && (!settings.subscriptionsOpen || !settings.okx)
+  if (disabled) {
+    return <p className={`text-sm text-muted-foreground ${className || ""}`}>{t(locale, "methodUnavailable")}</p>
+  }
   return (
     <>
       {open && <OKXPayModal plan={plan} prefillEmail={prefillEmail} prefillTelegram={prefillTelegram} couponCode={couponCode} onClose={() => setOpen(false)} />}
@@ -286,6 +296,8 @@ export function NowPaymentsButton({
   const [telegram, setTelegram] = useState(prefillTelegram || "")
   const [loading, setLoading] = useState(false)
   const [agreed, setAgreed] = useState(false)
+  const { settings: paySettings, loading: settingsLoading } = usePaymentSettings()
+  const disabled = !settingsLoading && (!paySettings.subscriptionsOpen || !paySettings.nowpayments)
 
   const handlePay = async () => {
     const useEmail = prefillEmail || email
@@ -306,6 +318,10 @@ export function NowPaymentsButton({
   }
 
   const handleClick = () => setOpen(true)
+
+  if (disabled) {
+    return <p className={`text-sm text-muted-foreground ${className || ""}`}>{t(locale, "methodUnavailable")}</p>
+  }
 
   return (
     <>

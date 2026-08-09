@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Trash2, RefreshCw, Edit } from "lucide-react"
+import { Plus, Trash2, RefreshCw, Edit, CalendarX } from "lucide-react"
 import { StatusPill } from "@/components/status-pill"
 
 type Sub = {
@@ -91,6 +91,20 @@ export function AdminSubscriptions() {
       await fetch("/api/admin/subscriptions?id=" + id, { method: "DELETE" })
       fetchSubs()
     } catch (e) { console.error("Failed to delete:", e) }
+    setActionLoading(null)
+  }
+
+  const handleExpire = async (sub: Sub) => {
+    if (!confirm(`Mark ${sub.client_name || sub.client_email}'s ${sub.plan} subscription as expired?`)) return
+    setActionLoading(sub.id)
+    try {
+      await fetch("/api/admin/subscriptions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: sub.id, status: "expired" }),
+      })
+      fetchSubs()
+    } catch (e) { console.error("Failed to expire subscription:", e) }
     setActionLoading(null)
   }
 
@@ -193,6 +207,9 @@ export function AdminSubscriptions() {
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleEdit(sub)}><Edit className="mr-1 h-3 w-3" /> Edit</Button>
+                      {sub.status !== "expired" && (
+                        <Button size="sm" variant="outline" className="h-7 text-xs border-amber-500/30 text-amber-400 hover:bg-amber-500/10" disabled={actionLoading === sub.id} onClick={() => handleExpire(sub)}><CalendarX className="mr-1 h-3 w-3" /> Expire</Button>
+                      )}
                       <Button size="sm" variant="outline" className="h-7 text-xs border-red-500/30 text-red-400 hover:bg-red-500/10" disabled={actionLoading === sub.id} onClick={() => handleDelete(sub.id)}><Trash2 className="mr-1 h-3 w-3" /> Delete</Button>
                     </div>
                   </TableCell>

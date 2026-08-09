@@ -21,6 +21,7 @@ import {
   Mail,
   Save,
   CalendarPlus,
+  CalendarX,
 } from "lucide-react"
 
 type Sub = {
@@ -254,6 +255,26 @@ export function AdminMentorship() {
     setActionLoading(null)
   }
 
+  const handleExpire = async (client: MentorshipClient) => {
+    if (!confirm(`Mark all of ${client.name}'s subscriptions as expired?`)) return
+    setActionLoading(client.email)
+    try {
+      await Promise.all(
+        client.subIds.map((id) =>
+          fetch("/api/admin/subscriptions", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id, status: "expired" }),
+          })
+        )
+      )
+      await load()
+    } catch (e) {
+      console.error("Failed to expire client:", e)
+    }
+    setActionLoading(null)
+  }
+
   const BOOKING_ERROR_MESSAGES: Record<string, string> = {
     noHoursRemaining: "This client has no remaining mentorship hours.",
     weeklyLimitReached: "This client has reached their weekly session limit.",
@@ -445,15 +466,26 @@ export function AdminMentorship() {
                               <CalendarPlus className="mr-1 h-3 w-3" /> Book
                             </Button>
                             {client.isActive && (
-                              <Button
-                                size="sm"
-                                variant="outline"
-                                className="h-7 border-red-500/30 text-xs text-red-400 hover:bg-red-500/10"
-                                disabled={actionLoading === client.email}
-                                onClick={() => handleDeactivate(client)}
-                              >
-                                <XCircle className="mr-1 h-3 w-3" /> Deactivate
-                              </Button>
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 border-amber-500/30 text-xs text-amber-400 hover:bg-amber-500/10"
+                                  disabled={actionLoading === client.email}
+                                  onClick={() => handleExpire(client)}
+                                >
+                                  <CalendarX className="mr-1 h-3 w-3" /> Expire
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 border-red-500/30 text-xs text-red-400 hover:bg-red-500/10"
+                                  disabled={actionLoading === client.email}
+                                  onClick={() => handleDeactivate(client)}
+                                >
+                                  <XCircle className="mr-1 h-3 w-3" /> Deactivate
+                                </Button>
+                              </>
                             )}
                           </div>
                         </TableCell>

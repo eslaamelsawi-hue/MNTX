@@ -8,6 +8,7 @@ import {
 import { loadStripe } from "@stripe/stripe-js"
 
 import { startCheckoutSession } from "@/app/actions/stripe"
+import { usePaymentSettings } from "@/hooks/use-payment-settings"
 
 const stripePromise = loadStripe(
   process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!
@@ -16,10 +17,27 @@ const stripePromise = loadStripe(
 export default function Checkout({ productId }: { productId: string }) {
   const [checked, setChecked] = useState(false)
   const [confirmed, setConfirmed] = useState(false)
+  const { settings, loading: settingsLoading } = usePaymentSettings()
   const fetchClientSecret = useCallback(
     () => startCheckoutSession(productId),
     [productId]
   )
+
+  if (!settingsLoading && !settings.subscriptionsOpen) {
+    return (
+      <div className="rounded-xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+        We&apos;re not accepting new subscriptions right now. Please check back later.
+      </div>
+    )
+  }
+
+  if (!settingsLoading && !settings.stripe) {
+    return (
+      <div className="rounded-xl border border-border bg-card p-6 text-center text-sm text-muted-foreground">
+        Card payment is currently unavailable. Please try another payment method.
+      </div>
+    )
+  }
 
   if (!confirmed) {
     return (

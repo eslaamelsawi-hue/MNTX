@@ -9,6 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { OKXPayButton, NowPaymentsButton } from "@/components/payment-buttons"
 import { EgyptPayment } from "@/components/egypt-payment"
+import { usePaymentSettings } from "@/hooks/use-payment-settings"
 import {
   EmbeddedCheckout,
   EmbeddedCheckoutProvider,
@@ -134,6 +135,7 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null)
   const [showEgypt, setShowEgypt] = useState(false)
+  const { settings, loading: settingsLoading } = usePaymentSettings()
 
   const selectedProduct = products.find((p) => p.id === selectedPlan)
 
@@ -173,6 +175,15 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
     () => startCheckoutSession(selectedPlan!, appliedCoupon?.code),
     [selectedPlan, appliedCoupon]
   )
+
+  if (!settingsLoading && !settings.subscriptionsOpen) {
+    return (
+      <div className="mx-auto max-w-2xl px-4 py-20 text-center">
+        <h2 className="mb-3 text-2xl font-bold text-foreground">Checkout Unavailable</h2>
+        <p className="text-muted-foreground">We&apos;re not accepting new subscriptions right now. Please check back later.</p>
+      </div>
+    )
+  }
 
   if (!selectedPlan) {
     return (

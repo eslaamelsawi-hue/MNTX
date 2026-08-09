@@ -19,6 +19,7 @@ import { AdminCourseAccess } from "@/components/admin-course-access"
 import { AdminMentorship } from "@/components/admin-mentorship"
 import { AdminOverview } from "@/components/admin-overview"
 import { AdminBacktests } from "@/components/admin-backtests"
+import { AdminPaymentSettings } from "@/components/admin-payment-settings"
 import { StatusPill } from "@/components/status-pill"
 import { AdminCourses } from "@/components/admin-courses"
 import { AdminWaitlist } from "@/components/admin-waitlist"
@@ -2591,6 +2592,8 @@ export function AdminDashboard() {
                 </div>
               </CardContent>
             </Card>
+
+            <AdminPaymentSettings />
 
             <Card>
               <CardHeader>

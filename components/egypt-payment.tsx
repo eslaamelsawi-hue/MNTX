@@ -3,6 +3,7 @@
 import { useState } from "react"
 import { Copy, Check, CreditCard } from "lucide-react"
 import { useTranslations } from 'next-intl'
+import { usePaymentSettings } from "@/hooks/use-payment-settings"
 
 function CopyButton({ text }: { text: string }) {
   const t = useTranslations('egyptPayment')
@@ -36,7 +37,22 @@ function StepNumber({ num }: { num: number }) {
 
 export function EgyptPayment() {
   const t = useTranslations('egyptPayment')
-  
+  const { settings, loading } = usePaymentSettings()
+
+  if (!loading && (!settings.subscriptionsOpen || !settings.egypt)) {
+    return (
+      <section className="px-4 pb-20">
+        <div className="mx-auto max-w-3xl">
+          <div className="rounded-2xl border border-border p-10 text-center text-muted-foreground">
+            {!settings.subscriptionsOpen
+              ? "We're not accepting new subscriptions right now. Please check back later."
+              : "This payment method is currently unavailable. Please try another payment method."}
+          </div>
+        </div>
+      </section>
+    )
+  }
+
   return (
     <section className="px-4 pb-20">
       <div className="mx-auto max-w-3xl">
