@@ -56,7 +56,8 @@
     "prevLesson": "السابق",
     "lessonOf": "الدرس {current} من {total}",
     "totalLength": "الإجمالي",
-    "aboutCourse": "عن الدورة"
+    "aboutCourse": "عن الدورة",
+    "lessonNotes": "عن هذا الدرس"
   },
   "auth": {
     "login": "تسجيل الدخول",

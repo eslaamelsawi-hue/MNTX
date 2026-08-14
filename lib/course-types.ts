@@ -8,6 +8,9 @@ export type Lesson = {
   /** video filename in private-media/course/ (or a storage key) */
   video: string
   freePreview: boolean
+  /** Optional notes/description shown below the video player. */
+  descriptionEn?: string
+  descriptionAr?: string
 }
 
 export type Section = {

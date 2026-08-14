@@ -56,7 +56,8 @@
     "prevLesson": "Previous",
     "lessonOf": "Lesson {current} of {total}",
     "totalLength": "total",
-    "aboutCourse": "About this course"
+    "aboutCourse": "About this course",
+    "lessonNotes": "About this lesson"
   },
   "auth": {
     "login": "Log in",

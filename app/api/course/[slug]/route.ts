@@ -28,6 +28,8 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
           titleAr: l.titleAr,
           duration: l.duration,
           freePreview: l.freePreview,
+          descriptionEn: l.descriptionEn || "",
+          descriptionAr: l.descriptionAr || "",
         })),
       })),
     },

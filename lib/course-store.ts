@@ -211,6 +211,8 @@ export async function addLesson(courseId: string, sectionId: string, input: Part
     duration: input.duration || "00:00",
     video: input.video || "",
     freePreview: input.freePreview ?? false,
+    descriptionEn: input.descriptionEn || "",
+    descriptionAr: input.descriptionAr || "",
   }
   s.lessons.push(lesson)
   await write(courses)
@@ -221,7 +223,7 @@ export async function updateLesson(courseId: string, sectionId: string, lessonId
   const courses = await read()
   const l = courses.find((x) => x.id === courseId)?.sections.find((x) => x.id === sectionId)?.lessons.find((x) => x.id === lessonId)
   if (!l) return false
-  const fields: (keyof Lesson)[] = ["titleEn", "titleAr", "duration", "video", "freePreview"]
+  const fields: (keyof Lesson)[] = ["titleEn", "titleAr", "duration", "video", "freePreview", "descriptionEn", "descriptionAr"]
   for (const f of fields) if (f in patch) (l as Record<string, unknown>)[f] = patch[f]
   await write(courses)
   return true

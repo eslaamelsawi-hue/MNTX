@@ -9,7 +9,7 @@ import { Badge } from "@/components/ui/badge"
 import { CoursePlayer } from "@/components/course/course-player"
 import { coverGradient } from "@/lib/course-types"
 
-type Lesson = { id: string; titleEn: string; titleAr: string; duration: string; freePreview: boolean }
+type Lesson = { id: string; titleEn: string; titleAr: string; duration: string; freePreview: boolean; descriptionEn?: string; descriptionAr?: string }
 type Section = { id: string; titleEn: string; titleAr: string; lessons: Lesson[] }
 type Course = { id: string; slug: string; titleEn: string; titleAr: string; subtitleEn: string; subtitleAr: string; sections: Section[] }
 type Cat = { id: string; slug: string; titleEn: string; titleAr: string; subtitleEn: string; subtitleAr: string; lessons: number; sections: number }
@@ -162,6 +162,12 @@ export function DashboardAcademy({ email }: { email: string }) {
                 <>
                   <CoursePlayer lesson={{ id: current.id }} email={email} />
                   <h4 className="mt-3 text-base font-semibold text-foreground">{isAr ? current.titleAr : current.titleEn}</h4>
+                  {(isAr ? current.descriptionAr : current.descriptionEn) && (
+                    <div className="mt-3 rounded-lg border border-border bg-card p-3">
+                      <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-muted-foreground">{t("lessonNotes")}</p>
+                      <p className="whitespace-pre-wrap text-sm text-muted-foreground">{isAr ? current.descriptionAr : current.descriptionEn}</p>
+                    </div>
+                  )}
                 </>
               ) : (
                 <div className="flex aspect-video w-full flex-col items-center justify-center gap-3 rounded-xl border border-border bg-card text-center">

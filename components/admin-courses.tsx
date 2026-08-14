@@ -7,9 +7,19 @@ import {
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { Textarea } from "@/components/ui/textarea"
 import { StatusPill } from "@/components/status-pill"
 
-type Lesson = { id: string; titleEn: string; titleAr: string; duration: string; video: string; freePreview: boolean }
+type Lesson = {
+  id: string
+  titleEn: string
+  titleAr: string
+  duration: string
+  video: string
+  freePreview: boolean
+  descriptionEn?: string
+  descriptionAr?: string
+}
 type Section = { id: string; titleEn: string; titleAr: string; lessons: Lesson[] }
 type Course = { id: string; slug: string; titleEn: string; titleAr: string; subtitleEn: string; subtitleAr: string; published: boolean; sections: Section[] }
 
@@ -250,21 +260,40 @@ function LessonRow({ courseId, sectionId, lesson, onChanged }: { courseId: strin
   }
 
   return (
-    <div className="flex flex-wrap items-center gap-2 rounded-md border border-border bg-card p-2">
-      <Input value={l.titleEn} onChange={(e) => setL({ ...l, titleEn: e.target.value })} onBlur={() => save({ titleEn: l.titleEn })} className="h-8 max-w-[190px]" placeholder="Lesson (EN)" />
-      <Input value={l.titleAr} onChange={(e) => setL({ ...l, titleAr: e.target.value })} onBlur={() => save({ titleAr: l.titleAr })} className="h-8 max-w-[150px]" placeholder="الدرس (AR)" dir="rtl" />
-      <Input value={l.duration} onChange={(e) => setL({ ...l, duration: e.target.value })} onBlur={() => save({ duration: l.duration })} className="h-8 w-20" placeholder="00:00" />
-      <label className="flex items-center gap-1 text-xs text-muted-foreground">
-        <input type="checkbox" checked={l.freePreview} onChange={(e) => { setL({ ...l, freePreview: e.target.checked }); save({ freePreview: e.target.checked }) }} />
-        preview
-      </label>
-      <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
-      <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading} className="h-8 gap-1.5">
-        {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
-        {uploading ? `${progress}%` : l.video ? "Replace" : "Upload"}
-      </Button>
-      {l.video && <Video className="h-4 w-4 text-green-400" aria-label="has video" />}
-      <Button size="sm" variant="ghost" onClick={remove} className="h-8 text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+    <div className="space-y-2 rounded-md border border-border bg-card p-2">
+      <div className="flex flex-wrap items-center gap-2">
+        <Input value={l.titleEn} onChange={(e) => setL({ ...l, titleEn: e.target.value })} onBlur={() => save({ titleEn: l.titleEn })} className="h-8 max-w-[190px]" placeholder="Lesson (EN)" />
+        <Input value={l.titleAr} onChange={(e) => setL({ ...l, titleAr: e.target.value })} onBlur={() => save({ titleAr: l.titleAr })} className="h-8 max-w-[150px]" placeholder="الدرس (AR)" dir="rtl" />
+        <Input value={l.duration} onChange={(e) => setL({ ...l, duration: e.target.value })} onBlur={() => save({ duration: l.duration })} className="h-8 w-20" placeholder="00:00" />
+        <label className="flex items-center gap-1 text-xs text-muted-foreground">
+          <input type="checkbox" checked={l.freePreview} onChange={(e) => { setL({ ...l, freePreview: e.target.checked }); save({ freePreview: e.target.checked }) }} />
+          preview
+        </label>
+        <input ref={fileRef} type="file" accept="video/*" className="hidden" onChange={(e) => e.target.files?.[0] && upload(e.target.files[0])} />
+        <Button size="sm" variant="outline" onClick={() => fileRef.current?.click()} disabled={uploading} className="h-8 gap-1.5">
+          {uploading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Upload className="h-3.5 w-3.5" />}
+          {uploading ? `${progress}%` : l.video ? "Replace" : "Upload"}
+        </Button>
+        {l.video && <Video className="h-4 w-4 text-green-400" aria-label="has video" />}
+        <Button size="sm" variant="ghost" onClick={remove} className="h-8 text-muted-foreground hover:text-destructive"><Trash2 className="h-4 w-4" /></Button>
+      </div>
+      <div className="grid gap-2 sm:grid-cols-2">
+        <Textarea
+          value={l.descriptionEn || ""}
+          onChange={(e) => setL({ ...l, descriptionEn: e.target.value })}
+          onBlur={() => save({ descriptionEn: l.descriptionEn })}
+          placeholder="Notes / description shown below the video (EN) — optional"
+          className="min-h-16 text-xs"
+        />
+        <Textarea
+          value={l.descriptionAr || ""}
+          onChange={(e) => setL({ ...l, descriptionAr: e.target.value })}
+          onBlur={() => save({ descriptionAr: l.descriptionAr })}
+          placeholder="ملاحظات / وصف يظهر أسفل الفيديو (AR) — اختياري"
+          dir="rtl"
+          className="min-h-16 text-xs"
+        />
+      </div>
     </div>
   )
 }
