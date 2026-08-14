@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
+import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { StatusPill } from "@/components/status-pill"
 import {
@@ -12,9 +13,10 @@ import {
   type ChartConfig,
 } from "@/components/ui/chart"
 import { AreaChart, Area, XAxis, CartesianGrid } from "recharts"
-import { LineChart, ArrowLeft, Eye, TrendingUp, TrendingDown, Percent, Activity } from "lucide-react"
+import { LineChart, ArrowLeft, Eye, TrendingUp, TrendingDown, Percent, Activity, MessageCircle } from "lucide-react"
 import { CoursePlayer } from "@/components/course/course-player"
 
+type Comment = { id: string; client_name: string; client_email: string; body: string; created_at: string }
 type Trade = { date: string; direction: "buy" | "sell"; entry: string; exit: string; pnl: string; result: "win" | "loss" | "be" }
 type BacktestSummary = {
   id: string; title: string; description: string | null; symbol: string; timeframe: string
@@ -35,6 +37,113 @@ function StatTile({ icon, label, value, tone }: { icon: React.ReactNode; label: 
       <div className="flex items-center gap-1.5 text-xs text-muted-foreground">{icon}{label}</div>
       <p className={`mt-1.5 font-mono text-xl font-bold tabular-nums ${tone === "good" ? "text-emerald-400" : tone === "bad" ? "text-red-400" : "text-foreground"}`}>{value}</p>
     </div>
+  )
+}
+
+function CommentsSection({ backtestId, email, l }: { backtestId: string; email: string; l: Record<string, string> }) {
+  const [comments, setComments] = useState<Comment[] | null>(null)
+  const [text, setText] = useState("")
+  const [posting, setPosting] = useState(false)
+  const [error, setError] = useState("")
+  const [deletingId, setDeletingId] = useState<string | null>(null)
+
+  const load = () => {
+    fetch(`/api/backtests/${backtestId}/comments`)
+      .then((r) => (r.ok ? r.json() : { comments: [] }))
+      .then((d) => setComments(d.comments ?? []))
+      .catch(() => setComments([]))
+  }
+
+  useEffect(() => { load() }, [backtestId])
+
+  const post = async () => {
+    const body = text.trim()
+    if (!body) return
+    setPosting(true)
+    setError("")
+    try {
+      const res = await fetch(`/api/backtests/${backtestId}/comments`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ comment: body }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setError(data.error || l.commentFailed || "Failed to post comment."); return }
+      setText("")
+      load()
+    } catch {
+      setError(l.commentFailed || "Failed to post comment.")
+    } finally {
+      setPosting(false)
+    }
+  }
+
+  const remove = async (id: string) => {
+    if (!confirm(l.deleteCommentConfirm || "Delete this comment?")) return
+    setDeletingId(id)
+    try {
+      await fetch(`/api/backtests/${backtestId}/comments/${id}`, { method: "DELETE" })
+      load()
+    } catch {
+      // ignore — comment stays visible, user can retry
+    } finally {
+      setDeletingId(null)
+    }
+  }
+
+  return (
+    <Card className="border-border bg-card">
+      <CardHeader className="pb-2">
+        <CardTitle className="flex items-center gap-2 text-base">
+          <MessageCircle className="h-4 w-4 text-primary" />
+          {l.comments || "Comments"}{comments ? ` (${comments.length})` : ""}
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        <div className="space-y-2">
+          <Textarea
+            value={text}
+            onChange={(e) => setText(e.target.value)}
+            placeholder={l.commentPlaceholder || "Share your thoughts on this strategy..."}
+            rows={2}
+            maxLength={2000}
+          />
+          <div className="flex items-center justify-between gap-3">
+            {error && <p className="text-xs text-red-400">{error}</p>}
+            <Button size="sm" className="ms-auto" onClick={post} disabled={posting || !text.trim()}>
+              {posting ? (l.posting || "Posting…") : (l.postComment || "Post Comment")}
+            </Button>
+          </div>
+        </div>
+
+        {comments === null ? (
+          <p className="py-4 text-center text-sm text-muted-foreground">{l.loading || "Loading…"}</p>
+        ) : comments.length === 0 ? (
+          <p className="py-4 text-center text-sm text-muted-foreground">{l.noComments || "No comments yet. Be the first to share your thoughts."}</p>
+        ) : (
+          <div className="space-y-3">
+            {comments.map((c) => (
+              <div key={c.id} className="rounded-lg border border-border p-3">
+                <div className="mb-1 flex items-center justify-between gap-2">
+                  <span className="text-sm font-medium text-foreground">{c.client_name}</span>
+                  <span className="text-xs text-muted-foreground">{new Date(c.created_at).toLocaleString()}</span>
+                </div>
+                <p className="whitespace-pre-wrap text-sm text-muted-foreground">{c.body}</p>
+                {c.client_email === email && (
+                  <button
+                    onClick={() => remove(c.id)}
+                    disabled={deletingId === c.id}
+                    className="mt-1.5 text-xs text-red-400 hover:underline disabled:opacity-50"
+                  >
+                    {l.delete || "Delete"}
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
+        )}
+      </CardContent>
+    </Card>
   )
 }
 
@@ -107,6 +216,8 @@ function BacktestDetail({ id, email, onBack, l }: { id: string; email: string; o
           <CoursePlayer lesson={{ id: bt.id }} email={email} src={`/api/backtests/${bt.id}/video`} />
         </div>
       )}
+
+      <CommentsSection backtestId={bt.id} email={email} l={l} />
 
       <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile icon={<Percent className="h-3.5 w-3.5" />} label={l.winRate || "Win rate"} value={bt.win_rate != null ? `${bt.win_rate}%` : "-"} tone={bt.win_rate != null && bt.win_rate >= 50 ? "good" : undefined} />
