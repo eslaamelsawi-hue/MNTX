@@ -1,18 +1,7 @@
 ﻿import { NextResponse } from "next/server"
 import { createNowpaymentsInvoice } from "@/lib/nowpayments"
 import { createAdminClient } from "@/lib/supabase/admin"
-
-const PLAN_INFO: Record<string, { amount: number; description: string }> = {
-  test:        { amount: 1,    description: "Mentix Trading - Test Plan" },
-  "gold-pro":  { amount: 100,  description: "Mentix Trading - Gold Pro Monthly Analysis" },
-  starter:     { amount: 379,  description: "Mentix Trading - ADVANCED SMC Course" },
-  coaching:    { amount: 999, description: "Mentix Trading - 1-on-1 Coaching Plan" },
-  "extend-1m": { amount: 250,  description: "Mentix Trading - Mentorship Extension 1 Month" },
-  "extend-2m": { amount: 449,  description: "Mentix Trading - Mentorship Extension 2 Months" },
-  "extend-3m": { amount: 900,  description: "Mentix Trading - Mentorship Extension 3 Months" },
-  "extend-6m": { amount: 1499, description: "Mentix Trading - Mentorship Extension 6 Months" },
-  "funded-challenge": { amount: 500, description: "Mentix Trading - PropFirm Mastery Course" },
-}
+import { PLAN_PRICES as PLAN_INFO } from "@/lib/plan-pricing"
 
 async function applyCouponDiscount(code: string, plan: string, amountDollars: number): Promise<number> {
   try {
@@ -43,7 +32,7 @@ async function applyCouponDiscount(code: string, plan: string, amountDollars: nu
 
 export async function POST(request: Request) {
   try {
-    const { plan, email, couponCode, locale } = await request.json()
+    const { plan, email, couponCode, locale, splitPayment } = await request.json()
 
     if (!email || !email.includes("@")) {
       return NextResponse.json({ error: "Valid email is required" }, { status: 400 })
@@ -60,13 +49,28 @@ export async function POST(request: Request) {
       finalAmount = await applyCouponDiscount(couponCode, plan, planInfo.amount)
     }
 
+    const isSplit = !!splitPayment
+    const chargeAmount = isSplit ? Math.round(finalAmount * 0.6 * 100) / 100 : finalAmount
+
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000"
     const orderId = `${plan}-${Date.now()}`
+
+    const supabase = createAdminClient()
+    const { error: orderError } = await supabase.from("nowpayments_orders").insert({
+      order_id: orderId,
+      plan,
+      email,
+      full_amount: finalAmount,
+      charge_amount: chargeAmount,
+      split_payment: isSplit,
+      status: "pending",
+    })
+    if (orderError) console.error("[nowpayments] Failed to record order:", orderError)
 
     const invoice = await createNowpaymentsInvoice({
       email,
       customerEmail: email,
-      amount: Math.round(finalAmount * 1.005 * 100) / 100,
+      amount: Math.round(chargeAmount * 1.005 * 100) / 100,
       description: planInfo.description,
       successUrl: `${baseUrl}/${locale || "en"}/payment/success?provider=nowpayments&plan=${plan}&order=${orderId}`,
       cancelUrl: `${baseUrl}/${locale || "en"}/#pricing`,

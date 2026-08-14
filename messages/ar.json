@@ -139,7 +139,8 @@
     "overdue": "متأخر",
     "partiallyPaid": "مدفوع جزئيًا",
     "cancelled": "ملغى",
-    "loading": "جارٍ التحميل…"
+    "loading": "جارٍ التحميل…",
+    "payNow": "ادفع الآن"
   },
   "progress": {
     "title": "التقدم",

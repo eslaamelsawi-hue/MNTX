@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { grantExtendHours, grantCoaching, EXTEND_PLAN_HOURS } from "@/lib/grant-hours"
 import { createStarterInviteLink } from "@/lib/tg-invite"
 import { sendConfirmationEmail } from "@/lib/email"
+import { markInstallmentPaid } from "@/lib/invoicing"
 
 function sortObjectKeys(obj: unknown): unknown {
   if (Array.isArray(obj)) return obj.map(sortObjectKeys)
@@ -51,8 +52,26 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true })
     }
 
-    // Extract planId from order_id format: "{planId}-{timestamp}"
-    const planId = (order_id as string).replace(/-\d+$/, "")
+    const supabase = createAdminClient()
+    const { data: orderRow } = await supabase
+      .from("nowpayments_orders")
+      .select("*")
+      .eq("order_id", order_id)
+      .maybeSingle()
+
+    // This order pays off an existing pending invoice installment (the
+    // client dashboard's "Pay Now" flow) — no hours/access to (re-)grant.
+    if (orderRow?.installment_id) {
+      if (orderRow.status !== "paid") {
+        await supabase.from("nowpayments_orders").update({ status: "paid" }).eq("order_id", order_id)
+        await markInstallmentPaid(orderRow.installment_id)
+      }
+      return NextResponse.json({ ok: true })
+    }
+
+    // Extract planId from order_id format: "{planId}-{timestamp}" (fallback
+    // for orders placed before the nowpayments_orders table existed).
+    const planId = orderRow?.plan ?? (order_id as string).replace(/-\d+$/, "")
 
     const isExtendPlan = !!EXTEND_PLAN_HOURS[planId]
     const isStarterPlan = planId === "starter"
@@ -65,10 +84,10 @@ export async function POST(request: Request) {
 
     let email: string = typeof payer_email === "string" ? payer_email.trim() : ""
     let name: string | undefined
+    if (!email && orderRow?.email) email = orderRow.email
 
     // Fallback: look up email from extend_requests table
     if (!email) {
-      const supabase = createAdminClient()
       const { data: req } = await supabase
         .from("extend_requests")
         .select("email, name")
@@ -86,8 +105,23 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true })
     }
 
+    // Avoid double-granting if the IPN fires more than once for the same order.
+    if (orderRow && orderRow.status === "paid") {
+      return NextResponse.json({ ok: true })
+    }
+    if (orderRow) {
+      await supabase.from("nowpayments_orders").update({ status: "paid" }).eq("order_id", order_id)
+    }
+
+    // Use the actual (possibly coupon-discounted) amount on file when known,
+    // and split the invoice into two installments if this was a split payment.
+    const invoiceAmount = orderRow ? Number(orderRow.full_amount) : undefined
+    const splitInfo = orderRow?.split_payment
+      ? { firstAmount: Number(orderRow.charge_amount), secondAmount: Math.round((Number(orderRow.full_amount) - Number(orderRow.charge_amount)) * 100) / 100 }
+      : undefined
+
     if (isExtendPlan) {
-      await grantExtendHours(email, planId, name)
+      await grantExtendHours(email, planId, name, invoiceAmount, splitInfo)
     }
 
     if (isStarterPlan) {
@@ -102,7 +136,7 @@ export async function POST(request: Request) {
 
     if (isCoachingPlan) {
       // Grant 10 hours + academy access + a Telegram course link.
-      const { tgInviteLink, alreadyFulfilled } = await grantCoaching(email, `Coaching-NP-${String(order_id).slice(-6)}`, name)
+      const { tgInviteLink, alreadyFulfilled } = await grantCoaching(email, `Coaching-NP-${String(order_id).slice(-6)}`, name, invoiceAmount, splitInfo)
       if (!alreadyFulfilled) {
         await sendConfirmationEmail({
           to: email,

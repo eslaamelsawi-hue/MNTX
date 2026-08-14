@@ -46,7 +46,7 @@ function generateSignature(
 
 export async function POST(request: Request) {
   try {
-    const { plan, email, telegram, couponCode } = await request.json()
+    const { plan, email, telegram, couponCode, splitPayment } = await request.json()
 
     const accessKey = process.env.OKX_ACCESS_KEY
     const secretKey = process.env.OKX_SECRET_KEY
@@ -101,28 +101,35 @@ export async function POST(request: Request) {
     if (couponCode && typeof couponCode === "string") {
       finalAmount = await applyCouponDiscount(couponCode, plan, planInfo.amount)
     }
-    const finalAmountStr = String(finalAmount)
+
+    const isSplit = !!splitPayment
+    const chargeAmount = isSplit ? Math.round(finalAmount * 0.6 * 100) / 100 : finalAmount
+    const chargeAmountStr = String(chargeAmount)
 
     // Store the pending order
     await createOrder({
       orderId,
       plan,
-      amount: finalAmountStr,
+      amount: chargeAmountStr,
       email,
       telegramUsername: typeof telegram === "string" && telegram.trim() ? telegram.trim().replace(/^@/, "") : undefined,
       address: entry.addr,
       chain: entry.chain,
       status: "pending",
       createdAt: new Date().toISOString(),
+      fullAmount: isSplit ? String(finalAmount) : undefined,
+      splitPayment: isSplit,
     })
 
     return NextResponse.json({
       orderId,
       address: entry.addr,
       chain: entry.chain,
-      amount: finalAmountStr,
+      amount: chargeAmountStr,
       currency: "USDT",
       description: planInfo.description,
+      splitPayment: isSplit,
+      secondAmount: isSplit ? String(Math.round((finalAmount - chargeAmount) * 100) / 100) : undefined,
     })
   } catch (error) {
     console.error("OKX Pay error:", error)

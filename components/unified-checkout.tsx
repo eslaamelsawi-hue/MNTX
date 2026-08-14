@@ -59,6 +59,11 @@ const translations = {
     oneTime: "One-time payment",
     back: "Back to plans",
     processing: "Processing...",
+    paymentPlan: "Payment Plan",
+    payInFull: "Pay in full",
+    splitPayment: "Split into 2 payments",
+    dueNow: "due now",
+    dueIn30Days: "due within 30 days",
   },
   ar: {
     selectPlan: "اختر خطة",
@@ -87,8 +92,23 @@ const translations = {
     oneTime: "دفعة واحدة",
     back: "العودة للخطط",
     processing: "جاري المعالجة...",
+    paymentPlan: "خطة الدفع",
+    payInFull: "الدفع بالكامل",
+    splitPayment: "تقسيم إلى دفعتين",
+    dueNow: "الآن",
+    dueIn30Days: "خلال 30 يومًا",
   },
 }
+
+const SPLIT_ELIGIBLE_PLANS = new Set([
+  "starter",
+  "coaching",
+  "extend-1m",
+  "extend-2m",
+  "extend-3m",
+  "extend-6m",
+  "funded-challenge",
+])
 
 type AppliedCoupon = {
   code: string
@@ -135,6 +155,7 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null)
   const [showEgypt, setShowEgypt] = useState(false)
+  const [splitPayment, setSplitPayment] = useState(false)
   const { settings, loading: settingsLoading } = usePaymentSettings()
 
   const selectedProduct = products.find((p) => p.id === selectedPlan)
@@ -142,6 +163,10 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
   const subtotalCents = selectedProduct?.priceInCents ?? 0
   const discountCents = appliedCoupon?.discountCents ?? 0
   const totalCents = Math.max(0, subtotalCents - discountCents)
+  const totalUsd = totalCents / 100
+  const firstPaymentUsd = Math.round(totalUsd * 0.6 * 100) / 100
+  const secondPaymentUsd = Math.round((totalUsd - firstPaymentUsd) * 100) / 100
+  const splitEligible = !!selectedPlan && SPLIT_ELIGIBLE_PLANS.has(selectedPlan)
 
   const handleApplyCoupon = async () => {
     if (!couponCode.trim() || !selectedPlan) return
@@ -196,7 +221,10 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
             <Card
               key={product.id}
               className="cursor-pointer border-border transition-all hover:border-primary hover:shadow-lg"
-              onClick={() => setSelectedPlan(product.id)}
+              onClick={() => {
+                setSelectedPlan(product.id)
+                setSplitPayment(false)
+              }}
             >
               <CardHeader className="pb-3">
                 <CardTitle className="text-lg">{product.name}</CardTitle>
@@ -239,6 +267,7 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
         onClick={() => {
           setSelectedPlan(null)
           setPaymentMethod(null)
+          setSplitPayment(false)
           handleRemoveCoupon()
         }}
         className="mb-6 text-sm text-muted-foreground hover:text-foreground transition-colors"
@@ -383,6 +412,38 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
             </CardContent>
           </Card>
 
+          {splitEligible && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">{t.paymentPlan}</CardTitle>
+              </CardHeader>
+              <CardContent className="grid gap-3 sm:grid-cols-2">
+                <button
+                  type="button"
+                  onClick={() => setSplitPayment(false)}
+                  className={`rounded-lg border p-4 text-left transition-all ${
+                    !splitPayment ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <p className="font-semibold text-foreground">{t.payInFull}</p>
+                  <p className="mt-1 text-lg font-bold text-primary">${totalUsd.toFixed(2)}</p>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setSplitPayment(true)}
+                  className={`rounded-lg border p-4 text-left transition-all ${
+                    splitPayment ? "border-primary bg-primary/5" : "border-border hover:border-primary/50"
+                  }`}
+                >
+                  <p className="font-semibold text-foreground">{t.splitPayment}</p>
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    <span className="font-bold text-primary">${firstPaymentUsd.toFixed(2)}</span> {t.dueNow} + <span className="font-bold text-foreground">${secondPaymentUsd.toFixed(2)}</span> {t.dueIn30Days}
+                  </p>
+                </button>
+              </CardContent>
+            </Card>
+          )}
+
           <Card>
             <CardHeader>
               <CardTitle className="text-lg">{t.choosePayment}</CardTitle>
@@ -399,6 +460,7 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
                 prefillEmail={email || undefined}
                 prefillTelegram={telegram || undefined}
                 couponCode={appliedCoupon?.code}
+                splitPayment={splitEligible && splitPayment}
                 className="w-full justify-start gap-3 border border-border bg-transparent text-foreground hover:border-primary/50 hover:bg-primary/5 h-auto p-4"
               />
 
@@ -407,6 +469,7 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
                 prefillEmail={email || undefined}
                 prefillTelegram={telegram || undefined}
                 couponCode={appliedCoupon?.code}
+                splitPayment={splitEligible && splitPayment}
                 className="w-full justify-start gap-3 border border-border bg-transparent text-foreground hover:border-primary/50 hover:bg-primary/5 h-auto p-4"
               />
 

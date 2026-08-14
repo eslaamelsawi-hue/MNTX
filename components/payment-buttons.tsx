@@ -34,6 +34,8 @@ const t = (locale: string, key: string) => {
     noRefundAgree: "أوافق على أن هذه الدفعة نهائية وغير قابلة للاسترداد.",
     methodUnavailable: "طريقة الدفع هذه غير متاحة حالياً",
     subscriptionsClosed: "لا نقبل اشتراكات جديدة حالياً. يرجى المحاولة لاحقاً.",
+    splitPaymentBadge: "الدفعة 1 من 2 (60%)",
+    splitPaymentNote: "المتبقي مستحق خلال 30 يومًا، ويمكنك دفعه في أي وقت من لوحة التحكم.",
   };
   const en: Record<string, string> = {
     payWithOKX: "Pay with OKX",
@@ -62,6 +64,8 @@ const t = (locale: string, key: string) => {
     noRefundAgree: "I understand this payment is final and non-refundable.",
     methodUnavailable: "This payment method is currently unavailable",
     subscriptionsClosed: "We're not accepting new subscriptions right now. Please check back later.",
+    splitPaymentBadge: "Payment 1 of 2 (60%)",
+    splitPaymentNote: "The remaining balance is due within 30 days — payable anytime from your dashboard.",
   };
   return (locale === "ar" ? ar[key] : en[key]) || en[key] || key;
 };
@@ -76,6 +80,8 @@ type OKXPayData = {
   amount: string
   currency: string
   description: string
+  splitPayment?: boolean
+  secondAmount?: string
 }
 
 // ─── OKX Pay Modal ────────────────────────────────────────────────────────────
@@ -85,12 +91,14 @@ function OKXPayModal({
   prefillEmail,
   prefillTelegram,
   couponCode,
+  splitPayment,
   onClose,
 }: {
   plan: string
   prefillEmail?: string
   prefillTelegram?: string
   couponCode?: string
+  splitPayment?: boolean
   onClose: () => void
 }) {
   const locale = useLocale()
@@ -118,7 +126,7 @@ function OKXPayModal({
       const res = await fetch("/api/okx-pay", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, email: useEmail, telegram, couponCode }),
+        body: JSON.stringify({ plan, email: useEmail, telegram, couponCode, splitPayment }),
       })
       const data = await res.json()
       if (data.address) setPayInfo(data)
@@ -205,6 +213,12 @@ function OKXPayModal({
         ) : (
           <>
             <p className="mb-3 text-center text-sm text-muted-foreground">{payInfo.description}</p>
+            {payInfo.splitPayment && (
+              <div className="mb-3 rounded-lg bg-primary/10 p-3 text-center">
+                <p className="text-xs font-semibold text-primary">{t(locale, "splitPaymentBadge")}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t(locale, "splitPaymentNote")}{payInfo.secondAmount ? ` (${payInfo.secondAmount} ${payInfo.currency})` : ""}</p>
+              </div>
+            )}
             <div className="mb-3 rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background p-4 text-center">
               <p className="text-3xl font-bold text-[hsl(210,60%,50%)]">{payInfo.amount} {payInfo.currency}</p>
               <p className="mt-1 text-xs text-muted-foreground">{t(locale, "network")}: {payInfo.chain}</p>
@@ -247,12 +261,14 @@ export function OKXPayButton({
   prefillEmail,
   prefillTelegram,
   couponCode,
+  splitPayment,
 }: {
   plan: string
   className?: string
   prefillEmail?: string
   prefillTelegram?: string
   couponCode?: string
+  splitPayment?: boolean
 }) {
   const locale = useLocale()
   const [open, setOpen] = useState(false)
@@ -263,7 +279,7 @@ export function OKXPayButton({
   }
   return (
     <>
-      {open && <OKXPayModal plan={plan} prefillEmail={prefillEmail} prefillTelegram={prefillTelegram} couponCode={couponCode} onClose={() => setOpen(false)} />}
+      {open && <OKXPayModal plan={plan} prefillEmail={prefillEmail} prefillTelegram={prefillTelegram} couponCode={couponCode} splitPayment={splitPayment} onClose={() => setOpen(false)} />}
       <Button type="button" className={className} size="lg" onClick={() => setOpen(true)}>
         <svg className="mr-2 h-5 w-5" viewBox="0 0 32 32" fill="none" aria-hidden="true">
           <rect width="32" height="32" rx="6" fill="#000"/>
@@ -283,12 +299,14 @@ export function NowPaymentsButton({
   prefillEmail,
   prefillTelegram,
   couponCode,
+  splitPayment,
 }: {
   plan: string
   className?: string
   prefillEmail?: string
   prefillTelegram?: string
   couponCode?: string
+  splitPayment?: boolean
 }) {
   const locale = useLocale()
   const [open, setOpen] = useState(false)
@@ -308,7 +326,7 @@ export function NowPaymentsButton({
       const res = await fetch("/api/nowpayments", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, email: useEmail, telegram, couponCode, locale }),
+        body: JSON.stringify({ plan, email: useEmail, telegram, couponCode, locale, splitPayment }),
       })
       const data = await res.json()
       if (data.url) window.location.href = data.url
@@ -347,6 +365,12 @@ export function NowPaymentsButton({
                   className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
                 />
               </>
+            )}
+            {splitPayment && (
+              <div className="mb-3 rounded-lg bg-primary/10 p-3 text-center">
+                <p className="text-xs font-semibold text-primary">{t(locale, "splitPaymentBadge")}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t(locale, "splitPaymentNote")}</p>
+              </div>
             )}
             <p className="mb-3 rounded-lg bg-red-500/10 p-3 text-center text-xs text-red-400">
               ⚠️ {t(locale, "noRefundNotice")}

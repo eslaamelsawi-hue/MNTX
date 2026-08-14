@@ -5,6 +5,7 @@ import { grantExtendHours, grantExtendHoursIfMissing, grantCoaching } from "@/li
 import { createStarterInviteLink } from "@/lib/tg-invite"
 import { sendConfirmationEmail } from "@/lib/email"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { markInstallmentPaid } from "@/lib/invoicing"
 
 const OKX_API_BASE = "https://www.okx.com"
 
@@ -55,6 +56,9 @@ export async function POST(request: Request) {
     }
 
     if (order.status === "paid") {
+      if (order.installmentId) {
+        return NextResponse.json({ status: "paid", message: "Payment already confirmed." })
+      }
       // Grant hours if not yet granted
       await grantExtendHoursIfMissing(order.email, order.plan)
       // Look up the already-claimed token for this order — do NOT waste a new token
@@ -127,8 +131,19 @@ export async function POST(request: Request) {
       txId: match.txId,
     })
 
+    // This order pays off an existing pending invoice installment (the
+    // client dashboard's "Pay Now" flow) — no hours/access to (re-)grant.
+    if (order.installmentId) {
+      await markInstallmentPaid(order.installmentId)
+      return NextResponse.json({ status: "paid", message: "Payment confirmed! Your remaining balance has been settled." })
+    }
+
+    const splitInfo = order.splitPayment && order.fullAmount
+      ? { firstAmount: parseFloat(order.amount), secondAmount: Math.round((parseFloat(order.fullAmount) - parseFloat(order.amount)) * 100) / 100 }
+      : undefined
+
     // Grant hours if this is an extend plan
-    await grantExtendHours(order.email, order.plan, undefined, parseFloat(order.amount))
+    await grantExtendHours(order.email, order.plan, undefined, parseFloat(order.amount), splitInfo)
 
     // Generate Telegram invite link for starter / coaching subscribers
     let tgInviteLink: string | null = null
@@ -139,7 +154,7 @@ export async function POST(request: Request) {
       }
     } else if (order.plan === "coaching") {
       // Grant 10 hours + academy access + a Telegram course link.
-      const res = await grantCoaching(order.email, orderId, undefined, parseFloat(order.amount))
+      const res = await grantCoaching(order.email, orderId, undefined, parseFloat(order.amount), splitInfo)
       tgInviteLink = res.tgInviteLink
     }
 

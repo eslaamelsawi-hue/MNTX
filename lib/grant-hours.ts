@@ -25,7 +25,8 @@ export async function grantExtendHours(
   email: string,
   planId: string,
   name?: string,
-  amount?: number
+  amount?: number,
+  splitInfo?: { firstAmount: number; secondAmount: number }
 ): Promise<void> {
   const hours = EXTEND_PLAN_HOURS[planId]
   if (!hours) return // not an extend plan
@@ -62,7 +63,7 @@ export async function grantExtendHours(
     })
   }
 
-  await createInvoiceForPlan({ clientEmail: normalizedEmail, clientName, plan: planId, amount })
+  await createInvoiceForPlan({ clientEmail: normalizedEmail, clientName, plan: planId, amount, split: splitInfo })
 }
 
 /**
@@ -113,6 +114,7 @@ export async function grantCoaching(
   orderRef: string,
   name?: string,
   amount?: number,
+  splitInfo?: { firstAmount: number; secondAmount: number }
 ): Promise<{ tgInviteLink: string | null; alreadyFulfilled: boolean }> {
   const supabase = createAdminClient()
   const normalizedEmail = email.toLowerCase().trim()
@@ -153,7 +155,7 @@ export async function grantCoaching(
     })
   }
 
-  await createInvoiceForPlan({ clientEmail: normalizedEmail, clientName: name || normalizedEmail.split("@")[0], plan: "coaching", amount })
+  await createInvoiceForPlan({ clientEmail: normalizedEmail, clientName: name || normalizedEmail.split("@")[0], plan: "coaching", amount, split: splitInfo })
 
   // 2) on-site academy / course access (idempotent upsert)
   try {

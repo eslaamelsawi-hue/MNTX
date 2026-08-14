@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { sendConfirmationEmail } from "@/lib/email"
 import { grantExtendHours, grantCoaching } from "@/lib/grant-hours"
 import { createStarterInviteLink } from "@/lib/tg-invite"
+import { markInstallmentPaid } from "@/lib/invoicing"
 
 async function getAllOrders() {
   try {
@@ -117,8 +118,17 @@ export async function PATCH(request: Request) {
       paidAt: new Date().toISOString(),
     })
 
+    if (order.installmentId) {
+      await markInstallmentPaid(order.installmentId)
+      return NextResponse.json({ success: true })
+    }
+
+    const splitInfo = order.splitPayment && order.fullAmount
+      ? { firstAmount: parseFloat(order.amount), secondAmount: Math.round((parseFloat(order.fullAmount) - parseFloat(order.amount)) * 100) / 100 }
+      : undefined
+
     // Grant hours if this is an extend plan
-    await grantExtendHours(order.email, order.plan, undefined, parseFloat(order.amount))
+    await grantExtendHours(order.email, order.plan, undefined, parseFloat(order.amount), splitInfo)
 
     // Claim a TG token and send confirmation email for starter / coaching plan
     const planLabel = order.plan.charAt(0).toUpperCase() + order.plan.slice(1).replace(/-/g, " ")
@@ -127,7 +137,7 @@ export async function PATCH(request: Request) {
       tgInviteLink = await createStarterInviteLink(orderId)
     } else if (order.plan === "coaching") {
       // Grant 10 hours + academy access + a Telegram course link.
-      const res = await grantCoaching(order.email, orderId, undefined, parseFloat(order.amount))
+      const res = await grantCoaching(order.email, orderId, undefined, parseFloat(order.amount), splitInfo)
       tgInviteLink = res.tgInviteLink
     }
     await sendConfirmationEmail({

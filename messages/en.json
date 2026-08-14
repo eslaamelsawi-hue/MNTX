@@ -139,7 +139,8 @@
     "overdue": "Overdue",
     "partiallyPaid": "Partially paid",
     "cancelled": "Cancelled",
-    "loading": "Loading…"
+    "loading": "Loading…",
+    "payNow": "Pay Now"
   },
   "progress": {
     "title": "Progress",

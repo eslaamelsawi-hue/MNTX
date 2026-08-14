@@ -12,6 +12,15 @@ export type OKXOrder = {
   createdAt: string
   paidAt?: string
   txId?: string
+  /** Full plan price when this order only charged a split-payment first
+   *  installment (60%) — used to derive the remaining second-installment
+   *  amount once payment is confirmed. */
+  fullAmount?: string
+  splitPayment?: boolean
+  /** Set when this order pays off an existing pending invoice installment
+   *  (the "Pay Now" flow in the client dashboard) rather than a fresh plan
+   *  purchase — the verify/webhook handler must not re-grant hours in that case. */
+  installmentId?: string
 }
 
 export async function createOrder(order: OKXOrder): Promise<void> {
@@ -26,6 +35,9 @@ export async function createOrder(order: OKXOrder): Promise<void> {
     chain: order.chain,
     status: order.status,
     created_at: order.createdAt,
+    full_amount: order.fullAmount || null,
+    split_payment: !!order.splitPayment,
+    installment_id: order.installmentId || null,
   })
   if (error) throw new Error("Failed to create order: " + error.message)
 }
@@ -49,6 +61,9 @@ export async function getOrder(orderId: string): Promise<OKXOrder | null> {
     createdAt: data.created_at,
     paidAt: data.paid_at || undefined,
     txId: data.tx_id || undefined,
+    fullAmount: data.full_amount != null ? String(data.full_amount) : undefined,
+    splitPayment: !!data.split_payment,
+    installmentId: data.installment_id || undefined,
   }
 }
 

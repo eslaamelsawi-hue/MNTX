@@ -4,7 +4,9 @@ import { useEffect, useState } from "react"
 import { useTranslations } from "next-intl"
 import { Receipt, CheckCircle2, Clock, AlertCircle } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "@/components/ui/button"
 import { StatusPill } from "@/components/status-pill"
+import { PayInstallmentModal } from "@/components/pay-installment-modal"
 
 type Installment = { id: string; amount: number; due_date: string; status: string; paid_at: string | null }
 type Invoice = {
@@ -22,12 +24,17 @@ const installmentIcon: Record<string, React.ReactNode> = {
 export function DashboardInvoices({ email }: { email: string }) {
   const t = useTranslations("invoices")
   const [invoices, setInvoices] = useState<Invoice[] | null>(null)
+  const [payingInstallment, setPayingInstallment] = useState<string | null>(null)
 
-  useEffect(() => {
+  const refresh = () => {
     fetch("/api/invoices")
       .then((r) => (r.ok ? r.json() : { invoices: [] }))
       .then((d) => setInvoices(d.invoices ?? []))
       .catch(() => setInvoices([]))
+  }
+
+  useEffect(() => {
+    refresh()
     // email is used only to key the fetch effect if it changes after login
   }, [email])
 
@@ -73,12 +80,19 @@ export function DashboardInvoices({ email }: { email: string }) {
                 <p className="text-xs font-medium text-muted-foreground">{t("installments")}</p>
                 <div className="space-y-1.5">
                   {inv.invoice_installments.map((i) => (
-                    <div key={i.id} className="flex items-center justify-between rounded-lg border border-border/60 px-3 py-2 text-sm">
+                    <div key={i.id} className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-border/60 px-3 py-2 text-sm">
                       <span className="flex items-center gap-2">
                         {installmentIcon[i.status] || installmentIcon.pending}
                         <span className="font-mono text-muted-foreground">{t("due")}: {new Date(i.due_date).toLocaleDateString()}</span>
                       </span>
-                      <span className="font-mono font-medium tabular-nums">{inv.currency} {i.amount}</span>
+                      <span className="flex items-center gap-2">
+                        <span className="font-mono font-medium tabular-nums">{inv.currency} {i.amount}</span>
+                        {i.status !== "paid" && (
+                          <Button size="sm" variant="outline" className="h-7 px-2 text-xs" onClick={() => setPayingInstallment(i.id)}>
+                            {t("payNow")}
+                          </Button>
+                        )}
+                      </span>
                     </div>
                   ))}
                 </div>
@@ -86,6 +100,14 @@ export function DashboardInvoices({ email }: { email: string }) {
             </Card>
           ))}
         </div>
+      )}
+
+      {payingInstallment && (
+        <PayInstallmentModal
+          installmentId={payingInstallment}
+          onClose={() => setPayingInstallment(null)}
+          onPaid={refresh}
+        />
       )}
     </div>
   )
