@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle, DialogTrigger } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Textarea } from "@/components/ui/textarea"
-import { Plus, Trash2, RefreshCw, Edit, CalendarX } from "lucide-react"
+import { Plus, Trash2, RefreshCw, Edit, CalendarX, RotateCcw } from "lucide-react"
 import { StatusPill } from "@/components/status-pill"
 
 type Sub = {
@@ -105,6 +105,24 @@ export function AdminSubscriptions() {
       })
       fetchSubs()
     } catch (e) { console.error("Failed to expire subscription:", e) }
+    setActionLoading(null)
+  }
+
+  const handleReactivate = async (sub: Sub) => {
+    const pastExpiry = !!sub.expires_at && new Date(sub.expires_at) < new Date()
+    const msg = pastExpiry
+      ? `Reactivate ${sub.client_name || sub.client_email}'s ${sub.plan} subscription? Its expiry date has passed, so it'll be cleared — set a new one via Edit if needed.`
+      : `Reactivate ${sub.client_name || sub.client_email}'s ${sub.plan} subscription?`
+    if (!confirm(msg)) return
+    setActionLoading(sub.id)
+    try {
+      await fetch("/api/admin/subscriptions", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id: sub.id, status: "active", ...(pastExpiry ? { expires_at: null } : {}) }),
+      })
+      fetchSubs()
+    } catch (e) { console.error("Failed to reactivate subscription:", e) }
     setActionLoading(null)
   }
 
@@ -207,7 +225,9 @@ export function AdminSubscriptions() {
                   <TableCell>
                     <div className="flex items-center gap-1">
                       <Button size="sm" variant="outline" className="h-7 text-xs" onClick={() => handleEdit(sub)}><Edit className="mr-1 h-3 w-3" /> Edit</Button>
-                      {sub.status !== "expired" && (
+                      {sub.status === "expired" ? (
+                        <Button size="sm" variant="outline" className="h-7 text-xs border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/10" disabled={actionLoading === sub.id} onClick={() => handleReactivate(sub)}><RotateCcw className="mr-1 h-3 w-3" /> Reactivate</Button>
+                      ) : (
                         <Button size="sm" variant="outline" className="h-7 text-xs border-amber-500/30 text-amber-400 hover:bg-amber-500/10" disabled={actionLoading === sub.id} onClick={() => handleExpire(sub)}><CalendarX className="mr-1 h-3 w-3" /> Expire</Button>
                       )}
                       <Button size="sm" variant="outline" className="h-7 text-xs border-red-500/30 text-red-400 hover:bg-red-500/10" disabled={actionLoading === sub.id} onClick={() => handleDelete(sub.id)}><Trash2 className="mr-1 h-3 w-3" /> Delete</Button>

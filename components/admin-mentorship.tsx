@@ -22,6 +22,7 @@ import {
   Save,
   CalendarPlus,
   CalendarX,
+  RotateCcw,
 } from "lucide-react"
 
 type Sub = {
@@ -51,6 +52,7 @@ type MentorshipClient = {
   usedHours: number
   remainingHours: number
   isActive: boolean
+  hasExpired: boolean
   subIds: string[]
   primarySubId: string
   notes: string
@@ -133,6 +135,7 @@ export function AdminMentorship() {
         existing.usedHours += sub.used_hours
         existing.remainingHours += sub.remaining_hours
         existing.isActive = existing.isActive || active
+        existing.hasExpired = existing.hasExpired || sub.status === "expired"
         existing.subIds.push(sub.id)
         if (sub.expires_at && (!existing.latestExpiry || sub.expires_at > existing.latestExpiry)) {
           existing.latestExpiry = sub.expires_at
@@ -146,6 +149,7 @@ export function AdminMentorship() {
           usedHours: sub.used_hours,
           remainingHours: sub.remaining_hours,
           isActive: active,
+          hasExpired: sub.status === "expired",
           subIds: [sub.id],
           primarySubId: sub.id,
           notes: sub.notes || "",
@@ -271,6 +275,28 @@ export function AdminMentorship() {
       await load()
     } catch (e) {
       console.error("Failed to expire client:", e)
+    }
+    setActionLoading(null)
+  }
+
+  const handleReactivate = async (client: MentorshipClient) => {
+    if (!confirm(`Reactivate ${client.name}'s expired subscription(s)? Any past expiry date will be cleared — set a new one from the subscription row if needed.`)) return
+    setActionLoading(client.email)
+    try {
+      const expiredSubs = subs.filter((s) => client.subIds.includes(s.id) && s.status === "expired")
+      await Promise.all(
+        expiredSubs.map((s) => {
+          const pastExpiry = !!s.expires_at && new Date(s.expires_at) < new Date()
+          return fetch("/api/admin/subscriptions", {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ id: s.id, status: "active", ...(pastExpiry ? { expires_at: null } : {}) }),
+          })
+        })
+      )
+      await load()
+    } catch (e) {
+      console.error("Failed to reactivate client:", e)
     }
     setActionLoading(null)
   }
@@ -486,6 +512,17 @@ export function AdminMentorship() {
                                   <XCircle className="mr-1 h-3 w-3" /> Deactivate
                                 </Button>
                               </>
+                            )}
+                            {client.hasExpired && (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="h-7 border-emerald-500/30 text-xs text-emerald-400 hover:bg-emerald-500/10"
+                                disabled={actionLoading === client.email}
+                                onClick={() => handleReactivate(client)}
+                              >
+                                <RotateCcw className="mr-1 h-3 w-3" /> Reactivate
+                              </Button>
                             )}
                           </div>
                         </TableCell>
