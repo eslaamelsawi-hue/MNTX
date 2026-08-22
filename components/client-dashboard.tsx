@@ -83,6 +83,17 @@ function isUpcoming(b: BookingRecord): boolean {
   return d > new Date() && b.status !== "cancelled"
 }
 
+const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000
+
+// Upcoming sessions can always be rescheduled; a missed (past) one only
+// within a week of its original time — matches the server-side rule.
+function canReschedule(b: BookingRecord): boolean {
+  if (b.status !== "confirmed" && b.status !== "rescheduled") return false
+  if (!b.availability_slots?.date) return false
+  const startsAt = new Date(`${b.availability_slots.date}T${b.availability_slots.start_time || "00:00:00"}`)
+  return Date.now() - startsAt.getTime() <= ONE_WEEK_MS
+}
+
 function fmtDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString(undefined, { weekday: "short", year: "numeric", month: "short", day: "numeric" })
 }
@@ -994,7 +1005,7 @@ export function ClientDashboard() {
                         </div>
                         <div className="flex items-center gap-2">
                           <SessionStatusBadge status={b.status} l={l} />
-                          {(b.status === "confirmed" || b.status === "rescheduled") && (
+                          {canReschedule(b) && (
                             <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setReschedulingBooking(b)}>
                               <Calendar className="h-3.5 w-3.5" />{l.reschedule}
                             </Button>
@@ -1039,7 +1050,14 @@ export function ClientDashboard() {
                           </p>
                         </div>
                       </div>
-                      <SessionStatusBadge status={b.status} l={l} />
+                      <div className="flex items-center gap-2">
+                        <SessionStatusBadge status={b.status} l={l} />
+                        {canReschedule(b) && (
+                          <Button size="sm" variant="outline" className="h-7 gap-1.5 text-xs" onClick={() => setReschedulingBooking(b)}>
+                            <Calendar className="h-3.5 w-3.5" />{l.reschedule}
+                          </Button>
+                        )}
+                      </div>
                     </CardContent>
                   </Card>
                 ))}

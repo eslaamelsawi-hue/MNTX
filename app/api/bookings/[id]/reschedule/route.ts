@@ -81,11 +81,14 @@ export async function PATCH(request: NextRequest, { params }: { params: Promise<
   if (booking.status !== "confirmed" && booking.status !== "rescheduled") {
     return NextResponse.json({ error: "This session can no longer be rescheduled." }, { status: 400 })
   }
+  // A missed (past) session can still be rescheduled, but only within a week
+  // of when it was originally supposed to happen — after that it's too stale.
+  const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000
   const oldSlot = booking.availability_slots
   if (oldSlot) {
     const startsAt = new Date(`${oldSlot.date}T${oldSlot.start_time || "00:00:00"}`)
-    if (startsAt <= new Date()) {
-      return NextResponse.json({ error: "This session has already started or passed." }, { status: 400 })
+    if (Date.now() - startsAt.getTime() > ONE_WEEK_MS) {
+      return NextResponse.json({ error: "This session is more than a week old and can no longer be rescheduled." }, { status: 400 })
     }
   }
   if (new_slot_id === booking.slot_id) {
