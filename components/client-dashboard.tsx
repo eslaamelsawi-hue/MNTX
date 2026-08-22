@@ -29,6 +29,7 @@ import { DashboardBacktests } from "@/components/dashboard-backtests"
 import { NotificationBell } from "@/components/notification-bell"
 import BookingCalendar from "@/components/booking-calendar"
 import { StatusPill } from "@/components/status-pill"
+import { RescheduleSessionModal } from "@/components/reschedule-session-modal"
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -153,6 +154,7 @@ const t: Record<"en" | "ar", Record<string, string>> = {
     noNextSession: "No upcoming sessions",
     bookSession: "Book a Session",
     joinZoom: "Join Zoom",
+    reschedule: "Reschedule",
     plan: "Plan",
     status: "Status",
     active: "Active",
@@ -252,6 +254,7 @@ const t: Record<"en" | "ar", Record<string, string>> = {
     noNextSession: "لا توجد جلسات قادمة",
     bookSession: "احجز جلسة",
     joinZoom: "انضم للزووم",
+    reschedule: "إعادة الجدولة",
     plan: "الخطة",
     status: "الحالة",
     active: "نشط",
@@ -355,6 +358,7 @@ export function ClientDashboard() {
   const [error, setError] = useState("")
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
   const [bookings, setBookings] = useState<BookingRecord[]>([])
+  const [reschedulingBooking, setReschedulingBooking] = useState<BookingRecord | null>(null)
   const [settings, setSettings] = useState<Settings>({})
   const [looked, setLooked] = useState(false)
   const [groupSessions, setGroupSessions] = useState<GroupSession[]>([])
@@ -990,6 +994,11 @@ export function ClientDashboard() {
                         </div>
                         <div className="flex items-center gap-2">
                           <SessionStatusBadge status={b.status} l={l} />
+                          {(b.status === "confirmed" || b.status === "rescheduled") && (
+                            <Button size="sm" variant="outline" className="gap-1.5" onClick={() => setReschedulingBooking(b)}>
+                              <Calendar className="h-3.5 w-3.5" />{l.reschedule}
+                            </Button>
+                          )}
                           {b.zoom_join_url && (
                             <a href={b.zoom_join_url} target="_blank" rel="noopener noreferrer">
                               <Button size="sm" className="gap-1.5">
@@ -1295,6 +1304,17 @@ export function ClientDashboard() {
         </TabsContent>
         </main>
       </div>
+
+      {reschedulingBooking && (
+        <RescheduleSessionModal
+          bookingId={reschedulingBooking.id}
+          duration={reschedulingBooking.duration}
+          currentDate={reschedulingBooking.availability_slots?.date ?? null}
+          currentStartTime={reschedulingBooking.availability_slots?.start_time ?? null}
+          onClose={() => setReschedulingBooking(null)}
+          onRescheduled={() => { runLookup(email); setReschedulingBooking(null) }}
+        />
+      )}
     </Tabs>
   )
 }
