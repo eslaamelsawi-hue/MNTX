@@ -197,6 +197,9 @@ const t: Record<"en" | "ar", Record<string, string>> = {
     discordTitle: "Discord Community",
     discordDesc: "Join our active Discord server for daily insights, signals, and peer support.",
     discordBtn: "Join Discord",
+    discordConnectVip: "Connect Discord for VIP MAX role",
+    discordConnectedAs: "Connected as",
+    discordVipActive: "VIP MAX active",
     telegramTitle: "Telegram Group",
     telegramDesc: "Get real-time alerts and updates directly in our Telegram group.",
     telegramBtn: "Join Telegram",
@@ -297,6 +300,9 @@ const t: Record<"en" | "ar", Record<string, string>> = {
     discordTitle: "مجتمع ديسكورد",
     discordDesc: "انضم إلى خادم Discord النشط للحصول على رؤى يومية وإشارات ودعم.",
     discordBtn: "انضم لديسكورد",
+    discordConnectVip: "اربط ديسكورد للحصول على رتبة VIP MAX",
+    discordConnectedAs: "متصل باسم",
+    discordVipActive: "رتبة VIP MAX مفعّلة",
     telegramTitle: "مجموعة تيليجرام",
     telegramDesc: "احصل على تنبيهات وتحديثات فورية في مجموعة Telegram.",
     telegramBtn: "انضم لتيليجرام",
@@ -370,6 +376,7 @@ export function ClientDashboard() {
   const [subscriptions, setSubscriptions] = useState<Subscription[]>([])
   const [bookings, setBookings] = useState<BookingRecord[]>([])
   const [reschedulingBooking, setReschedulingBooking] = useState<BookingRecord | null>(null)
+  const [discordStatus, setDiscordStatus] = useState<{ linked: boolean; username?: string; roleGranted?: boolean } | null>(null)
   const [settings, setSettings] = useState<Settings>({})
   const [looked, setLooked] = useState(false)
   const [groupSessions, setGroupSessions] = useState<GroupSession[]>([])
@@ -450,6 +457,14 @@ export function ClientDashboard() {
   useEffect(() => {
     setMobileNavOpen(false)
   }, [activeTab])
+
+  useEffect(() => {
+    if (activeTab !== "community" || discordStatus !== null) return
+    fetch("/api/discord/status")
+      .then((r) => (r.ok ? r.json() : { linked: false }))
+      .then(setDiscordStatus)
+      .catch(() => setDiscordStatus({ linked: false }))
+  }, [activeTab, discordStatus])
 
   const activeSub = useMemo(
     () => subscriptions.find((s) => s.status === "active") ?? subscriptions[0],
@@ -1139,6 +1154,21 @@ export function ClientDashboard() {
                     <ExternalLink className="h-4 w-4" />{l.discordBtn}
                   </Button>
                 )}
+                <div className="rounded-lg border border-border/60 bg-muted/20 p-3">
+                  {discordStatus?.linked ? (
+                    <div className="flex items-center gap-2 text-xs">
+                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-400 shrink-0" />
+                      <span className="text-muted-foreground">
+                        {l.discordConnectedAs} <span className="font-medium text-foreground">@{discordStatus.username}</span>
+                        {discordStatus.roleGranted && <span className="ms-1 text-emerald-400">· {l.discordVipActive}</span>}
+                      </span>
+                    </div>
+                  ) : (
+                    <a href="/api/discord/oauth/start" className="flex items-center gap-2 text-xs font-medium text-primary hover:underline">
+                      <Crown className="h-3.5 w-3.5 shrink-0" />{l.discordConnectVip}
+                    </a>
+                  )}
+                </div>
               </CardContent>
             </Card>
 

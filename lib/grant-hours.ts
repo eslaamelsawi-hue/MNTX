@@ -4,6 +4,7 @@ import { grantAccess } from "@/lib/course-access-store"
 import { createStarterInviteLink } from "@/lib/tg-invite"
 import { COURSE_GRANT_PLAN } from "@/lib/course"
 import { createInvoiceForPlan } from "@/lib/invoicing"
+import { grantVipRoleForEmail } from "@/lib/discord"
 
 /** Mentorship hours granted by the 1-on-1 Coaching Plan (10 sessions = 10 hours). */
 export const COACHING_HOURS = 10
@@ -170,6 +171,13 @@ export async function grantCoaching(
     tgInviteLink = await createStarterInviteLink(orderRef)
   } catch (e) {
     console.error("[grantCoaching] telegram invite failed:", e)
+  }
+
+  // 4) Discord VIP MAX role, if they've already linked their Discord account
+  try {
+    await grantVipRoleForEmail(normalizedEmail)
+  } catch (e) {
+    console.error("[grantCoaching] discord role grant failed:", e)
   }
 
   return { tgInviteLink, alreadyFulfilled: false }

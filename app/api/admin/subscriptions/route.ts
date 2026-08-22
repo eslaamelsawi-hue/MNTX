@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createInvoiceForPlan } from "@/lib/invoicing"
+import { revokeVipRoleForEmail } from "@/lib/discord"
 
 async function isAdmin() {
   const cookieStore = await cookies()
@@ -56,6 +57,12 @@ export async function PATCH(req: NextRequest) {
   const supabase = createAdminClient()
   const { data, error } = await supabase.from("user_subscriptions").update(filtered).eq("id", id).select().single()
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  // Pull the Discord VIP MAX role when an admin cancels a coaching subscription.
+  if (filtered.status === "cancelled" && data.plan === "coaching") {
+    revokeVipRoleForEmail(data.client_email).catch((e) => console.error("[admin/subscriptions] discord role revoke failed:", e))
+  }
+
   return NextResponse.json({ subscription: data })
 }
 
