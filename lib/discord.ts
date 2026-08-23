@@ -68,12 +68,15 @@ async function qualifiesForVip(email: string): Promise<boolean> {
   return !!data
 }
 
-/** Grants the VIP MAX role to a client's linked Discord account, if any.
+/** Grants the VIP MAX role to a client's linked Discord account — but ONLY
+ *  if they actually qualify (a non-cancelled coaching subscription on file).
  *  Called right after a coaching purchase completes, and from the OAuth
- *  callback when a client links Discord after already having coaching. */
+ *  callback when a client links Discord after already having coaching.
+ *  Safe to call for anyone: silently does nothing if they don't qualify. */
 export async function grantVipRoleForEmail(email: string): Promise<void> {
   if (!configured()) return
   const normalized = email.toLowerCase().trim()
+  if (!(await qualifiesForVip(normalized))) return
   const supabase = createAdminClient()
   const { data: link } = await supabase.from("discord_links").select("discord_user_id").eq("client_email", normalized).maybeSingle()
   if (!link) return
