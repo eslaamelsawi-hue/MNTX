@@ -1,8 +1,11 @@
 "use client"
 
-import { useEffect, useState } from "react"
+import { useEffect, useState, useCallback } from "react"
 import { useLocale } from "next-intl"
-import { Loader2, X, CheckCircle2, Calendar, Clock } from "lucide-react"
+import { Loader2, X, CheckCircle2, Calendar as CalendarIcon, Clock } from "lucide-react"
+import { format, isSameDay, parseISO } from "date-fns"
+import { Calendar } from "@/components/ui/calendar"
+import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 
 const dict = {
@@ -10,9 +13,11 @@ const dict = {
     title: "Reschedule Session",
     currentlyScheduled: "Currently scheduled",
     pickDate: "Pick a new date",
+    pickDateHint: "Highlighted days have open times.",
     availableTimes: "Available times",
-    noSlots: "No open times on this date. Try another day.",
+    noSlots: "No open times on this date. Try another highlighted day.",
     loadingSlots: "Loading times…",
+    loadingCalendar: "Loading calendar…",
     confirm: "Confirm New Time",
     confirming: "Rescheduling…",
     cancel: "Cancel",
@@ -22,14 +27,18 @@ const dict = {
     error: "Something went wrong. Please try again.",
     weeklyLimit: "You've reached your weekly session limit for that week.",
     min: "min",
+    prevDay: "prev. day",
+    nextDay: "next day",
   },
   ar: {
     title: "إعادة جدولة الجلسة",
     currentlyScheduled: "الموعد الحالي",
     pickDate: "اختر تاريخًا جديدًا",
+    pickDateHint: "الأيام المميزة بها أوقات متاحة.",
     availableTimes: "الأوقات المتاحة",
-    noSlots: "لا توجد أوقات متاحة في هذا اليوم. جرّب يومًا آخر.",
+    noSlots: "لا توجد أوقات متاحة في هذا اليوم. جرّب يومًا آخر مميزًا.",
     loadingSlots: "جاري تحميل الأوقات…",
+    loadingCalendar: "جاري تحميل التقويم…",
     confirm: "تأكيد الموعد الجديد",
     confirming: "جاري إعادة الجدولة…",
     cancel: "إلغاء",
@@ -39,13 +48,31 @@ const dict = {
     error: "حدث خطأ ما. حاول مرة أخرى.",
     weeklyLimit: "لقد وصلت إلى الحد الأسبوعي للجلسات في ذلك الأسبوع.",
     min: "دقيقة",
+    prevDay: "اليوم السابق",
+    nextDay: "اليوم التالي",
   },
 }
 
 type SlotOption = { id: string; date: string; start_time: string; end_time: string; duration: number }
 
-function todayIso() {
-  return new Date().toISOString().slice(0, 10)
+// Slots are stored as Africa/Cairo local wall-clock time — convert to the
+// viewer's own timezone so what they see always matches their own clock.
+function cairoToLocal(slotDate: string, timeStr: string, userTz: string): { displayTime: string; tzAbbr: string; dayOffset: number } {
+  const probe = new Date(`${slotDate}T12:00:00Z`)
+  const utcMs = new Date(probe.toLocaleString("en-US", { timeZone: "UTC" })).getTime()
+  const cairoMs = new Date(probe.toLocaleString("en-US", { timeZone: "Africa/Cairo" })).getTime()
+  const cairoOffsetMs = cairoMs - utcMs
+
+  const normalizedTime = timeStr.length === 5 ? `${timeStr}:00` : timeStr
+  const cairoAsUtc = new Date(`${slotDate}T${normalizedTime}Z`)
+  const trueUtc = new Date(cairoAsUtc.getTime() - cairoOffsetMs)
+
+  const displayTime = new Intl.DateTimeFormat("en-US", { timeZone: userTz, hour: "2-digit", minute: "2-digit", hour12: false }).format(trueUtc)
+  const tzAbbr = new Intl.DateTimeFormat("en-US", { timeZone: userTz, timeZoneName: "short" }).format(trueUtc).split(", ").pop() ?? userTz
+  const localDate = new Intl.DateTimeFormat("en-CA", { timeZone: userTz, year: "numeric", month: "2-digit", day: "2-digit" }).format(trueUtc)
+  const dayOffset = localDate < slotDate ? -1 : localDate > slotDate ? 1 : 0
+
+  return { displayTime, tzAbbr, dayOffset }
 }
 
 export function RescheduleSessionModal({
@@ -66,21 +93,53 @@ export function RescheduleSessionModal({
   const locale = useLocale()
   const l = dict[locale as keyof typeof dict] || dict.en
 
-  const [date, setDate] = useState(todayIso())
+  const [userTimezone, setUserTimezone] = useState("Africa/Cairo")
+  useEffect(() => {
+    setUserTimezone(Intl.DateTimeFormat().resolvedOptions().timeZone)
+  }, [])
+
+  const [monthSlots, setMonthSlots] = useState<SlotOption[]>([])
+  const [monthLoading, setMonthLoading] = useState(true)
+  const [selectedDate, setSelectedDate] = useState<Date | undefined>()
   const [slots, setSlots] = useState<SlotOption[] | null>(null)
   const [selectedSlotId, setSelectedSlotId] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [error, setError] = useState("")
   const [done, setDone] = useState(false)
 
+  const fetchMonth = useCallback(
+    async (month: string) => {
+      setMonthLoading(true)
+      try {
+        const res = await fetch(`/api/slots?month=${month}`)
+        const data = await res.json()
+        setMonthSlots((data.slots ?? []).filter((s: SlotOption) => s.duration === duration))
+      } catch {
+        setMonthSlots([])
+      } finally {
+        setMonthLoading(false)
+      }
+    },
+    [duration]
+  )
+
   useEffect(() => {
-    setSlots(null)
+    fetchMonth(format(new Date(), "yyyy-MM"))
+  }, [fetchMonth])
+
+  const availableDates = monthSlots.map((s) => parseISO(s.date))
+
+  const handleDateSelect = (date: Date | undefined) => {
+    if (!date) return
+    setSelectedDate(date)
     setSelectedSlotId(null)
-    fetch(`/api/slots?date=${date}`)
+    setSlots(null)
+    const dateStr = format(date, "yyyy-MM-dd")
+    fetch(`/api/slots?date=${dateStr}`)
       .then((r) => r.json())
       .then((d: { slots?: SlotOption[] }) => setSlots((d.slots ?? []).filter((s) => s.duration === duration)))
       .catch(() => setSlots([]))
-  }, [date, duration])
+  }
 
   const confirm = async () => {
     if (!selectedSlotId) return
@@ -106,6 +165,8 @@ export function RescheduleSessionModal({
     }
   }
 
+  const currentLocal = currentDate && currentStartTime ? cairoToLocal(currentDate, currentStartTime, userTimezone) : null
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
       <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
@@ -125,43 +186,74 @@ export function RescheduleSessionModal({
           <>
             {currentDate && (
               <p className="mb-3 flex items-center gap-2 rounded-lg border border-border/60 bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
-                <Calendar className="h-3.5 w-3.5" />
+                <CalendarIcon className="h-3.5 w-3.5 shrink-0" />
                 {l.currentlyScheduled}: {new Date(currentDate).toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" })}
-                {currentStartTime ? ` · ${currentStartTime.slice(0, 5)}` : ""}
+                {currentLocal ? ` · ${currentLocal.displayTime} (${currentLocal.tzAbbr})` : ""}
               </p>
             )}
 
-            <label className="mb-1 block text-xs font-medium text-muted-foreground">{l.pickDate}</label>
-            <input
-              type="date"
-              min={todayIso()}
-              value={date}
-              onChange={(e) => setDate(e.target.value)}
-              className="mb-3 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground outline-none focus:border-primary"
-            />
+            <p className="mb-1.5 text-xs font-medium text-muted-foreground">{l.pickDate}</p>
+            <p className="mb-2 text-[11px] text-muted-foreground/70">{l.pickDateHint}</p>
 
-            <p className="mb-1.5 text-xs font-medium text-muted-foreground">{l.availableTimes}</p>
-            {slots === null ? (
-              <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
-                <Loader2 className="h-4 w-4 animate-spin" /> {l.loadingSlots}
+            {monthLoading ? (
+              <div className="flex items-center justify-center gap-2 py-10 text-sm text-muted-foreground">
+                <Loader2 className="h-4 w-4 animate-spin" /> {l.loadingCalendar}
               </div>
-            ) : slots.length === 0 ? (
-              <p className="rounded-lg border border-border/60 py-4 text-center text-sm text-muted-foreground">{l.noSlots}</p>
             ) : (
-              <div className="mb-3 grid max-h-48 grid-cols-2 gap-2 overflow-y-auto">
-                {slots.map((s) => (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => setSelectedSlotId(s.id)}
-                    className={`flex items-center justify-center gap-1.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${
-                      selectedSlotId === s.id ? "border-primary bg-primary/10 text-primary" : "border-border text-foreground hover:border-primary/50"
-                    }`}
-                  >
-                    <Clock className="h-3 w-3" /> {s.start_time.slice(0, 5)}
-                  </button>
-                ))}
+              <div className="mb-3 flex justify-center rounded-lg border border-border/60 bg-background/50">
+                <Calendar
+                  mode="single"
+                  selected={selectedDate}
+                  onSelect={handleDateSelect}
+                  onMonthChange={(m) => fetchMonth(format(m, "yyyy-MM"))}
+                  disabled={(date) => {
+                    const today = new Date()
+                    today.setHours(0, 0, 0, 0)
+                    if (date < today) return true
+                    return !availableDates.some((d) => isSameDay(d, date))
+                  }}
+                  modifiers={{ available: availableDates }}
+                  modifiersClassNames={{ available: "bg-primary/10 font-semibold text-primary hover:bg-primary/20" }}
+                />
               </div>
+            )}
+
+            {selectedDate && (
+              <>
+                <p className="mb-1.5 text-xs font-medium text-muted-foreground">{l.availableTimes}</p>
+                {slots === null ? (
+                  <div className="flex items-center justify-center gap-2 py-6 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" /> {l.loadingSlots}
+                  </div>
+                ) : slots.length === 0 ? (
+                  <p className="rounded-lg border border-border/60 py-4 text-center text-sm text-muted-foreground">{l.noSlots}</p>
+                ) : (
+                  <div className="mb-3 grid max-h-48 grid-cols-2 gap-2 overflow-y-auto">
+                    {slots.map((s) => {
+                      const local = cairoToLocal(s.date, s.start_time, userTimezone)
+                      return (
+                        <button
+                          key={s.id}
+                          type="button"
+                          onClick={() => setSelectedSlotId(s.id)}
+                          className={`flex flex-col items-center justify-center gap-0.5 rounded-lg border px-2 py-2 text-xs font-medium transition-colors ${
+                            selectedSlotId === s.id ? "border-primary bg-primary/10 text-primary" : "border-border text-foreground hover:border-primary/50"
+                          }`}
+                        >
+                          <span className="flex items-center gap-1.5">
+                            <Clock className="h-3 w-3" /> {local.displayTime} <span className="text-[10px] font-normal text-muted-foreground">{local.tzAbbr}</span>
+                          </span>
+                          {local.dayOffset !== 0 && (
+                            <Badge variant="outline" className="h-4 px-1 text-[9px] font-normal text-amber-500">
+                              {local.dayOffset < 0 ? l.prevDay : l.nextDay}
+                            </Badge>
+                          )}
+                        </button>
+                      )
+                    })}
+                  </div>
+                )}
+              </>
             )}
 
             {error && <p className="mb-3 rounded-lg bg-red-500/10 p-3 text-center text-xs text-red-400">{error}</p>}
