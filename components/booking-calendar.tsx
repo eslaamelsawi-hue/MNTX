@@ -202,6 +202,12 @@ export default function BookingCalendar(
   }, [fetchMonthSlots])
 
   const availableDates = allSlots.map((s) => parseISO(s.date))
+  // Only future days get the "available" highlight — a past day that
+  // happens to have a stale slot row is still disabled, so it shouldn't
+  // look pickable.
+  const todayStart = new Date()
+  todayStart.setHours(0, 0, 0, 0)
+  const highlightDates = availableDates.filter((d) => d >= todayStart)
 
   const handleDateSelect = (date: Date | undefined) => {
     if (!date) return
@@ -371,11 +377,11 @@ export default function BookingCalendar(
                     return !availableDates.some((d) => isSameDay(d, date))
                   }}
                   modifiers={{
-                    available: availableDates,
+                    available: highlightDates,
                   }}
                   modifiersClassNames={{
                     available:
-                      "bg-primary/10 font-semibold text-primary hover:bg-primary/20",
+                      "m-0.5 rounded-lg bg-primary/10 font-semibold text-primary hover:bg-primary/20",
                   }}
                   className="rounded-xl"
                 />
