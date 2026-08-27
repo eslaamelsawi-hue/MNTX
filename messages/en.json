@@ -703,7 +703,19 @@
     "noHoursError": "You don't have mentorship hours. Please purchase a plan to book sessions.",
     "weeklyLimitError": "You can book a maximum of 2 sessions per week.",
     "prevDay": "previous day in your timezone",
-    "nextDay": "next day in your timezone"
+    "nextDay": "next day in your timezone",
+    "customTimeCta": "Can't find a good time? Request a custom time",
+    "customTimeTitle": "Request a Custom Time",
+    "customTimeDesc": "Pick any date and time — your mentor will confirm it as soon as possible.",
+    "pickTime": "Time",
+    "selectDuration": "Session Length",
+    "continueToDetails": "Continue",
+    "backToCalendar": "Back",
+    "requestTime": "Request This Time",
+    "requestSubmitting": "Sending request...",
+    "pendingTitle": "Request Sent!",
+    "pendingMessage": "We've received your requested time. You'll get an email as soon as your mentor confirms it.",
+    "pickTimeError": "Please pick a date and time."
   },
   "fundedChallenge": {
     "badge": "Prop Firm Mastery",

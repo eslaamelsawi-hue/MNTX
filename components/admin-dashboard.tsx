@@ -646,6 +646,36 @@ export function AdminDashboard() {
     }
   }
 
+  const handleApprove = async (bookingId: string) => {
+    if (!confirm("Approve this custom time request? This creates the Zoom meeting and deducts the client's hours.")) return
+    try {
+      await fetch("/api/admin/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ booking_id: bookingId, action: "approve" }),
+      })
+      fetchBookings()
+      fetchSlots()
+    } catch (e) {
+      console.error("Failed to approve booking:", e)
+    }
+  }
+
+  const handleDecline = async (bookingId: string) => {
+    if (!confirm("Decline this custom time request? The client will be notified by email.")) return
+    try {
+      await fetch("/api/admin/bookings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ booking_id: bookingId, action: "decline" }),
+      })
+      fetchBookings()
+      fetchSlots()
+    } catch (e) {
+      console.error("Failed to decline booking:", e)
+    }
+  }
+
   const toggleCancelledSelection = (id: string) => {
     setSelectedCancelledIds(prev => {
       const next = new Set(prev)
@@ -1312,6 +1342,26 @@ export function AdminDashboard() {
                           </TableCell>
                           <TableCell className="text-right">
                             <div className="flex items-center justify-end gap-1">
+                              {booking.status === "pending" && (
+                                <>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="gap-1 text-emerald-400 hover:text-emerald-300"
+                                    onClick={() => handleApprove(booking.id)}
+                                  >
+                                    <CheckCircle2 className="h-4 w-4" /> Approve
+                                  </Button>
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    className="gap-1 text-red-400 hover:text-red-300"
+                                    onClick={() => handleDecline(booking.id)}
+                                  >
+                                    <XCircle className="h-4 w-4" /> Decline
+                                  </Button>
+                                </>
+                              )}
                               {booking.status === "confirmed" && (
                                 <>
                                   <Button

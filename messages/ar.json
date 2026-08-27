@@ -703,7 +703,19 @@
     "noHoursError": "ليس لديك ساعات إرشاد. يرجى شراء خطة لحجز الجلسات.",
     "weeklyLimitError": "يمكنك حجز جلستين كحد أقصى في الأسبوع.",
     "prevDay": "اليوم السابق بتوقيتك",
-    "nextDay": "اليوم التالي بتوقيتك"
+    "nextDay": "اليوم التالي بتوقيتك",
+    "customTimeCta": "لم تجد وقتًا مناسبًا؟ اطلب موعدًا مخصصًا",
+    "customTimeTitle": "طلب موعد مخصص",
+    "customTimeDesc": "اختر أي تاريخ ووقت — سيقوم مرشدك بتأكيده في أقرب وقت ممكن.",
+    "pickTime": "الوقت",
+    "selectDuration": "مدة الجلسة",
+    "continueToDetails": "متابعة",
+    "backToCalendar": "رجوع",
+    "requestTime": "طلب هذا الموعد",
+    "requestSubmitting": "جاري إرسال الطلب...",
+    "pendingTitle": "تم إرسال الطلب!",
+    "pendingMessage": "لقد استلمنا موعدك المطلوب. ستصلك رسالة بريد إلكتروني فور تأكيد مرشدك له.",
+    "pickTimeError": "يرجى اختيار تاريخ ووقت."
   },
   "fundedChallenge": {
     "badge": "إتقان PropFirm",

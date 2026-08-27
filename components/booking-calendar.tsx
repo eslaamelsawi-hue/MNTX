@@ -27,7 +27,7 @@ import { useTranslations } from "next-intl"
 import type { AvailabilitySlot } from "@/lib/types/appointments"
 import { createClient } from "@/lib/supabase/client"
 
-type Step = "calendar" | "slots" | "form" | "success"
+type Step = "calendar" | "slots" | "custom" | "form" | "success"
 
 const STEPS: Step[] = ["calendar", "slots", "form", "success"]
 
@@ -93,7 +93,16 @@ export default function BookingCalendar(
     date: string
     time: string
     zoomUrl?: string
+    pending?: boolean
   } | null>(null)
+
+  // "Request a custom time" — any date/time the client wants, subject to
+  // admin approval instead of the usual instant confirmation.
+  const [bookingMode, setBookingMode] = useState<"slot" | "custom">("slot")
+  const [customDate, setCustomDate] = useState<Date | undefined>()
+  const [customTime, setCustomTime] = useState("")
+  const [customDuration, setCustomDuration] = useState(60)
+  const [customError, setCustomError] = useState<string | null>(null)
 
   const [formData, setFormData] = useState({
     client_name: defaultName,
@@ -159,11 +168,13 @@ export default function BookingCalendar(
   }
 
   // When the email is pre-filled (prop or self-detected session), auto-verify
-  // hours as soon as a slot is chosen (the weekly-limit check depends on the slot date).
+  // hours as soon as a slot is chosen (the weekly-limit check depends on the
+  // slot date) — or as soon as a custom time request starts, since that path
+  // never sets selectedSlot and the email field may be locked/never blurred.
   useEffect(() => {
-    if (prefill.email && selectedSlot) verifyEmail(prefill.email)
+    if (prefill.email && (selectedSlot || bookingMode === "custom")) verifyEmail(prefill.email)
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedSlot?.id, prefill.email])
+  }, [selectedSlot?.id, prefill.email, bookingMode])
 
   const fetchMonthSlots = useCallback(async (month: string) => {
     try {
@@ -230,6 +241,50 @@ export default function BookingCalendar(
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+
+    if (bookingMode === "custom") {
+      if (!customDate || !customTime || !emailAllowed) return
+      setSubmitting(true)
+      setError(null)
+      try {
+        const [hh, mm] = customTime.split(":").map(Number)
+        const startLocal = new Date(customDate)
+        startLocal.setHours(hh, mm, 0, 0)
+
+        const res = await fetch("/api/bookings/custom-request", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            start_at_iso: startLocal.toISOString(),
+            duration: customDuration,
+            client_name: formData.client_name.trim(),
+            client_email: formData.client_email.trim(),
+            client_phone: formData.client_phone.trim() || undefined,
+            client_message: formData.client_message.trim() || undefined,
+            client_timezone: userTimezone,
+          }),
+        })
+        const data = await res.json()
+        if (!res.ok) {
+          const mappedError =
+            data.error === "noHoursRemaining"
+              ? t("noHoursError")
+              : data.error === "weeklyLimitReached"
+                ? t("weeklyLimitError")
+                : data.error || t("errorBooking")
+          setError(mappedError)
+          return
+        }
+        setConfirmationData({ date: format(customDate, "yyyy-MM-dd"), time: customTime, pending: true })
+        setStep("success")
+      } catch {
+        setError(t("errorBooking"))
+      } finally {
+        setSubmitting(false)
+      }
+      return
+    }
+
     if (!selectedSlot || !emailAllowed) return
 
     setSubmitting(true)
@@ -289,6 +344,11 @@ export default function BookingCalendar(
     setEmailAllowed(false)
     setRemainingHours(0)
     setWeeklyLimitReached(false)
+    setBookingMode("slot")
+    setCustomDate(undefined)
+    setCustomTime("")
+    setCustomDuration(60)
+    setCustomError(null)
     const now = new Date()
     fetchMonthSlots(format(now, "yyyy-MM"))
   }
@@ -320,7 +380,7 @@ export default function BookingCalendar(
         </div>
 
         {/* Step indicator */}
-        {step !== "success" && (
+        {step !== "success" && step !== "custom" && (
           <div className="flex items-center justify-center gap-2 mb-10">
             {STEPS.slice(0, 3).map((s, i) => (
               <div key={s} className="flex items-center gap-2">
@@ -385,6 +445,96 @@ export default function BookingCalendar(
                   }}
                   className="rounded-xl"
                 />
+              </div>
+              <button
+                type="button"
+                onClick={() => { setBookingMode("custom"); setCustomError(null); setStep("custom") }}
+                className="mt-4 block w-full text-center text-sm font-medium text-primary hover:underline"
+              >
+                {t("customTimeCta")}
+              </button>
+            </div>
+          </div>
+        )}
+
+        {/* Step: Custom time request */}
+        {step === "custom" && (
+          <div className="mx-auto max-w-md animate-in fade-in slide-in-from-bottom-4 duration-500">
+            <div className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-6 shadow-xl shadow-black/5">
+              <div className="flex items-center gap-3 mb-2">
+                <Button
+                  variant="ghost"
+                  size="icon"
+                  className="h-8 w-8 rounded-lg"
+                  onClick={() => { setBookingMode("slot"); setStep("calendar") }}
+                >
+                  <ArrowLeft className="h-4 w-4" />
+                </Button>
+                <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10">
+                  <CalendarDays className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="font-semibold text-lg">{t("customTimeTitle")}</h2>
+                  <p className="text-xs text-muted-foreground">{t("customTimeDesc")}</p>
+                </div>
+              </div>
+
+              <div className="mt-6 space-y-5">
+                <div className="flex justify-center">
+                  <Calendar
+                    mode="single"
+                    selected={customDate}
+                    onSelect={(date) => { setCustomDate(date); setCustomError(null) }}
+                    disabled={(date) => {
+                      const today = new Date()
+                      today.setHours(0, 0, 0, 0)
+                      return date < today
+                    }}
+                    className="rounded-xl"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div className="space-y-2">
+                    <Label htmlFor="custom-time" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      {t("pickTime")}
+                    </Label>
+                    <Input
+                      id="custom-time"
+                      type="time"
+                      value={customTime}
+                      onChange={(e) => { setCustomTime(e.target.value); setCustomError(null) }}
+                      className="h-11 rounded-xl border-border/50 bg-background/50"
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="custom-duration" className="text-xs font-medium uppercase tracking-wider text-muted-foreground">
+                      {t("selectDuration")}
+                    </Label>
+                    <select
+                      id="custom-duration"
+                      value={customDuration}
+                      onChange={(e) => setCustomDuration(Number(e.target.value))}
+                      className="h-11 w-full rounded-xl border border-border/50 bg-background/50 px-3 text-sm text-foreground"
+                    >
+                      <option value={30}>30 {t("minutes")}</option>
+                      <option value={60}>60 {t("minutes")}</option>
+                      <option value={90}>90 {t("minutes")}</option>
+                    </select>
+                  </div>
+                </div>
+
+                {customError && <p className="text-sm text-destructive">{customError}</p>}
+
+                <Button
+                  className="w-full h-12 rounded-xl text-base font-semibold"
+                  onClick={() => {
+                    if (!customDate || !customTime) { setCustomError(t("pickTimeError")); return }
+                    setStep("form")
+                  }}
+                >
+                  {t("continueToDetails")}
+                </Button>
               </div>
             </div>
           </div>
@@ -473,7 +623,7 @@ export default function BookingCalendar(
         )}
 
         {/* Step: Form */}
-        {step === "form" && selectedSlot && selectedDate && (
+        {step === "form" && (bookingMode === "custom" ? customDate && customTime : selectedSlot && selectedDate) && (
           <div className="mx-auto max-w-lg animate-in fade-in slide-in-from-bottom-4 duration-500">
             <div className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm shadow-xl shadow-black/5 overflow-hidden">
               {/* Session summary bar */}
@@ -484,25 +634,31 @@ export default function BookingCalendar(
                       variant="ghost"
                       size="icon"
                       className="h-8 w-8 rounded-lg"
-                      onClick={() => setStep("slots")}
+                      onClick={() => setStep(bookingMode === "custom" ? "custom" : "slots")}
                     >
                       <ArrowLeft className="h-4 w-4" />
                     </Button>
                     <div>
                       <p className="text-sm font-semibold">{t("yourDetails")}</p>
                       <p className="text-xs text-muted-foreground">
-                        {format(selectedDate, "EEE, MMM d")} {"\u00b7"}{" "}
-                        {cairoToLocal(selectedSlot.date, selectedSlot.start_time, userTimezone).displayTime}
-                        {" \u2013 "}
-                        {cairoToLocal(selectedSlot.date, selectedSlot.end_time, userTimezone).displayTime}
-                        {" \u00b7 "}
-                        {cairoToLocal(selectedSlot.date, selectedSlot.start_time, userTimezone).tzAbbr}
+                        {bookingMode === "custom" && customDate ? (
+                          <>{format(customDate, "EEE, MMM d")} {"\u00b7"} {customTime}</>
+                        ) : selectedSlot && selectedDate ? (
+                          <>
+                            {format(selectedDate, "EEE, MMM d")} {"\u00b7"}{" "}
+                            {cairoToLocal(selectedSlot.date, selectedSlot.start_time, userTimezone).displayTime}
+                            {" \u2013 "}
+                            {cairoToLocal(selectedSlot.date, selectedSlot.end_time, userTimezone).displayTime}
+                            {" \u00b7 "}
+                            {cairoToLocal(selectedSlot.date, selectedSlot.start_time, userTimezone).tzAbbr}
+                          </>
+                        ) : null}
                       </p>
                     </div>
                   </div>
                   <Badge className="bg-primary/10 text-primary border-primary/20 hover:bg-primary/10">
                     <Video className="mr-1 h-3 w-3" />
-                    Zoom {"\u00b7"} {selectedSlot.duration} {t("minutes")}
+                    Zoom {"\u00b7"} {bookingMode === "custom" ? customDuration : selectedSlot?.duration} {t("minutes")}
                   </Badge>
                 </div>
               </div>
@@ -606,12 +762,12 @@ export default function BookingCalendar(
                     {submitting ? (
                       <>
                         <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        {t("submitting")}
+                        {bookingMode === "custom" ? t("requestSubmitting") : t("submitting")}
                       </>
                     ) : (
                       <>
                         <CalendarCheck className="mr-2 h-4 w-4" />
-                        {t("confirmBooking")}
+                        {bookingMode === "custom" ? t("requestTime") : t("confirmBooking")}
                       </>
                     )}
                   </Button>
@@ -625,16 +781,22 @@ export default function BookingCalendar(
         {step === "success" && confirmationData && (
           <div className="mx-auto max-w-md animate-in fade-in zoom-in-95 duration-500">
             <div className="rounded-2xl border border-border/50 bg-card/80 backdrop-blur-sm p-8 shadow-xl shadow-black/5 text-center">
-              {/* Animated check */}
+              {/* Animated check / clock */}
               <div className="relative mx-auto mb-6 flex h-20 w-20 items-center justify-center">
-                <div className="absolute inset-0 rounded-full bg-green-500/10 animate-ping" />
-                <div className="relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br from-green-500 to-emerald-600 shadow-lg shadow-green-500/30">
-                  <CheckCircle2 className="h-8 w-8 text-white" />
+                <div className={`absolute inset-0 rounded-full animate-ping ${confirmationData.pending ? "bg-amber-500/10" : "bg-green-500/10"}`} />
+                <div
+                  className={`relative flex h-16 w-16 items-center justify-center rounded-full bg-gradient-to-br shadow-lg ${
+                    confirmationData.pending
+                      ? "from-amber-500 to-amber-600 shadow-amber-500/30"
+                      : "from-green-500 to-emerald-600 shadow-green-500/30"
+                  }`}
+                >
+                  {confirmationData.pending ? <Clock className="h-8 w-8 text-white" /> : <CheckCircle2 className="h-8 w-8 text-white" />}
                 </div>
               </div>
 
-              <h2 className="text-2xl font-bold mb-2">{t("successTitle")}</h2>
-              <p className="text-muted-foreground mb-6">{t("successMessage")}</p>
+              <h2 className="text-2xl font-bold mb-2">{confirmationData.pending ? t("pendingTitle") : t("successTitle")}</h2>
+              <p className="text-muted-foreground mb-6">{confirmationData.pending ? t("pendingMessage") : t("successMessage")}</p>
 
               {/* Session details card */}
               <div className="rounded-xl bg-muted/50 border border-border/50 p-4 mb-6 text-sm text-left space-y-3">
@@ -654,11 +816,17 @@ export default function BookingCalendar(
                   <div>
                     <p className="text-xs text-muted-foreground">{t("time")}</p>
                     <p className="font-medium">
-                      {cairoToLocal(confirmationData.date, confirmationData.time, userTimezone).displayTime}
-                      {" "}
-                      <span className="text-xs text-muted-foreground font-normal">
-                        {cairoToLocal(confirmationData.date, confirmationData.time, userTimezone).tzAbbr}
-                      </span>
+                      {confirmationData.pending ? (
+                        confirmationData.time
+                      ) : (
+                        <>
+                          {cairoToLocal(confirmationData.date, confirmationData.time, userTimezone).displayTime}
+                          {" "}
+                          <span className="text-xs text-muted-foreground font-normal">
+                            {cairoToLocal(confirmationData.date, confirmationData.time, userTimezone).tzAbbr}
+                          </span>
+                        </>
+                      )}
                     </p>
                   </div>
                 </div>
@@ -682,9 +850,11 @@ export default function BookingCalendar(
                 )}
               </div>
 
-              <p className="text-xs text-muted-foreground mb-4">
-                {t("confirmationEmail")}
-              </p>
+              {!confirmationData.pending && (
+                <p className="text-xs text-muted-foreground mb-4">
+                  {t("confirmationEmail")}
+                </p>
+              )}
 
               <Button
                 className="w-full h-11 rounded-xl"

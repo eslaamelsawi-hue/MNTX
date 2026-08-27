@@ -1,6 +1,12 @@
+import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
+
+async function isAdmin() {
+  const cookieStore = await cookies();
+  return !!cookieStore.get("admin_session")?.value;
+}
 
 export async function GET() {
   const supabase = await createClient();
@@ -18,9 +24,13 @@ export async function GET() {
 }
 
 export async function PATCH(request: NextRequest) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const supabase = await createClient();
   const body = await request.json();
-  const { booking_id, status, new_slot_id } = body;
+  const { booking_id, status, new_slot_id, action } = body;
 
   if (!booking_id) {
     return NextResponse.json({ error: "Booking ID required" }, { status: 400 });
@@ -29,12 +39,143 @@ export async function PATCH(request: NextRequest) {
   // Get current booking
   const { data: currentBooking, error: fetchError } = await supabase
     .from("bookings")
-    .select("*")
+    .select("*, availability_slots(*)")
     .eq("id", booking_id)
     .single();
 
   if (fetchError || !currentBooking) {
     return NextResponse.json({ error: "Booking not found" }, { status: 404 });
+  }
+
+  // Approve or decline a client's custom time request (status "pending").
+  if (action === "approve" || action === "decline") {
+    if (currentBooking.status !== "pending") {
+      return NextResponse.json({ error: "Only pending requests can be approved or declined" }, { status: 400 });
+    }
+    const slot = currentBooking.availability_slots;
+
+    if (action === "decline") {
+      if (slot) {
+        await supabase
+          .from("availability_slots")
+          .update({ is_booked: false, updated_at: new Date().toISOString() })
+          .eq("id", slot.id);
+      }
+      const { data, error } = await supabase
+        .from("bookings")
+        .update({ status: "cancelled", updated_at: new Date().toISOString() })
+        .eq("id", booking_id)
+        .select("*, availability_slots(*)")
+        .single();
+      if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+      try {
+        await fetch(`${request.nextUrl.origin}/api/email/send-custom-request`, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            type: "declined",
+            client_name: currentBooking.client_name,
+            client_email: currentBooking.client_email,
+            date: slot?.date,
+            start_time: slot?.start_time,
+            duration: currentBooking.duration,
+          }),
+        });
+      } catch (e) {
+        console.error("Decline notification email failed:", e);
+      }
+
+      return NextResponse.json({ booking: data });
+    }
+
+    // action === "approve" — same steps a normal booking already goes
+    // through automatically: create the Zoom meeting, deduct hours, confirm.
+    if (!slot) {
+      return NextResponse.json({ error: "This request has no time slot on file" }, { status: 500 });
+    }
+
+    let zoomData: { id?: number; join_url?: string; start_url?: string } | null = null;
+    try {
+      const zoomRes = await fetch(`${request.nextUrl.origin}/api/zoom/create-meeting-s2s`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          topic: `1-on-1 Coaching: ${currentBooking.client_name}`,
+          start_time: (() => {
+            const time = slot.start_time.length === 5 ? `${slot.start_time}:00` : slot.start_time;
+            const probe = new Date(`${slot.date}T12:00:00Z`);
+            const offset =
+              new Date(probe.toLocaleString("en-US", { timeZone: "Africa/Cairo" })).getTime() -
+              new Date(probe.toLocaleString("en-US", { timeZone: "UTC" })).getTime();
+            return new Date(new Date(`${slot.date}T${time}Z`).getTime() - offset).toISOString();
+          })(),
+          duration: currentBooking.duration,
+        }),
+      });
+      if (zoomRes.ok) zoomData = await zoomRes.json();
+      else console.error("Zoom meeting creation error:", await zoomRes.json());
+    } catch (e) {
+      console.error("Zoom meeting creation failed:", e);
+    }
+
+    const admin = createAdminClient();
+    try {
+      const normalizedEmail = currentBooking.client_email.toLowerCase().trim();
+      const { data: activeSub } = await admin
+        .from("user_subscriptions")
+        .select("id, used_hours")
+        .eq("client_email", normalizedEmail)
+        .eq("status", "active")
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .single();
+      if (activeSub) {
+        const hoursToDeduct = currentBooking.duration / 60;
+        await admin
+          .from("user_subscriptions")
+          .update({ used_hours: activeSub.used_hours + hoursToDeduct, updated_at: new Date().toISOString() })
+          .eq("id", activeSub.id);
+      }
+    } catch (e) {
+      console.error("Hour deduction failed:", e);
+    }
+
+    const { data, error } = await supabase
+      .from("bookings")
+      .update({
+        status: "confirmed",
+        zoom_meeting_id: zoomData?.id?.toString() || null,
+        zoom_join_url: zoomData?.join_url || null,
+        zoom_start_url: zoomData?.start_url || null,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", booking_id)
+      .select("*, availability_slots(*)")
+      .single();
+
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 });
+
+    try {
+      await fetch(`${request.nextUrl.origin}/api/email/send-confirmation`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          booking_id,
+          client_name: currentBooking.client_name,
+          client_email: currentBooking.client_email,
+          date: slot.date,
+          start_time: slot.start_time,
+          duration: currentBooking.duration,
+          zoom_join_url: zoomData?.join_url || null,
+          client_timezone: currentBooking.client_timezone,
+        }),
+      });
+    } catch (e) {
+      console.error("Confirmation email failed:", e);
+    }
+
+    return NextResponse.json({ booking: data });
   }
 
   // If rescheduling
@@ -118,6 +259,10 @@ export async function PATCH(request: NextRequest) {
 }
 
 export async function DELETE(request: NextRequest) {
+  if (!(await isAdmin())) {
+    return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
+  }
+
   const supabase = createAdminClient();
   const { ids } = await request.json();
 
