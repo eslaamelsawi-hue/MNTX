@@ -9,6 +9,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import {
   CalendarDays,
+  CalendarClock,
   Clock,
   CheckCircle2,
   Loader2,
@@ -449,9 +450,13 @@ export default function BookingCalendar(
               <button
                 type="button"
                 onClick={() => { setBookingMode("custom"); setCustomError(null); setStep("custom") }}
-                className="mt-4 block w-full text-center text-sm font-medium text-primary hover:underline"
+                className="mt-5 flex w-full items-center gap-3 rounded-xl border-2 border-dashed border-primary/40 bg-primary/5 px-4 py-3.5 text-start transition-all hover:border-primary hover:bg-primary/10"
               >
-                {t("customTimeCta")}
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/15">
+                  <CalendarClock className="h-5 w-5 text-primary" />
+                </div>
+                <span className="flex-1 text-sm font-semibold text-foreground">{t("customTimeCta")}</span>
+                <ArrowRight className="h-4 w-4 shrink-0 text-primary" />
               </button>
             </div>
           </div>
