@@ -31,7 +31,7 @@ export async function PATCH(request: NextRequest) {
 
   const supabase = await createClient();
   const body = await request.json();
-  const { booking_id, status, new_slot_id, action } = body;
+  const { booking_id, status, new_slot_id, action, reason } = body;
 
   if (!booking_id) {
     return NextResponse.json({ error: "Booking ID required" }, { status: 400 });
@@ -62,9 +62,11 @@ export async function PATCH(request: NextRequest) {
           .update({ is_booked: false, updated_at: new Date().toISOString() })
           .eq("id", slot.id);
       }
+      const declineNote = typeof reason === "string" && reason.trim() ? reason.trim() : null;
+
       const { data, error } = await supabase
         .from("bookings")
-        .update({ status: "cancelled", updated_at: new Date().toISOString() })
+        .update({ status: "cancelled", admin_note: declineNote, updated_at: new Date().toISOString() })
         .eq("id", booking_id)
         .select("*, availability_slots(*)")
         .single();
@@ -81,6 +83,7 @@ export async function PATCH(request: NextRequest) {
             date: slot?.date,
             start_time: slot?.start_time,
             duration: currentBooking.duration,
+            reason: declineNote,
           }),
         });
       } catch (e) {

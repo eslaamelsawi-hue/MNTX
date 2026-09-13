@@ -663,12 +663,13 @@ export function AdminDashboard() {
   }
 
   const handleDecline = async (bookingId: string) => {
-    if (!confirm("Decline this custom time request? The client will be notified by email.")) return
+    const reason = window.prompt("Decline this custom time request. Add an optional note for the client (leave blank to skip), or Cancel to back out:")
+    if (reason === null) return
     try {
       await fetch("/api/admin/bookings", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ booking_id: bookingId, action: "decline" }),
+        body: JSON.stringify({ booking_id: bookingId, action: "decline", reason }),
       })
       fetchBookings()
       fetchSlots()

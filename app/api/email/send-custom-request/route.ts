@@ -17,8 +17,9 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ success: true, message: "Custom request recorded (email service not configured)" })
   }
   try {
-    const { type, client_name, client_email, date, start_time, duration, booking_id } = await request.json()
+    const { type, client_name, client_email, date, start_time, duration, booking_id, reason } = await request.json()
 
+    const escapeHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
     const adminEmail = process.env.ADMIN_EMAIL || "admin@mentix.com"
     const cairoFormattedDate = new Date(`${date}T12:00:00Z`).toLocaleDateString("en-US", {
       timeZone: "Africa/Cairo",
@@ -42,6 +43,7 @@ export async function POST(request: NextRequest) {
           <div style="padding: 30px 0;">
             <h2 style="color: #f5f5f5;">Hello ${client_name},</h2>
             <p style="color: #ccc; line-height: 1.6;">Unfortunately your requested time of <strong style="color:#f5f5f5;">${cairoFormattedDate} at ${cairoTime} Cairo Time</strong> isn't available. Please pick a different time from your dashboard, or request another custom time.</p>
+            ${reason ? `<div style="background-color: #1a1a1a; border-radius: 8px; padding: 16px; margin: 16px 0; border-left: 4px solid #d4a017;"><p style="margin: 0; color: #ccc; font-size: 14px;"><strong style="color: #f5f5f5;">Note from your mentor:</strong><br/>${escapeHtml(String(reason))}</p></div>` : ""}
           </div>
           <div style="text-align: center; padding: 20px 0; border-top: 1px solid #333; color: #666; font-size: 12px;">
             <p>&copy; ${new Date().getFullYear()} Mentix Trading. All rights reserved.</p>
