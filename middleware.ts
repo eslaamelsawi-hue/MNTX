@@ -14,6 +14,17 @@ function isProtected(path: string): boolean {
 }
 
 export default async function middleware(request: NextRequest) {
+  // API routes: only refresh the Supabase session cookie (so an expired
+  // access token gets rotated before the route handler reads it) — never
+  // run next-intl's locale routing here, since it would try to redirect
+  // e.g. /api/course/access to /en/api/course/access and break every
+  // client-side fetch() call to the API.
+  if (request.nextUrl.pathname.startsWith('/api/')) {
+    const response = NextResponse.next();
+    await updateSession(request, response);
+    return response;
+  }
+
   // Run locale routing first, then refresh the Supabase session on its response.
   const response = intlMiddleware(request);
   const { user } = await updateSession(request, response);
@@ -36,6 +47,7 @@ export default async function middleware(request: NextRequest) {
 export const config = {
   matcher: [
     '/(ar|en)/:path*',
+    '/api/:path*',
     '/((?!api|_next|_vercel|.*\\..*).*)'
   ]
 };
