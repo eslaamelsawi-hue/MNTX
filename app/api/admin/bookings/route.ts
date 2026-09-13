@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { NextRequest, NextResponse } from "next/server";
+import { confirmBookingWithZoomAndHours } from "@/lib/bookings";
 
 async function isAdmin() {
   const cookieStore = await cookies();
@@ -95,86 +96,23 @@ export async function PATCH(request: NextRequest) {
       return NextResponse.json({ error: "This request has no time slot on file" }, { status: 500 });
     }
 
-    let zoomData: { id?: number; join_url?: string; start_url?: string } | null = null;
-    try {
-      const zoomRes = await fetch(`${request.nextUrl.origin}/api/zoom/create-meeting-s2s`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          topic: `1-on-1 Coaching: ${currentBooking.client_name}`,
-          start_time: (() => {
-            const time = slot.start_time.length === 5 ? `${slot.start_time}:00` : slot.start_time;
-            const probe = new Date(`${slot.date}T12:00:00Z`);
-            const offset =
-              new Date(probe.toLocaleString("en-US", { timeZone: "Africa/Cairo" })).getTime() -
-              new Date(probe.toLocaleString("en-US", { timeZone: "UTC" })).getTime();
-            return new Date(new Date(`${slot.date}T${time}Z`).getTime() - offset).toISOString();
-          })(),
-          duration: currentBooking.duration,
-        }),
-      });
-      if (zoomRes.ok) zoomData = await zoomRes.json();
-      else console.error("Zoom meeting creation error:", await zoomRes.json());
-    } catch (e) {
-      console.error("Zoom meeting creation failed:", e);
-    }
-
-    const admin = createAdminClient();
-    try {
-      const normalizedEmail = currentBooking.client_email.toLowerCase().trim();
-      const { data: activeSub } = await admin
-        .from("user_subscriptions")
-        .select("id, used_hours")
-        .eq("client_email", normalizedEmail)
-        .eq("status", "active")
-        .order("created_at", { ascending: false })
-        .limit(1)
-        .single();
-      if (activeSub) {
-        const hoursToDeduct = currentBooking.duration / 60;
-        await admin
-          .from("user_subscriptions")
-          .update({ used_hours: activeSub.used_hours + hoursToDeduct, updated_at: new Date().toISOString() })
-          .eq("id", activeSub.id);
-      }
-    } catch (e) {
-      console.error("Hour deduction failed:", e);
-    }
+    await confirmBookingWithZoomAndHours({
+      baseUrl: request.nextUrl.origin,
+      bookingId: booking_id,
+      clientName: currentBooking.client_name,
+      clientEmail: currentBooking.client_email,
+      duration: currentBooking.duration,
+      slot: { date: slot.date, start_time: slot.start_time },
+      clientTimezone: currentBooking.client_timezone,
+    });
 
     const { data, error } = await supabase
       .from("bookings")
-      .update({
-        status: "confirmed",
-        zoom_meeting_id: zoomData?.id?.toString() || null,
-        zoom_join_url: zoomData?.join_url || null,
-        zoom_start_url: zoomData?.start_url || null,
-        updated_at: new Date().toISOString(),
-      })
-      .eq("id", booking_id)
       .select("*, availability_slots(*)")
+      .eq("id", booking_id)
       .single();
 
     if (error) return NextResponse.json({ error: error.message }, { status: 500 });
-
-    try {
-      await fetch(`${request.nextUrl.origin}/api/email/send-confirmation`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          booking_id,
-          client_name: currentBooking.client_name,
-          client_email: currentBooking.client_email,
-          date: slot.date,
-          start_time: slot.start_time,
-          duration: currentBooking.duration,
-          zoom_join_url: zoomData?.join_url || null,
-          client_timezone: currentBooking.client_timezone,
-        }),
-      });
-    } catch (e) {
-      console.error("Confirmation email failed:", e);
-    }
-
     return NextResponse.json({ booking: data });
   }
 

@@ -95,6 +95,10 @@ export default function BookingCalendar(
     time: string
     zoomUrl?: string
     pending?: boolean
+    // Custom-time requests store date/time already in the viewer's own
+    // timezone (as picked), unlike slot-based bookings which store Cairo
+    // time and need cairoToLocal() conversion for display.
+    localTime?: boolean
   } | null>(null)
 
   // "Request a custom time" — any date/time the client wants, subject to
@@ -276,7 +280,11 @@ export default function BookingCalendar(
           setError(mappedError)
           return
         }
-        setConfirmationData({ date: format(customDate, "yyyy-MM-dd"), time: customTime, pending: true })
+        setConfirmationData(
+          data.autoApproved
+            ? { date: format(customDate, "yyyy-MM-dd"), time: customTime, zoomUrl: data.zoom_join_url || undefined, localTime: true }
+            : { date: format(customDate, "yyyy-MM-dd"), time: customTime, pending: true, localTime: true }
+        )
         setStep("success")
       } catch {
         setError(t("errorBooking"))
@@ -821,7 +829,7 @@ export default function BookingCalendar(
                   <div>
                     <p className="text-xs text-muted-foreground">{t("time")}</p>
                     <p className="font-medium">
-                      {confirmationData.pending ? (
+                      {confirmationData.localTime ? (
                         confirmationData.time
                       ) : (
                         <>

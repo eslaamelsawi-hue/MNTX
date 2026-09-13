@@ -17,6 +17,7 @@ import { AdminInvoices } from "@/components/admin-invoices"
 import { AdminNotifications } from "@/components/admin-notifications"
 import { AdminCourseAccess } from "@/components/admin-course-access"
 import { AdminMentorship } from "@/components/admin-mentorship"
+import { AdminAutoApproveRules } from "@/components/admin-auto-approve-rules"
 import { AdminOverview } from "@/components/admin-overview"
 import { AdminBacktests } from "@/components/admin-backtests"
 import { AdminPaymentSettings } from "@/components/admin-payment-settings"
@@ -1236,6 +1237,7 @@ export function AdminDashboard() {
                 <Button variant="outline" size="sm" onClick={fetchBookings}>
                   <RefreshCw className="mr-2 h-4 w-4" /> Refresh
                 </Button>
+                <AdminAutoApproveRules />
               </div>
             </div>
 

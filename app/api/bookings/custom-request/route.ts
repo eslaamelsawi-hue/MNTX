@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { utcIsoToCairo, addMinutesToTime } from "@/lib/timezone"
+import { confirmBookingWithZoomAndHours, hasMatchingAutoApproveRule } from "@/lib/bookings"
 
 const ALLOWED_DURATIONS = [30, 60, 90]
 
@@ -8,9 +9,13 @@ const ALLOWED_DURATIONS = [30, 60, 90]
  * Lets a client request ANY date/time for a session (not limited to
  * admin-created slots). Creates a real availability_slots row for the exact
  * requested time (so it renders correctly everywhere a normal booking would)
- * plus a `bookings` row with status "pending" — no Zoom meeting, no hours
- * deducted yet. An admin must approve it (see /api/admin/bookings PATCH
- * action=approve) before it becomes a real confirmed session.
+ * plus a `bookings` row.
+ *
+ * If the client has a matching auto-approve rule (admin-managed, see
+ * /api/admin/booking-rules), it's confirmed immediately — same as a normal
+ * slot booking. Otherwise it's created as "pending": no Zoom meeting, no
+ * hours deducted yet, until an admin approves it (see /api/admin/bookings
+ * PATCH action=approve).
  */
 export async function POST(request: NextRequest) {
   try {
@@ -103,6 +108,8 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: slotError?.message || "Failed to create slot" }, { status: 500 })
     }
 
+    const autoApprove = await hasMatchingAutoApproveRule(normalizedEmail, cairoDate, cairoStartTime, cairoEndTime)
+
     const { data: booking, error: bookingError } = await admin
       .from("bookings")
       .insert({
@@ -112,7 +119,7 @@ export async function POST(request: NextRequest) {
         client_phone: client_phone || null,
         client_message: client_message || null,
         duration: Number(duration),
-        status: "pending",
+        status: autoApprove ? "confirmed" : "pending",
         client_timezone: client_timezone || null,
       })
       .select()
@@ -122,6 +129,19 @@ export async function POST(request: NextRequest) {
       // Nothing references the slot yet, safe to remove.
       await admin.from("availability_slots").delete().eq("id", slot.id)
       return NextResponse.json({ error: bookingError?.message || "Failed to create booking request" }, { status: 500 })
+    }
+
+    if (autoApprove) {
+      const { zoomJoinUrl } = await confirmBookingWithZoomAndHours({
+        baseUrl: request.nextUrl.origin,
+        bookingId: booking.id,
+        clientName: client_name,
+        clientEmail: normalizedEmail,
+        duration: Number(duration),
+        slot: { date: cairoDate, start_time: cairoStartTime },
+        clientTimezone: client_timezone,
+      })
+      return NextResponse.json({ booking: { ...booking, status: "confirmed" }, slot, autoApproved: true, zoom_join_url: zoomJoinUrl })
     }
 
     try {
