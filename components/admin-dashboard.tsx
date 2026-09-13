@@ -20,6 +20,7 @@ import { AdminMentorship } from "@/components/admin-mentorship"
 import { AdminAutoApproveRules } from "@/components/admin-auto-approve-rules"
 import { AdminOverview } from "@/components/admin-overview"
 import { AdminBacktests } from "@/components/admin-backtests"
+import { AdminCertification } from "@/components/admin-certification"
 import { AdminPaymentSettings } from "@/components/admin-payment-settings"
 import { StatusPill } from "@/components/status-pill"
 import { AdminCourses } from "@/components/admin-courses"
@@ -66,6 +67,7 @@ import {
   Newspaper,
   Menu,
   LineChart,
+  Award,
 } from "lucide-react"
 
 type Slot = {
@@ -1013,6 +1015,7 @@ export function AdminDashboard() {
       { value: "mentorship", label: "Mentorship", icon: GraduationCap },
       { value: "subscriptions", label: "Subscriptions", icon: DollarSign },
       { value: "invoices", label: "Invoices", icon: FileText },
+      { value: "certification", label: "Certification Test", icon: Award },
     ] },
     { label: "Commerce", items: [
       { value: "orders", label: "Orders", icon: ShoppingCart },
@@ -2601,6 +2604,11 @@ export function AdminDashboard() {
           {/* MNTX Elite / Course Access Tab */}
           <TabsContent value="course-access" className="space-y-4">
             <AdminCourseAccess />
+          </TabsContent>
+
+          {/* Certification Test Tab */}
+          <TabsContent value="certification" className="space-y-4">
+            <AdminCertification />
           </TabsContent>
 
           {/* Waitlist Tab */}

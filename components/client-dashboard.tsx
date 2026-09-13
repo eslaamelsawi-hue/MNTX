@@ -26,6 +26,7 @@ import { DashboardRecordings } from "@/components/dashboard-recordings"
 import { DashboardInvoices } from "@/components/dashboard-invoices"
 import { DashboardProgress } from "@/components/dashboard-progress"
 import { DashboardBacktests } from "@/components/dashboard-backtests"
+import { DashboardCertification } from "@/components/dashboard-certification"
 import { NotificationBell } from "@/components/notification-bell"
 import BookingCalendar from "@/components/booking-calendar"
 import { StatusPill } from "@/components/status-pill"
@@ -127,6 +128,7 @@ const t: Record<"en" | "ar", Record<string, string>> = {
     tabBooking: "Book Session",
     tabProgress: "Progress",
     tabBacktests: "Strategy Backtests",
+    tabCertification: "Certification Test",
     tabPayments: "Payments",
     backtestsSubtitle: "Published backtest reports for our trading strategies.",
     backtestsEmpty: "No backtest reports published yet.",
@@ -230,6 +232,7 @@ const t: Record<"en" | "ar", Record<string, string>> = {
     tabBooking: "احجز جلسة",
     tabProgress: "التقدم",
     tabBacktests: "اختبار الاستراتيجيات",
+    tabCertification: "اختبار الشهادة",
     tabPayments: "المدفوعات",
     backtestsSubtitle: "تقارير اختبار الاستراتيجيات المنشورة.",
     backtestsEmpty: "لم يتم نشر أي تقارير اختبار بعد.",
@@ -592,6 +595,7 @@ export function ClientDashboard() {
     { value: "mentorship", icon: BookOpen, label: l.tabMentorship },
     { value: "progress", icon: TrendingUp, label: l.tabProgress },
     { value: "backtests", icon: LineChart, label: l.tabBacktests || "Strategy Backtests" },
+    { value: "certification", icon: Award, label: l.tabCertification || "Certification Test" },
     { value: "sessions", icon: Calendar, label: l.tabSessions },
     { value: "booking", icon: CalendarPlus, label: l.tabBooking, dividerAfter: true },
     { value: "recordings", icon: Video, label: isRtl ? "التسجيلات" : "Recordings" },
@@ -714,6 +718,11 @@ export function ClientDashboard() {
         {/* ── Progress ── */}
         <TabsContent value="progress" className="space-y-4">
           {!hasCoaching ? <LockedPanel l={l} locale={locale} /> : <DashboardProgress subscriptions={subscriptions} bookings={bookings} l={l} />}
+        </TabsContent>
+
+        {/* ── Certification Test ── */}
+        <TabsContent value="certification" className="space-y-4">
+          <DashboardCertification email={email} l={l} />
         </TabsContent>
 
         {/* ── Strategy Backtests ── */}
