@@ -12,7 +12,7 @@ import { coverGradient } from "@/lib/course-types"
 type Lesson = { id: string; titleEn: string; titleAr: string; duration: string; freePreview: boolean; descriptionEn?: string; descriptionAr?: string }
 type Section = { id: string; titleEn: string; titleAr: string; lessons: Lesson[] }
 type Course = { id: string; slug: string; titleEn: string; titleAr: string; subtitleEn: string; subtitleAr: string; sections: Section[] }
-type Cat = { id: string; slug: string; titleEn: string; titleAr: string; subtitleEn: string; subtitleAr: string; lessons: number; sections: number }
+type Cat = { id: string; slug: string; titleEn: string; titleAr: string; subtitleEn: string; subtitleAr: string; lessons: number; sections: number; hasAccess: boolean }
 
 /** All of the member's courses. Pick one to open it; go back to switch. */
 export function DashboardAcademy({ email }: { email: string }) {
@@ -33,24 +33,35 @@ export function DashboardAcademy({ email }: { email: string }) {
       .then((r) => r.json())
       .then((d: { courses: Cat[] }) => setCats(d.courses ?? []))
       .catch(() => setCats([]))
-    fetch("/api/course/access", { method: "POST" })
-      .then((r) => r.json())
-      .then((d) => setAccess(!!d.access))
-      .catch(() => setAccess(false))
   }, [])
 
   useEffect(() => {
     if (!slug) {
       setCourse(null)
       setLessonId(null)
+      setAccess(null)
       return
     }
     setCourse(null)
+    setAccess(null)
     fetch(`/api/course/${slug}`)
       .then((r) => (r.ok ? r.json() : { course: null }))
       .then((d: { course: Course | null }) => {
         setCourse(d.course)
         setLessonId(d.course?.sections.flatMap((s) => s.lessons)[0]?.id ?? null)
+        if (!d.course) {
+          setAccess(false)
+          return
+        }
+        // Per-course entitlement — re-checked every time a different course opens.
+        fetch("/api/course/access", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ courseId: d.course.id }),
+        })
+          .then((r) => r.json())
+          .then((ad) => setAccess(!!ad.access))
+          .catch(() => setAccess(false))
       })
       .catch(() => setCourse(null))
   }, [slug])
@@ -61,9 +72,14 @@ export function DashboardAcademy({ email }: { email: string }) {
   const canPlay = !!current && (unlocked || current.freePreview)
 
   async function handleSubscribe() {
+    if (!course) return
     setSubscribing(true)
     try {
-      const res = await fetch("/api/course/subscribe", { method: "POST" })
+      const res = await fetch("/api/course/subscribe", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ courseId: course.id }),
+      })
       const data = await res.json().catch(() => ({ access: false }))
       if (data.access) {
         setAccess(true)
@@ -115,7 +131,7 @@ export function DashboardAcademy({ email }: { email: string }) {
               >
                 <div className={`relative flex h-28 items-center justify-center bg-gradient-to-br ${coverGradient(c.slug)}`}>
                   <GraduationCap className="h-9 w-9 text-primary/70 transition-transform group-hover:scale-110" />
-                  {!unlocked && (
+                  {!c.hasAccess && (
                     <span className="absolute end-2 top-2 rounded-md bg-black/40 p-1 text-white/70">
                       <Lock className="h-3.5 w-3.5" />
                     </span>

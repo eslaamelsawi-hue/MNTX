@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { StatusPill } from "@/components/status-pill"
+import { CourseSpecificAccess } from "@/components/admin-course-specific-access"
 
 type Lesson = {
   id: string
@@ -154,6 +155,9 @@ function CourseRow({ course, open, onToggle, onChanged }: { course: Course; open
               </Button>
               <span className="ms-auto text-xs text-muted-foreground">/course/{c.slug}</span>
             </div>
+
+            {/* Per-course access */}
+            <CourseSpecificAccess courseId={c.id} />
 
             {/* Sections */}
             <div className="space-y-4">

@@ -1,20 +1,25 @@
 import { NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { createClient } from "@/lib/supabase/server"
-import { createAdminClient } from "@/lib/supabase/admin"
 import { hasCourseAccess, signAccessToken, COURSE_COOKIE } from "@/lib/course-access"
 import { grantAccess } from "@/lib/course-access-store"
 import { COURSE_GRANT_PLAN } from "@/lib/course"
 
 /**
- * Handles a "Subscribe" click on a course: if the signed-in user already has
- * an active premium plan (user_subscriptions) or any other course entitlement
- * (admin grant / paid order), grant them course access. Otherwise report back
- * so the client can forward them to the $999 1-on-1 coaching checkout.
+ * Handles a "Subscribe" click on a specific course: if the signed-in user
+ * already qualifies for THIS course (a grant, or a paid order for a plan
+ * this course accepts), record an explicit per-course grant so future
+ * checks are simple, and issue the access cookie. Otherwise report back so
+ * the client can forward them to the $999 1-on-1 coaching checkout.
  * The email always comes from the authenticated session, never the request body.
  */
-export async function POST() {
+export async function POST(request: Request) {
   try {
+    const { courseId } = await request.json().catch(() => ({}))
+    if (!courseId) {
+      return NextResponse.json({ access: false, error: "courseId is required" }, { status: 400 })
+    }
+
     const supabase = await createClient()
     const {
       data: { user },
@@ -26,31 +31,14 @@ export async function POST() {
 
     const email = user.email
 
-    // Look up their active plan name (if any) purely for the grantAccess
-    // record below — hasCourseAccess() below is the actual entitlement
-    // decision, and already checks for an active subscription itself.
-    let plan: string | null = null
-    try {
-      const admin = createAdminClient()
-      const { data: subs, error } = await admin
-        .from("user_subscriptions")
-        .select("plan, status")
-        .ilike("client_email", email.trim())
-        .order("created_at", { ascending: false })
-        .limit(5)
-      if (error) console.error("[course/subscribe] user_subscriptions lookup failed:", error)
-      const active = subs?.find((s) => (s.status ?? "").trim().toLowerCase() === "active")
-      plan = active?.plan ?? null
-    } catch (e) {
-      console.error("[course/subscribe] user_subscriptions lookup threw:", e)
-    }
-
-    const entitled = await hasCourseAccess(email)
+    const entitled = await hasCourseAccess(email, courseId)
     if (!entitled) {
       return NextResponse.json({ access: false, email })
     }
 
-    await grantAccess(email, plan ?? COURSE_GRANT_PLAN, "auto:subscribe")
+    // Scoped to this course specifically — never over-grants blanket access
+    // just because the client qualified via a course-specific purchase.
+    await grantAccess(email, COURSE_GRANT_PLAN, "auto:subscribe", undefined, courseId)
 
     const cookieStore = await cookies()
     cookieStore.set(COURSE_COOKIE, signAccessToken(email), {

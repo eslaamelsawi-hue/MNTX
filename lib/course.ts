@@ -4,8 +4,5 @@
  * client and server.
  */
 
-/** The plan admins grant to give someone academy access. */
+/** The plan admins grant to give someone blanket (all-courses) academy access. */
 export const COURSE_GRANT_PLAN = "mntx-elite"
-
-/** Any of these plans (as an admin grant or paid order) unlocks the academy. */
-export const ACADEMY_ACCESS_PLANS = ["mntx-elite", "starter", "coaching"]

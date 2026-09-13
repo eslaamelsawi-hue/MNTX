@@ -1,7 +1,7 @@
 import "server-only"
 import crypto from "crypto"
-import { ACADEMY_ACCESS_PLANS } from "@/lib/course"
-import { isGranted } from "@/lib/course-access-store"
+import { hasGrant } from "@/lib/course-access-store"
+import { getCourseById } from "@/lib/course-store"
 import { createAdminClient } from "@/lib/supabase/admin"
 
 export const COURSE_COOKIE = "course_access"
@@ -45,21 +45,26 @@ export function verifyAccessToken(token: string | undefined): string | null {
 }
 
 /**
- * Does this email own the course? Layered so it's testable locally:
- *  1) COURSE_ACCESS_EMAILS allowlist (manual / testing grants)
- *  2) an active mentorship/coaching subscription in user_subscriptions
- *  3) a paid order for the required plan in okx_orders
- * NowPayments / Stripe buyers can be added to the query later.
+ * Does this email own THIS SPECIFIC course? Layered so it's testable locally:
+ *  1) COURSE_ACCESS_EMAILS allowlist (manual / testing grants) — every course
+ *  2) an admin/system grant: either blanket (MNTX ELITE) or scoped to this
+ *     exact course
+ *  3) a paid order for one of the plans THIS course accepts (its
+ *     `accessPlans`, e.g. the SMC course also accepts a "starter" purchase)
+ *
+ * Note there is deliberately NO "any active subscription unlocks everything"
+ * check — only MNTX ELITE (a blanket grant) or a grant/purchase tied to this
+ * specific course does.
  *
  * This is the single source of truth for course entitlement — every route
- * that needs to know "can this email watch the course" (the access-check
+ * that needs to know "can this email watch THIS course" (the access-check
  * the dashboard UI uses to show locked/unlocked, the subscribe endpoint,
- * the video stream route's cookie) must go through this function, not a
- * partial re-implementation, or they drift out of sync with each other.
+ * the video stream route) must go through this function, not a partial
+ * re-implementation, or they drift out of sync with each other.
  */
-export async function hasCourseAccess(email: string): Promise<boolean> {
+export async function hasCourseAccess(email: string, courseId: string): Promise<boolean> {
   const e = normalize(email)
-  if (!e || !e.includes("@")) return false
+  if (!e || !e.includes("@") || !courseId) return false
 
   const allow = (process.env.COURSE_ACCESS_EMAILS || "")
     .split(",")
@@ -67,35 +72,24 @@ export async function hasCourseAccess(email: string): Promise<boolean> {
     .filter(Boolean)
   if (allow.includes(e)) return true
 
-  // Admin-granted access (the MNTX ELITE list)
-  if (await isGranted(e)) return true
+  // Admin/system grant — blanket (MNTX ELITE) or scoped to this course.
+  if (await hasGrant(e, courseId)) return true
 
-  // Any active mentorship/coaching subscription unlocks the academy too.
+  // A paid order for a plan this specific course accepts.
   try {
-    const admin = createAdminClient()
-    const { data: sub } = await admin
-      .from("user_subscriptions")
-      .select("id")
-      .ilike("client_email", e)
-      .eq("status", "active")
-      .limit(1)
-      .maybeSingle()
-    if (sub) return true
-  } catch {
-    // DB unavailable — fall through
-  }
-
-  // A paid order for any plan that unlocks the course
-  try {
-    const supabase = createAdminClient()
-    const { data } = await supabase
-      .from("okx_orders")
-      .select("order_id")
-      .in("plan", ACADEMY_ACCESS_PLANS)
-      .eq("status", "paid")
-      .ilike("email", e)
-      .limit(1)
-    if (data && data.length > 0) return true
+    const course = await getCourseById(courseId)
+    const acceptedPlans = course?.accessPlans ?? []
+    if (acceptedPlans.length > 0) {
+      const supabase = createAdminClient()
+      const { data } = await supabase
+        .from("okx_orders")
+        .select("order_id")
+        .in("plan", acceptedPlans)
+        .eq("status", "paid")
+        .ilike("email", e)
+        .limit(1)
+      if (data && data.length > 0) return true
+    }
   } catch {
     // DB unavailable — fall through to no access
   }
