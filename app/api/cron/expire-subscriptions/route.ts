@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { markOverdueInstallmentsAndNotify } from "@/lib/invoicing"
+import { markOverdueInstallmentsAndNotify, disableSubscriptionsForLateInvoices } from "@/lib/invoicing"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -47,10 +47,16 @@ export async function GET(req: NextRequest) {
     return { overdue: 0, notified: 0 }
   })
 
+  const lateDisableResult = await disableSubscriptionsForLateInvoices().catch((e) => {
+    console.error("[cron/expire-subscriptions] late-payment disable check failed:", e)
+    return { disabledClients: 0 }
+  })
+
   return NextResponse.json({
     expired: data?.length ?? 0,
     subscriptions: data ?? [],
     overdueInstallments: invoiceResult.overdue,
     overdueNotificationsSent: invoiceResult.notified,
+    disabledForLatePayment: lateDisableResult.disabledClients,
   })
 }

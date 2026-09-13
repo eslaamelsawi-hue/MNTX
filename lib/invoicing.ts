@@ -2,6 +2,11 @@ import "server-only"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createNotification } from "@/lib/notifications"
 import { PLAN_PRICES } from "@/lib/plan-pricing"
+import { revokeVipRoleForEmail } from "@/lib/discord"
+
+/** A payment overdue by more than this many days gets the client's
+ *  subscriptions disabled automatically (see disableSubscriptionsForLateInvoices). */
+const LATE_PAYMENT_DISABLE_DAYS = 60
 
 function addDays(days: number): string {
   const d = new Date()
@@ -182,4 +187,67 @@ export async function markOverdueInstallmentsAndNotify(): Promise<{ overdue: num
     notified++
   }
   return { overdue: overdue.length, notified }
+}
+
+/** Runs daily from the expire-subscriptions cron, right after
+ *  markOverdueInstallmentsAndNotify: any client with a payment more than
+ *  LATE_PAYMENT_DISABLE_DAYS overdue has ALL of their non-cancelled
+ *  subscriptions disabled (mirrors the admin's manual "Deactivate" action),
+ *  pulls their Discord VIP MAX role if they had coaching, and gets notified.
+ *  Idempotent: a client with nothing left to disable is skipped silently, so
+ *  this never re-notifies someone already disabled. */
+export async function disableSubscriptionsForLateInvoices(): Promise<{ disabledClients: number }> {
+  const supabase = createAdminClient()
+  const cutoff = addDays(-LATE_PAYMENT_DISABLE_DAYS)
+
+  const { data: lateInstallments } = await supabase
+    .from("invoice_installments")
+    .select("invoice_id")
+    .eq("status", "pending")
+    .lt("due_date", cutoff)
+
+  if (!lateInstallments || lateInstallments.length === 0) return { disabledClients: 0 }
+
+  const invoiceIds = Array.from(new Set(lateInstallments.map((i) => i.invoice_id)))
+  const { data: invoices } = await supabase
+    .from("invoices")
+    .select("client_email, status")
+    .in("id", invoiceIds)
+    .neq("status", "cancelled")
+
+  if (!invoices || invoices.length === 0) return { disabledClients: 0 }
+
+  const emails = Array.from(new Set(invoices.map((inv) => inv.client_email.toLowerCase().trim())))
+  let disabledClients = 0
+
+  for (const email of emails) {
+    const { data: activeSubs } = await supabase
+      .from("user_subscriptions")
+      .select("id, plan")
+      .eq("client_email", email)
+      .neq("status", "cancelled")
+
+    if (!activeSubs || activeSubs.length === 0) continue // already fully disabled — nothing to do
+
+    await supabase
+      .from("user_subscriptions")
+      .update({ status: "cancelled", updated_at: new Date().toISOString() })
+      .in("id", activeSubs.map((s) => s.id))
+
+    if (activeSubs.some((s) => s.plan === "coaching")) {
+      await revokeVipRoleForEmail(email).catch((e) => console.error("[invoicing] discord role revoke failed:", e))
+    }
+
+    await createNotification({
+      clientEmail: email,
+      title: "Subscription disabled — overdue payment",
+      message: `Your subscription has been disabled because a payment has been overdue for more than ${LATE_PAYMENT_DISABLE_DAYS} days. Please contact support to settle your balance and restore access.`,
+      type: "invoice",
+      link: "payments",
+      sendEmail: true,
+    })
+    disabledClients++
+  }
+
+  return { disabledClients }
 }
