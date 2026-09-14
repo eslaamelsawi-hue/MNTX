@@ -1,23 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
-import crypto from "crypto"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { sendDiscountOfferEmail } from "@/lib/email"
 import { PLAN_PRICES } from "@/lib/plan-pricing"
+import { OFFER_PLAN, OFFER_PLAN_LABEL, generateCouponCode } from "@/lib/discount-offers"
 
 async function isAdmin() {
   const cookieStore = await cookies()
   return !!cookieStore.get("admin_session")?.value
-}
-
-// Scoped to coaching for now — it's the only plan the checkout page (and
-// its coupon-code field) fully supports end-to-end today.
-const OFFER_PLAN = "coaching"
-const OFFER_PLAN_LABEL = "1-on-1 Coaching Plan"
-
-function generateCouponCode(): string {
-  const suffix = crypto.randomBytes(4).toString("hex").toUpperCase().slice(0, 6)
-  return `DEAL${suffix}`
 }
 
 export async function GET() {
@@ -119,4 +109,24 @@ export async function POST(req: NextRequest) {
   if (offerError) console.error("[admin/discount-offer] failed to log offer (email was still sent):", offerError)
 
   return NextResponse.json({ success: true, offer, couponCode })
+}
+
+/** Deletes a sent offer AND revokes its coupon, so the code stops working —
+ *  deleting is meant to fully retract the discount, not just hide it from the list. */
+export async function DELETE(req: NextRequest) {
+  if (!(await isAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
+  const id = req.nextUrl.searchParams.get("id")
+  if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 })
+
+  const supabase = createAdminClient()
+  const { data: offer } = await supabase.from("discount_offers").select("coupon_code").eq("id", id).single()
+  if (!offer) return NextResponse.json({ error: "Offer not found" }, { status: 404 })
+
+  const { error: couponError } = await supabase.from("coupons").delete().eq("code", offer.coupon_code)
+  if (couponError) console.error("[admin/discount-offer] failed to delete coupon (offer still removed):", couponError)
+
+  const { error } = await supabase.from("discount_offers").delete().eq("id", id)
+  if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+  return NextResponse.json({ success: true })
 }

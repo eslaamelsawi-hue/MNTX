@@ -7,7 +7,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StatusPill } from "@/components/status-pill"
-import { Gift, Send, Loader2, RefreshCw } from "lucide-react"
+import { Gift, Send, Loader2, RefreshCw, Bell, Trash2 } from "lucide-react"
 
 type Offer = {
   id: string
@@ -29,6 +29,7 @@ export function AdminDiscountOffers() {
   const [expiryDays, setExpiryDays] = useState("3")
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [rowActionId, setRowActionId] = useState<string | null>(null)
 
   const load = async () => {
     setLoading(true)
@@ -68,6 +69,42 @@ export function AdminDiscountOffers() {
       await load()
     } finally {
       setSending(false)
+    }
+  }
+
+  const resend = async (offer: Offer) => {
+    setError("")
+    setSuccess("")
+    setRowActionId(offer.id)
+    try {
+      const res = await fetch(`/api/admin/discount-offer/${offer.id}/resend`, { method: "POST" })
+      const data = await res.json()
+      if (!res.ok) {
+        setError(data.error || "Failed to resend reminder.")
+        return
+      }
+      setSuccess(`Reminder resent to ${offer.client_email}.`)
+      await load()
+    } finally {
+      setRowActionId(null)
+    }
+  }
+
+  const remove = async (offer: Offer) => {
+    if (!confirm(`Delete this offer and revoke code ${offer.coupon_code} for ${offer.client_email}?`)) return
+    setError("")
+    setSuccess("")
+    setRowActionId(offer.id)
+    try {
+      const res = await fetch(`/api/admin/discount-offer?id=${offer.id}`, { method: "DELETE" })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) {
+        setError(data.error || "Failed to delete offer.")
+        return
+      }
+      await load()
+    } finally {
+      setRowActionId(null)
     }
   }
 
@@ -124,6 +161,7 @@ export function AdminDiscountOffers() {
                   <TableHead>Sent</TableHead>
                   <TableHead>Expires</TableHead>
                   <TableHead>Status</TableHead>
+                  <TableHead className="text-right">Actions</TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -135,6 +173,30 @@ export function AdminDiscountOffers() {
                     <TableCell className="text-xs text-muted-foreground">{new Date(o.sent_at).toLocaleDateString()}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{new Date(o.expires_at).toLocaleDateString()}</TableCell>
                     <TableCell><StatusPill status={o.status} /></TableCell>
+                    <TableCell className="text-right">
+                      <div className="flex items-center justify-end gap-1">
+                        {o.status !== "redeemed" && (
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            className="gap-1 text-amber-400 hover:text-amber-300"
+                            disabled={rowActionId === o.id}
+                            onClick={() => resend(o)}
+                          >
+                            {rowActionId === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bell className="h-3.5 w-3.5" />} Resend
+                          </Button>
+                        )}
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-red-400 hover:text-red-300"
+                          disabled={rowActionId === o.id}
+                          onClick={() => remove(o)}
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                        </Button>
+                      </div>
+                    </TableCell>
                   </TableRow>
                 ))}
               </TableBody>
