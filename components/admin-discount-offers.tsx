@@ -183,7 +183,7 @@ export function AdminDiscountOffers() {
                             disabled={rowActionId === o.id}
                             onClick={() => resend(o)}
                           >
-                            {rowActionId === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bell className="h-3.5 w-3.5" />} Resend
+                            {rowActionId === o.id ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bell className="h-3.5 w-3.5" />} Reminder
                           </Button>
                         )}
                         <Button
