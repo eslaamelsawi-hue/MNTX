@@ -4,7 +4,7 @@
  * Admin notification is sent as a plain internal email separately.
  */
 
-import { Resend } from "resend"
+import { sendEmail } from "@/lib/resend-send"
 
 interface ConfirmationEmailOptions {
   to: string
@@ -126,27 +126,11 @@ function buildConfirmationHtml(opts: ConfirmationEmailOptions): string {
  * Does NOT send an admin notification — handle that separately if needed.
  */
 export async function sendConfirmationEmail(opts: ConfirmationEmailOptions): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY
-  if (!apiKey) {
-    console.warn("[email] RESEND_API_KEY not set — skipping confirmation email")
-    return
-  }
-
-  const from = process.env.RESEND_FROM_EMAIL || "Mentix Trading <noreply@mentixtrading.com>"
-  const resend = new Resend(apiKey)
-
-  const html = buildConfirmationHtml(opts)
-
-  const { error } = await resend.emails.send({
-    from,
+  await sendEmail({
     to: opts.to,
     subject: `Payment Confirmed — ${opts.planLabel} #${opts.orderId.slice(-6)}`,
-    html,
+    html: buildConfirmationHtml(opts),
   })
-
-  if (error) {
-    console.error("[email] Failed to send confirmation email:", error)
-  }
 }
 
 /**
@@ -154,16 +138,7 @@ export async function sendConfirmationEmail(opts: ConfirmationEmailOptions): Pro
  * due, etc). Best-effort — failures are logged, not thrown.
  */
 export async function sendNotificationEmail(opts: { to: string; title: string; message: string }): Promise<void> {
-  const apiKey = process.env.RESEND_API_KEY
-  if (!apiKey) {
-    console.warn("[email] RESEND_API_KEY not set — skipping notification email")
-    return
-  }
-
-  const from = process.env.RESEND_FROM_EMAIL || "Mentix Trading <noreply@mentixtrading.com>"
-  const resend = new Resend(apiKey)
   const year = new Date().getFullYear()
-
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
@@ -182,16 +157,7 @@ export async function sendNotificationEmail(opts: { to: string; title: string; m
 </body>
 </html>`
 
-  const { error } = await resend.emails.send({
-    from,
-    to: opts.to,
-    subject: opts.title,
-    html,
-  })
-
-  if (error) {
-    console.error("[email] Failed to send notification email:", error)
-  }
+  await sendEmail({ to: opts.to, subject: opts.title, html })
 }
 
 /**
@@ -208,13 +174,6 @@ export async function sendDiscountOfferEmail(opts: {
   expiresAt: string
   checkoutUrl: string
 }): Promise<{ success: boolean; error?: string }> {
-  const apiKey = process.env.RESEND_API_KEY
-  if (!apiKey) {
-    return { success: false, error: "RESEND_API_KEY is not configured" }
-  }
-
-  const from = process.env.RESEND_FROM_EMAIL || "Mentix Trading <noreply@mentixtrading.com>"
-  const resend = new Resend(apiKey)
   const year = new Date().getFullYear()
 
   const discountedPrice = Math.round(opts.originalPrice * (1 - opts.discountPercent / 100) * 100) / 100
@@ -266,16 +225,9 @@ export async function sendDiscountOfferEmail(opts: {
 </body>
 </html>`
 
-  const { error } = await resend.emails.send({
-    from,
+  return sendEmail({
     to: opts.to,
     subject: `A ${opts.discountPercent}% Discount on Your Mentorship — Just for You`,
     html,
   })
-
-  if (error) {
-    console.error("[email] Failed to send discount offer email:", error)
-    return { success: false, error: error.message }
-  }
-  return { success: true }
 }

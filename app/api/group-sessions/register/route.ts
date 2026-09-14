@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { Resend } from "resend"
+import { sendEmail } from "@/lib/resend-send"
 
 export async function POST(req: NextRequest) {
   const body = await req.json()
@@ -64,8 +64,6 @@ export async function POST(req: NextRequest) {
 
   // Send confirmation email
   try {
-    const resend = new Resend(process.env.RESEND_API_KEY)
-
     const sessionDateTime = new Date(`${session.session_date}T${session.start_time}`)
     const formattedDate = sessionDateTime.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })
     const formattedTime = `${session.start_time.slice(0, 5)} - ${session.end_time.slice(0, 5)}`
@@ -122,12 +120,12 @@ export async function POST(req: NextRequest) {
       </div>
     `
 
-    await resend.emails.send({
-      from: "Mentix Trading <noreply@mentixtrading.com>",
+    const result = await sendEmail({
       to: client_email,
       subject: `✓ Registered: ${session.title}`,
       html: htmlContent,
     })
+    if (!result.success) console.error("Failed to send registration email:", result.error)
   } catch (emailError) {
     console.error("Failed to send email:", emailError)
     // Don't fail the registration if email fails
@@ -135,12 +133,10 @@ export async function POST(req: NextRequest) {
 
   // Send admin notification
   try {
-    const resend = new Resend(process.env.RESEND_API_KEY)
     const adminEmail = process.env.ADMIN_EMAIL
 
     if (adminEmail) {
-      await resend.emails.send({
-        from: "Mentix Trading <noreply@mentixtrading.com>",
+      const result = await sendEmail({
         to: adminEmail,
         subject: `New Registration: ${session.title}`,
         html: `
@@ -148,6 +144,7 @@ export async function POST(req: NextRequest) {
           <p>Date: ${session.session_date} at ${session.start_time}</p>
         `,
       })
+      if (!result.success) console.error("Failed to send admin notification:", result.error)
     }
   } catch (adminEmailError) {
     console.error("Failed to send admin notification:", adminEmailError)

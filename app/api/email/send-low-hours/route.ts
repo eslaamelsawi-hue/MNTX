@@ -1,17 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { Resend } from "resend";
-
-let resend: Resend | null = null;
-if (process.env.RESEND_API_KEY) {
-  resend = new Resend(process.env.RESEND_API_KEY);
-}
+import { sendEmail } from "@/lib/resend-send";
 
 export async function POST(request: NextRequest) {
-  if (!resend) {
-    console.warn("Email service not configured - RESEND_API_KEY missing");
-    return NextResponse.json({ success: true, message: "Email service not configured" });
-  }
-
   try {
     const { client_name, client_email, remaining_hours } = await request.json();
 
@@ -28,11 +18,11 @@ export async function POST(request: NextRequest) {
       <div style="padding: 30px 0;">
         <h2 style="color: #f5f5f5;">Hello ${client_name},</h2>
         <p style="color: #ccc; line-height: 1.6;">
-          We wanted to let you know that your mentorship hours are running low. 
+          We wanted to let you know that your mentorship hours are running low.
           You currently have <strong style="color: #d4a017;">${remaining_hours} hour(s)</strong> remaining.
         </p>
         <p style="color: #ccc; line-height: 1.6;">
-          Your online Zoom coaching sessions will end soon. To continue getting 1-on-1 coaching, 
+          Your online Zoom coaching sessions will end soon. To continue getting 1-on-1 coaching,
           you can extend your mentorship by clicking the button below.
         </p>
         <div style="text-align: center; margin: 30px 0;">
@@ -52,14 +42,15 @@ export async function POST(request: NextRequest) {
       </div>
     </div>`;
 
-    await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || "Mentix Trading <noreply@mentixtrading.com>",
+    const result = await sendEmail({
       to: client_email,
       subject: "⏳ Your Mentorship Hours Are Running Low — Extend Now",
       html: emailHtml,
     });
 
-    console.log("✅ Low-hours warning email sent to", client_email);
+    if (!result.success) {
+      return NextResponse.json({ error: result.error }, { status: 502 });
+    }
     return NextResponse.json({ success: true });
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error";

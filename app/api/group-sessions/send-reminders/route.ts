@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { Resend } from "resend"
+import { sendEmail } from "@/lib/resend-send"
 
 export async function POST(req: NextRequest) {
   const supabase = createAdminClient()
@@ -20,7 +20,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: error.message }, { status: 500 })
   }
 
-  const resend = new Resend(process.env.RESEND_API_KEY)
   let remindersSent = 0
 
   for (const session of sessions || []) {
@@ -37,8 +36,7 @@ export async function POST(req: NextRequest) {
 
       for (const reg of registrations || []) {
         try {
-          await resend.emails.send({
-            from: "Mentix Trading <noreply@mentixtrading.com>",
+          const result = await sendEmail({
             to: reg.client_email,
             subject: `⏰ Session Reminder: ${session.title} starts in ${minutesUntilSession} minutes!`,
             html: `
@@ -69,7 +67,8 @@ export async function POST(req: NextRequest) {
               </div>
             `,
           })
-          remindersSent++
+          if (result.success) remindersSent++
+          else console.error(`Failed to send reminder to ${reg.client_email}:`, result.error)
         } catch (emailError) {
           console.error(`Failed to send reminder to ${reg.client_email}:`, emailError)
         }

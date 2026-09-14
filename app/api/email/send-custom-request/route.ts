@@ -1,10 +1,5 @@
 import { NextRequest, NextResponse } from "next/server"
-import { Resend } from "resend"
-
-let resend: Resend | null = null
-if (process.env.RESEND_API_KEY) {
-  resend = new Resend(process.env.RESEND_API_KEY)
-}
+import { sendEmail } from "@/lib/resend-send"
 
 /** Notifies both sides of a custom time request's lifecycle: "received"
  *  (client ack + admin alert to go approve/decline it) and "declined"
@@ -12,10 +7,6 @@ if (process.env.RESEND_API_KEY) {
  *  existing send-confirmation email since an approved request becomes a
  *  normal confirmed booking. */
 export async function POST(request: NextRequest) {
-  if (!resend) {
-    console.warn("Email service not configured - RESEND_API_KEY missing")
-    return NextResponse.json({ success: true, message: "Custom request recorded (email service not configured)" })
-  }
   try {
     const { type, client_name, client_email, date, start_time, duration, booking_id, reason } = await request.json()
 
@@ -31,8 +22,7 @@ export async function POST(request: NextRequest) {
     const cairoTime = start_time.slice(0, 5)
 
     if (type === "declined") {
-      await resend.emails.send({
-        from: process.env.RESEND_FROM_EMAIL || "Mentix Trading <noreply@mentixtrading.com>",
+      const result = await sendEmail({
         to: client_email,
         subject: "Your requested time couldn't be confirmed",
         html: `
@@ -50,12 +40,12 @@ export async function POST(request: NextRequest) {
           </div>
         </div>`,
       })
+      if (!result.success) return NextResponse.json({ error: result.error }, { status: 502 })
       return NextResponse.json({ success: true })
     }
 
     // type === "received"
-    await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || "Mentix Trading <noreply@mentixtrading.com>",
+    const clientResult = await sendEmail({
       to: client_email,
       subject: "We've received your requested time",
       html: `
@@ -80,8 +70,7 @@ export async function POST(request: NextRequest) {
       </div>`,
     })
 
-    await resend.emails.send({
-      from: process.env.RESEND_FROM_EMAIL || "Mentix Trading <noreply@mentixtrading.com>",
+    const adminResult = await sendEmail({
       to: adminEmail,
       subject: `Custom time request: ${client_name} - ${cairoFormattedDate}`,
       html: `
@@ -103,6 +92,8 @@ export async function POST(request: NextRequest) {
       </div>`,
     })
 
+    if (!clientResult.success) return NextResponse.json({ error: clientResult.error }, { status: 502 })
+    if (!adminResult.success) console.error("[send-custom-request] admin alert failed (client email still sent):", adminResult.error)
     return NextResponse.json({ success: true })
   } catch (error: unknown) {
     const message = error instanceof Error ? error.message : "Unknown error"
