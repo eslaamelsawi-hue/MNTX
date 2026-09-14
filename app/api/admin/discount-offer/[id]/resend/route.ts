@@ -48,6 +48,7 @@ export async function POST(req: NextRequest, { params }: { params: Promise<{ id:
     couponCode: offer.coupon_code,
     expiresAt: newExpiry.toISOString(),
     checkoutUrl: `${baseUrl}/en/checkout?plan=${offer.plan}`,
+    isReminder: true,
   })
   if (!emailResult.success) {
     return NextResponse.json({ error: `Reminder email failed to send: ${emailResult.error}` }, { status: 502 })

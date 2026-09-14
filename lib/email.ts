@@ -173,11 +173,25 @@ export async function sendDiscountOfferEmail(opts: {
   couponCode: string
   expiresAt: string
   checkoutUrl: string
+  isReminder?: boolean
 }): Promise<{ success: boolean; error?: string }> {
   const year = new Date().getFullYear()
 
   const discountedPrice = Math.round(opts.originalPrice * (1 - opts.discountPercent / 100) * 100) / 100
   const expiresLabel = new Date(opts.expiresAt).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
+
+  const eyebrow = opts.isReminder ? "Reminder" : "Exclusive Offer"
+  const heading = opts.isReminder
+    ? `Don't miss it — your ${opts.discountPercent}% discount is still waiting`
+    : `A ${opts.discountPercent}% discount on your mentorship — just for you`
+  const intro = opts.isReminder
+    ? `Just a friendly reminder — the <strong style="color:#f5f5f5;">${opts.discountPercent}% discount</strong> we sent you on our
+        ${opts.planLabel} is still available, but it won't be for long.`
+    : `We wanted to reach out personally with something special: a <strong style="color:#f5f5f5;">${opts.discountPercent}% discount</strong> on our
+        ${opts.planLabel} — full mentorship, weekly live sessions, and everything included, at a fraction of the usual price.`
+  const subject = opts.isReminder
+    ? `⏰ Reminder: Your ${opts.discountPercent}% Discount Is Still Available`
+    : `A ${opts.discountPercent}% Discount on Your Mentorship — Just for You`
 
   const html = `<!DOCTYPE html>
 <html lang="en">
@@ -186,15 +200,14 @@ export async function sendDiscountOfferEmail(opts: {
   <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #0a0a0a; color: #f5f5f5;">
     <div style="text-align: center; padding: 24px 0; border-bottom: 2px solid #d4a017;">
       <p style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 1px; color: #d4a017;">MENTIX TRADING</p>
-      <p style="margin: 6px 0 0; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #888;">Exclusive Offer</p>
+      <p style="margin: 6px 0 0; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #888;">${eyebrow}</p>
     </div>
 
     <div style="padding: 36px 4px 8px;">
-      <h1 style="margin: 0 0 16px; font-size: 24px; color: #ffffff; line-height: 1.3;">A ${opts.discountPercent}% discount on your mentorship — just for you</h1>
+      <h1 style="margin: 0 0 16px; font-size: 24px; color: #ffffff; line-height: 1.3;">${heading}</h1>
       <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.7; color: #ccc;">Hi,</p>
       <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.7; color: #ccc;">
-        We wanted to reach out personally with something special: a <strong style="color:#f5f5f5;">${opts.discountPercent}% discount</strong> on our
-        ${opts.planLabel} — full mentorship, weekly live sessions, and everything included, at a fraction of the usual price.
+        ${intro}
       </p>
 
       <div style="background: linear-gradient(135deg, rgba(212,160,23,0.12) 0%, rgba(212,160,23,0.04) 100%); border: 1px dashed #d4a017; border-radius: 10px; padding: 22px; text-align: center; margin: 0 0 24px;">
@@ -227,7 +240,7 @@ export async function sendDiscountOfferEmail(opts: {
 
   return sendEmail({
     to: opts.to,
-    subject: `A ${opts.discountPercent}% Discount on Your Mentorship — Just for You`,
+    subject,
     html,
   })
 }
