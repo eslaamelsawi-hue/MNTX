@@ -21,6 +21,7 @@ import { AdminAutoApproveRules } from "@/components/admin-auto-approve-rules"
 import { AdminOverview } from "@/components/admin-overview"
 import { AdminBacktests } from "@/components/admin-backtests"
 import { AdminCertification } from "@/components/admin-certification"
+import { AdminDiscountOffers } from "@/components/admin-discount-offers"
 import { AdminPaymentSettings } from "@/components/admin-payment-settings"
 import { StatusPill } from "@/components/status-pill"
 import { AdminCourses } from "@/components/admin-courses"
@@ -68,6 +69,7 @@ import {
   Menu,
   LineChart,
   Award,
+  Gift,
 } from "lucide-react"
 
 type Slot = {
@@ -1020,6 +1022,7 @@ export function AdminDashboard() {
     { label: "Commerce", items: [
       { value: "orders", label: "Orders", icon: ShoppingCart },
       { value: "coupons", label: "Coupons", icon: Tag },
+      { value: "discount-offers", label: "Discount Offers", icon: Gift },
     ] },
     { label: "Content", items: [
       { value: "articles", label: "Gold Articles", icon: Newspaper },
@@ -2569,6 +2572,11 @@ export function AdminDashboard() {
                 </Table>
               </Card>
             )}
+          </TabsContent>
+
+          {/* Discount Offers Tab */}
+          <TabsContent value="discount-offers" className="space-y-4">
+            <AdminDiscountOffers />
           </TabsContent>
 
           {/* Subscriptions Tab */}

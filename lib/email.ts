@@ -193,3 +193,89 @@ export async function sendNotificationEmail(opts: { to: string; title: string; m
     console.error("[email] Failed to send notification email:", error)
   }
 }
+
+/**
+ * Sends a personalized single-use discount-code email (admin-triggered, one
+ * client at a time from the Discount Offers tab). Best-effort like the other
+ * senders here — failures are logged, not thrown.
+ */
+export async function sendDiscountOfferEmail(opts: {
+  to: string
+  planLabel: string
+  originalPrice: number
+  discountPercent: number
+  couponCode: string
+  expiresAt: string
+  checkoutUrl: string
+}): Promise<{ success: boolean; error?: string }> {
+  const apiKey = process.env.RESEND_API_KEY
+  if (!apiKey) {
+    return { success: false, error: "RESEND_API_KEY is not configured" }
+  }
+
+  const from = process.env.RESEND_FROM_EMAIL || "Mentix Trading <noreply@mentixtrading.com>"
+  const resend = new Resend(apiKey)
+  const year = new Date().getFullYear()
+
+  const discountedPrice = Math.round(opts.originalPrice * (1 - opts.discountPercent / 100) * 100) / 100
+  const expiresLabel = new Date(opts.expiresAt).toLocaleDateString("en-US", { weekday: "long", year: "numeric", month: "long", day: "numeric" })
+
+  const html = `<!DOCTYPE html>
+<html lang="en">
+<head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1.0"></head>
+<body style="margin:0;padding:0;background-color:#0a0a0a;">
+  <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 20px; background-color: #0a0a0a; color: #f5f5f5;">
+    <div style="text-align: center; padding: 24px 0; border-bottom: 2px solid #d4a017;">
+      <p style="margin: 0; font-size: 22px; font-weight: 800; letter-spacing: 1px; color: #d4a017;">MENTIX TRADING</p>
+      <p style="margin: 6px 0 0; font-size: 13px; letter-spacing: 2px; text-transform: uppercase; color: #888;">Exclusive Offer</p>
+    </div>
+
+    <div style="padding: 36px 4px 8px;">
+      <h1 style="margin: 0 0 16px; font-size: 24px; color: #ffffff; line-height: 1.3;">A ${opts.discountPercent}% discount on your mentorship — just for you</h1>
+      <p style="margin: 0 0 16px; font-size: 15px; line-height: 1.7; color: #ccc;">Hi,</p>
+      <p style="margin: 0 0 24px; font-size: 15px; line-height: 1.7; color: #ccc;">
+        We wanted to reach out personally with something special: a <strong style="color:#f5f5f5;">${opts.discountPercent}% discount</strong> on our
+        ${opts.planLabel} — full mentorship, weekly live sessions, and everything included, at a fraction of the usual price.
+      </p>
+
+      <div style="background: linear-gradient(135deg, rgba(212,160,23,0.12) 0%, rgba(212,160,23,0.04) 100%); border: 1px dashed #d4a017; border-radius: 10px; padding: 22px; text-align: center; margin: 0 0 24px;">
+        <p style="margin: 0 0 6px; font-size: 11px; letter-spacing: 1.5px; text-transform: uppercase; color: #a8842f;">Your code</p>
+        <p style="margin: 0 0 10px; font-size: 30px; font-weight: 800; letter-spacing: 3px; color: #d4a017; font-family: 'Courier New', monospace;">${opts.couponCode}</p>
+        <p style="margin: 0; font-size: 13px; color: #999;">Enter this at checkout to apply your discount</p>
+      </div>
+
+      <div style="background-color: #1a1a1a; border-radius: 8px; padding: 18px 20px; margin: 0 0 28px; border-left: 4px solid #d4a017;">
+        <p style="margin: 0 0 8px; color: #ccc; font-size: 14px;"><strong style="color:#f5f5f5;">Plan:</strong> ${opts.planLabel} (normally $${opts.originalPrice.toFixed(2)})</p>
+        <p style="margin: 0 0 8px; color: #ccc; font-size: 14px;"><strong style="color:#f5f5f5;">Your price:</strong> <span style="color:#4ade80; font-weight:700;">$${discountedPrice.toFixed(2)}</span> (${opts.discountPercent}% off)</p>
+        <p style="margin: 0; color: #ccc; font-size: 14px;"><strong style="color:#f5f5f5;">Valid until:</strong> ${expiresLabel} — single use</p>
+      </div>
+
+      <div style="text-align: center; margin: 0 0 32px;">
+        <a href="${opts.checkoutUrl}" style="background: linear-gradient(135deg, #d4a017 0%, #e8b923 100%); color: #0a0a0a; padding: 16px 44px; text-decoration: none; border-radius: 8px; font-weight: 700; display: inline-block; font-size: 16px; box-shadow: 0 4px 12px rgba(212, 160, 23, 0.3);">Claim Your Discount</a>
+      </div>
+
+      <p style="margin: 0; font-size: 13px; line-height: 1.6; color: #888;">
+        Questions before you enroll? Just reply to this email or message us on Telegram — we're happy to help.
+      </p>
+    </div>
+
+    <div style="text-align: center; padding: 24px 0; margin-top: 16px; border-top: 1px solid #333; color: #666; font-size: 12px;">
+      <p style="margin:0;">&copy; ${year} Mentix Trading. All rights reserved.</p>
+    </div>
+  </div>
+</body>
+</html>`
+
+  const { error } = await resend.emails.send({
+    from,
+    to: opts.to,
+    subject: `A ${opts.discountPercent}% Discount on Your Mentorship — Just for You`,
+    html,
+  })
+
+  if (error) {
+    console.error("[email] Failed to send discount offer email:", error)
+    return { success: false, error: error.message }
+  }
+  return { success: true }
+}

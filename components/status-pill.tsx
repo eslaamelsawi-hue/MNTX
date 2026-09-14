@@ -10,6 +10,7 @@ const STATUS_COLOR: Record<string, string> = {
   read: "text-emerald-400",
   scheduled: "text-emerald-400",
   open: "text-emerald-400",
+  redeemed: "text-emerald-400",
   pending: "text-amber-400",
   partially_paid: "text-amber-400",
   booked: "text-amber-400",
