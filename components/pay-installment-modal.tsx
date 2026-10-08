@@ -12,6 +12,7 @@ const dict = {
     choose: "Choose a payment method",
     okx: "Pay with OKX (USDT)",
     crypto: "Pay with Crypto (NowPayments)",
+    visa: "Pay with Visa (Whop)",
     unavailable: "No payment methods are currently available. Please contact support.",
     loading: "Loading…",
     cancel: "Cancel",
@@ -34,6 +35,7 @@ const dict = {
     choose: "اختر طريقة الدفع",
     okx: "الدفع عبر OKX (USDT)",
     crypto: "الدفع بالعملات الرقمية (NowPayments)",
+    visa: "الدفع بالفيزا (Whop)",
     unavailable: "لا توجد طرق دفع متاحة حاليًا. يرجى التواصل مع الدعم.",
     loading: "جاري التحميل…",
     cancel: "إلغاء",
@@ -81,7 +83,7 @@ export function PayInstallmentModal({
     setTimeout(() => setCopied(false), 2000)
   }
 
-  const startPayment = async (method: "okx" | "nowpayments") => {
+  const startPayment = async (method: "okx" | "nowpayments" | "whop") => {
     setLoading(true)
     setError("")
     try {
@@ -92,7 +94,7 @@ export function PayInstallmentModal({
       })
       const data = await res.json()
       if (!res.ok) { setError(data.error || l.error); setLoading(false); return }
-      if (method === "nowpayments") {
+      if (method === "nowpayments" || method === "whop") {
         window.location.href = data.url
         return
       }
@@ -130,6 +132,7 @@ export function PayInstallmentModal({
 
   const disabledOkx = !settingsLoading && !settings.okx
   const disabledNow = !settingsLoading && !settings.nowpayments
+  const disabledWhop = !settingsLoading && !settings.whop
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
@@ -154,7 +157,7 @@ export function PayInstallmentModal({
           <>
             <p className="mb-3 text-sm text-muted-foreground">{l.choose}</p>
             {error && <p className="mb-3 rounded-lg bg-red-500/10 p-3 text-center text-xs text-red-400">{error}</p>}
-            {disabledOkx && disabledNow ? (
+            {disabledOkx && disabledNow && disabledWhop ? (
               <p className="rounded-lg border border-border/60 p-3 text-center text-sm text-muted-foreground">{l.unavailable}</p>
             ) : (
               <div className="space-y-2">
@@ -163,6 +166,9 @@ export function PayInstallmentModal({
                 )}
                 {!disabledNow && (
                   <Button type="button" variant="outline" className="w-full" onClick={() => startPayment("nowpayments")}>{l.crypto}</Button>
+                )}
+                {!disabledWhop && (
+                  <Button type="button" variant="outline" className="w-full" onClick={() => startPayment("whop")}>{l.visa}</Button>
                 )}
               </div>
             )}

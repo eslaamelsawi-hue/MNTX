@@ -32,7 +32,7 @@ async function applyCouponDiscount(code: string, plan: string, amountDollars: nu
 
 export async function POST(request: Request) {
   try {
-    const { plan, email, telegram, couponCode, locale } = await request.json()
+    const { plan, email, telegram, couponCode, locale, splitPayment } = await request.json()
 
     const planInfo = PLAN_PRICES[plan]
     if (!planInfo) {
@@ -46,8 +46,11 @@ export async function POST(request: Request) {
     if (couponCode && typeof couponCode === "string") {
       finalAmount = await applyCouponDiscount(couponCode, plan, planInfo.amount)
     }
+
+    const isSplit = !!splitPayment
+    let chargeAmount = isSplit ? Math.round(finalAmount * 0.6 * 100) / 100 : finalAmount
     // Whop requires a non-zero charge.
-    if (finalAmount <= 0) finalAmount = 0.5
+    if (chargeAmount <= 0) chargeAmount = 0.5
 
     const orderId = `whop-${plan}-${Date.now()}`
     const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://mentixtrading.com"
@@ -59,15 +62,16 @@ export async function POST(request: Request) {
       plan,
       email: email.toLowerCase().trim(),
       telegram_username: typeof telegram === "string" && telegram.trim() ? telegram.trim().replace(/^@/, "") : null,
-      full_amount: planInfo.amount,
-      charge_amount: finalAmount,
+      full_amount: finalAmount,
+      charge_amount: chargeAmount,
+      split_payment: isSplit,
       status: "pending",
     })
     if (orderError) console.error("[whop-pay] Failed to record order:", orderError)
 
     const checkout = await createWhopCheckout({
       planLabel: planInfo.description,
-      amount: finalAmount,
+      amount: chargeAmount,
       redirectUrl,
       metadata: { order_id: orderId, plan, email: email.toLowerCase().trim() },
     })

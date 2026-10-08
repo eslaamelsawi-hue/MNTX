@@ -412,12 +412,14 @@ export function WhopPayButton({
   prefillEmail,
   prefillTelegram,
   couponCode,
+  splitPayment,
 }: {
   plan: string
   className?: string
   prefillEmail?: string
   prefillTelegram?: string
   couponCode?: string
+  splitPayment?: boolean
 }) {
   const locale = useLocale()
   const [open, setOpen] = useState(false)
@@ -437,7 +439,7 @@ export function WhopPayButton({
       const res = await fetch("/api/whop-pay", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, email: useEmail, telegram, couponCode, locale }),
+        body: JSON.stringify({ plan, email: useEmail, telegram, couponCode, locale, splitPayment }),
       })
       const data = await res.json()
       if (data.url) window.location.href = data.url
@@ -475,6 +477,12 @@ export function WhopPayButton({
                   className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
                 />
               </>
+            )}
+            {splitPayment && (
+              <div className="mb-3 rounded-lg bg-primary/10 p-3 text-center">
+                <p className="text-xs font-semibold text-primary">{t(locale, "splitPaymentBadge")}</p>
+                <p className="mt-1 text-xs text-muted-foreground">{t(locale, "splitPaymentNote")}</p>
+              </div>
             )}
             <p className="mb-3 rounded-lg bg-red-500/10 p-3 text-center text-xs text-red-400">
               ⚠️ {t(locale, "noRefundNotice")}

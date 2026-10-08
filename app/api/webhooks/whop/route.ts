@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { grantExtendHours, grantCoaching, EXTEND_PLAN_HOURS } from "@/lib/grant-hours"
 import { createStarterInviteLink } from "@/lib/tg-invite"
 import { sendConfirmationEmail } from "@/lib/email"
+import { markInstallmentPaid } from "@/lib/invoicing"
 
 /** Whop signs webhooks per the Standard Webhooks spec: HMAC-SHA256 over
  *  "{webhook-id}.{webhook-timestamp}.{raw body}", secret is base64 after a
@@ -62,6 +63,15 @@ export async function POST(request: Request) {
     if (order.status === "paid") {
       return NextResponse.json({ ok: true }) // already processed — webhooks can redeliver
     }
+
+    // This order pays off an existing pending invoice installment (the
+    // client dashboard's "Pay Now" flow) — no hours/access to (re-)grant.
+    if (order.installment_id) {
+      await admin.from("whop_orders").update({ status: "paid" }).eq("order_id", orderId)
+      await markInstallmentPaid(order.installment_id)
+      return NextResponse.json({ ok: true })
+    }
+
     await admin.from("whop_orders").update({ status: "paid" }).eq("order_id", orderId)
 
     const email = order.email
@@ -70,13 +80,17 @@ export async function POST(request: Request) {
     const isStarterPlan = planId === "starter"
     const isCoachingPlan = planId === "coaching"
 
+    const splitInfo = order.split_payment
+      ? { firstAmount: Number(order.charge_amount), secondAmount: Math.round((Number(order.full_amount) - Number(order.charge_amount)) * 100) / 100 }
+      : undefined
+
     let tgInviteLink: string | null = null
     if (isExtendPlan) {
-      await grantExtendHours(email, planId, undefined, order.full_amount)
+      await grantExtendHours(email, planId, undefined, order.full_amount, splitInfo)
     } else if (isStarterPlan) {
       tgInviteLink = await createStarterInviteLink(orderId)
     } else if (isCoachingPlan) {
-      const res = await grantCoaching(email, orderId, undefined, order.full_amount)
+      const res = await grantCoaching(email, orderId, undefined, order.full_amount, splitInfo)
       tgInviteLink = res.tgInviteLink
     }
 

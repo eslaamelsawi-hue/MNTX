@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createOrder } from "@/lib/okx-orders"
 import { createNowpaymentsInvoice } from "@/lib/nowpayments"
+import { createWhopCheckout } from "@/lib/whop"
 
 const OKX_API_BASE = "https://www.okx.com"
 
@@ -21,7 +22,7 @@ function generateSignature(timestamp: string, method: string, requestPath: strin
 export async function POST(request: Request) {
   try {
     const { installmentId, method } = await request.json()
-    if (!installmentId || (method !== "okx" && method !== "nowpayments")) {
+    if (!installmentId || (method !== "okx" && method !== "nowpayments" && method !== "whop")) {
       return NextResponse.json({ error: "installmentId and a valid method are required" }, { status: 400 })
     }
 
@@ -97,6 +98,32 @@ export async function POST(request: Request) {
         currency: "USDT",
         description,
       })
+    }
+
+    if (method === "whop") {
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://mentixtrading.com"
+      const orderId = `whop-installment-${installmentId}-${Date.now()}`
+      const { error: orderError } = await admin.from("whop_orders").insert({
+        order_id: orderId,
+        plan,
+        email,
+        full_amount: amount,
+        charge_amount: amount,
+        split_payment: false,
+        installment_id: installmentId,
+        status: "pending",
+      })
+      if (orderError) console.error("[pay-installment] Failed to record Whop order:", orderError)
+
+      const checkout = await createWhopCheckout({
+        planLabel: description.slice(0, 30),
+        amount,
+        redirectUrl: `${baseUrl}/en/payment/success?provider=whop&plan=${plan}&order=${orderId}`,
+        metadata: { order_id: orderId, plan, email },
+      })
+      await admin.from("whop_orders").update({ checkout_id: checkout.checkoutId }).eq("order_id", orderId)
+
+      return NextResponse.json({ url: checkout.url })
     }
 
     // NowPayments

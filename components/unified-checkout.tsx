@@ -473,15 +473,14 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
                 className="w-full justify-start gap-3 border border-border bg-transparent text-foreground hover:border-primary/50 hover:bg-primary/5 h-auto p-4"
               />
 
-              {!(splitEligible && splitPayment) && (
-                <WhopPayButton
-                  plan={selectedPlan}
-                  prefillEmail={email || undefined}
-                  prefillTelegram={telegram || undefined}
-                  couponCode={appliedCoupon?.code}
-                  className="w-full justify-start gap-3 border border-border bg-transparent text-foreground hover:border-primary/50 hover:bg-primary/5 h-auto p-4"
-                />
-              )}
+              <WhopPayButton
+                plan={selectedPlan}
+                prefillEmail={email || undefined}
+                prefillTelegram={telegram || undefined}
+                couponCode={appliedCoupon?.code}
+                splitPayment={splitEligible && splitPayment}
+                className="w-full justify-start gap-3 border border-border bg-transparent text-foreground hover:border-primary/50 hover:bg-primary/5 h-auto p-4"
+              />
 
               <button
                 type="button"
