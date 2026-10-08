@@ -11,6 +11,7 @@ type Flags = {
   payment_nowpayments_enabled: boolean
   payment_stripe_enabled: boolean
   payment_egypt_enabled: boolean
+  payment_whop_enabled: boolean
 }
 
 const DEFAULTS: Flags = {
@@ -19,6 +20,7 @@ const DEFAULTS: Flags = {
   payment_nowpayments_enabled: true,
   payment_stripe_enabled: true,
   payment_egypt_enabled: true,
+  payment_whop_enabled: true,
 }
 
 const METHODS: { key: keyof Flags; label: string; desc: string }[] = [
@@ -26,6 +28,7 @@ const METHODS: { key: keyof Flags; label: string; desc: string }[] = [
   { key: "payment_nowpayments_enabled", label: "NOWPayments (Crypto)", desc: "The \"Pay with Crypto\" button across checkout pages." },
   { key: "payment_stripe_enabled", label: "Card (Stripe)", desc: "Embedded card checkout at /checkout/[plan] and unified checkout." },
   { key: "payment_egypt_enabled", label: "Egypt (Instapay / Vodafone Cash)", desc: "The manual Egyptian payment instructions page." },
+  { key: "payment_whop_enabled", label: "Visa / Card (Whop)", desc: "The \"Pay with Visa\" button across checkout pages." },
 ]
 
 export function AdminPaymentSettings() {
@@ -45,6 +48,7 @@ export function AdminPaymentSettings() {
         payment_nowpayments_enabled: settings.payment_nowpayments_enabled !== "false",
         payment_stripe_enabled: settings.payment_stripe_enabled !== "false",
         payment_egypt_enabled: settings.payment_egypt_enabled !== "false",
+        payment_whop_enabled: settings.payment_whop_enabled !== "false",
       })
     } catch (e) {
       console.error("Failed to load payment settings:", e)

@@ -30,7 +30,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { useTranslations } from "next-intl"
 import { Label } from "@/components/ui/label"
-import { OKXPayButton, NowPaymentsButton } from "@/components/payment-buttons"
+import { OKXPayButton, NowPaymentsButton, WhopPayButton } from "@/components/payment-buttons"
 
 const fetcher = (url: string) => fetch(url).then((r) => r.json())
 
@@ -265,6 +265,11 @@ export function GoldProPage() {
                             className="w-full bg-yellow-500 text-black hover:bg-yellow-600"
                           />
                           <OKXPayButton
+                            plan="gold-pro"
+                            prefillEmail={email}
+                            className="w-full bg-transparent border border-yellow-500/30 text-foreground hover:bg-yellow-500/10"
+                          />
+                          <WhopPayButton
                             plan="gold-pro"
                             prefillEmail={email}
                             className="w-full bg-transparent border border-yellow-500/30 text-foreground hover:bg-yellow-500/10"

@@ -21,7 +21,7 @@ import {
   Target,
   X,
 } from "lucide-react"
-import { OKXPayButton, NowPaymentsButton } from "@/components/payment-buttons"
+import { OKXPayButton, NowPaymentsButton, WhopPayButton } from "@/components/payment-buttons"
 import { WaitlistForm } from "@/components/waitlist-form"
 
 const certificates = [
@@ -401,6 +401,7 @@ export function FundedChallengePage() {
             <CardFooter className="flex flex-col gap-3 pt-4">
               <OKXPayButton plan="funded-challenge" className="w-full" />
               <NowPaymentsButton plan="funded-challenge" className="w-full" />
+              <WhopPayButton plan="funded-challenge" className="w-full" />
             </CardFooter>
           </Card>
         </div>

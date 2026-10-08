@@ -13,6 +13,7 @@ const ALLOWED_KEYS = [
   "payment_nowpayments_enabled",
   "payment_stripe_enabled",
   "payment_egypt_enabled",
+  "payment_whop_enabled",
 ]
 
 const BOOLEAN_KEYS = [
@@ -21,6 +22,7 @@ const BOOLEAN_KEYS = [
   "payment_nowpayments_enabled",
   "payment_stripe_enabled",
   "payment_egypt_enabled",
+  "payment_whop_enabled",
 ]
 
 async function isAdmin() {

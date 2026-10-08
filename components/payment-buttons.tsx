@@ -36,6 +36,8 @@ const t = (locale: string, key: string) => {
     subscriptionsClosed: "لا نقبل اشتراكات جديدة حالياً. يرجى المحاولة لاحقاً.",
     splitPaymentBadge: "الدفعة 1 من 2 (60%)",
     splitPaymentNote: "المتبقي مستحق خلال 30 يومًا، ويمكنك دفعه في أي وقت من لوحة التحكم.",
+    payWithVisa: "الدفع بالفيزا",
+    redirecting: "جاري التحويل إلى صفحة الدفع…",
   };
   const en: Record<string, string> = {
     payWithOKX: "Pay with OKX",
@@ -66,6 +68,8 @@ const t = (locale: string, key: string) => {
     subscriptionsClosed: "We're not accepting new subscriptions right now. Please check back later.",
     splitPaymentBadge: "Payment 1 of 2 (60%)",
     splitPaymentNote: "The remaining balance is due within 30 days — payable anytime from your dashboard.",
+    payWithVisa: "Pay with Visa",
+    redirecting: "Redirecting to checkout…",
   };
   return (locale === "ar" ? ar[key] : en[key]) || en[key] || key;
 };
@@ -394,6 +398,107 @@ export function NowPaymentsButton({
             <svg className="mr-2 h-5 w-5" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
               <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z"/>
             </svg>{t(locale, "payWithCrypto")}</>
+        )}
+      </Button>
+    </>
+  )
+}
+
+// ─── Whop Pay Button (Visa / Card) ────────────────────────────────────────────
+
+export function WhopPayButton({
+  plan,
+  className,
+  prefillEmail,
+  prefillTelegram,
+  couponCode,
+}: {
+  plan: string
+  className?: string
+  prefillEmail?: string
+  prefillTelegram?: string
+  couponCode?: string
+}) {
+  const locale = useLocale()
+  const [open, setOpen] = useState(false)
+  const [email, setEmail] = useState(prefillEmail || "")
+  const [telegram, setTelegram] = useState(prefillTelegram || "")
+  const [loading, setLoading] = useState(false)
+  const [agreed, setAgreed] = useState(false)
+  const { settings: paySettings, loading: settingsLoading } = usePaymentSettings()
+  const disabled = !settingsLoading && (!paySettings.subscriptionsOpen || !paySettings.whop)
+
+  const handlePay = async () => {
+    const useEmail = prefillEmail || email
+    if (!useEmail || !useEmail.includes("@")) { alert("Please enter a valid email."); return }
+    if (!agreed) return
+    setLoading(true)
+    try {
+      const res = await fetch("/api/whop-pay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ plan, email: useEmail, telegram, couponCode, locale }),
+      })
+      const data = await res.json()
+      if (data.url) window.location.href = data.url
+      else { alert(data.error || "Something went wrong."); setLoading(false) }
+    } catch { alert("Something went wrong. Please try again."); setLoading(false) }
+  }
+
+  const handleClick = () => setOpen(true)
+
+  if (disabled) {
+    return <p className={`text-sm text-muted-foreground ${className || ""}`}>{t(locale, "methodUnavailable")}</p>
+  }
+
+  return (
+    <>
+      {open && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => !loading && setOpen(false)}>
+          <div className="w-full max-w-sm rounded-xl border border-[hsl(210,60%,50%)]/30 bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
+            <h3 className="mb-1 text-center text-lg font-bold text-foreground">{t(locale, "payWithVisa")}</h3>
+            {!prefillEmail && (
+              <>
+                <p className="mb-4 text-center text-sm text-muted-foreground">{t(locale, "enterEmailContinue")}</p>
+                <input
+                  type="email"
+                  placeholder="your@email.com"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
+                />
+                <input
+                  type="text"
+                  placeholder="Telegram username (optional)"
+                  value={telegram}
+                  onChange={(e) => setTelegram(e.target.value)}
+                  className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
+                />
+              </>
+            )}
+            <p className="mb-3 rounded-lg bg-red-500/10 p-3 text-center text-xs text-red-400">
+              ⚠️ {t(locale, "noRefundNotice")}
+            </p>
+            <label className="mb-3 flex items-start gap-2 text-xs text-muted-foreground">
+              <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 shrink-0" />
+              <span>{t(locale, "noRefundAgree")}</span>
+            </label>
+            <Button type="button" className="mb-2 w-full bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" onClick={handlePay} disabled={loading || !agreed}>
+              {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t(locale, "redirecting")}</> : t(locale, "continueToPayment")}
+            </Button>
+            <button type="button" onClick={() => setOpen(false)} disabled={loading} className="w-full rounded-lg border border-[hsl(210,60%,50%)]/30 py-2 text-sm text-muted-foreground hover:bg-[hsl(210,60%,50%)]/10">{t(locale, "cancel")}</button>
+          </div>
+        </div>
+      )}
+      <Button type="button" className={className} size="lg" onClick={handleClick} disabled={loading}>
+        {loading ? (
+          <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t(locale, "redirecting")}</>
+        ) : (
+          <>
+            <svg className="mr-2 h-5 w-5" viewBox="0 0 48 32" aria-hidden="true">
+              <rect width="48" height="32" rx="4" fill="#1A1F71"/>
+              <text x="24" y="21" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="bold" fontStyle="italic" fontSize="13" fill="#fff">VISA</text>
+            </svg>{t(locale, "payWithVisa")}</>
         )}
       </Button>
     </>

@@ -3,7 +3,7 @@
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Check, ShoppingCart } from "lucide-react"
-import { OKXPayButton, NowPaymentsButton } from "@/components/payment-buttons"
+import { OKXPayButton, NowPaymentsButton, WhopPayButton } from "@/components/payment-buttons"
 import Link from "next/link"
 import { useLocale } from "next-intl"
 
@@ -67,6 +67,7 @@ export function Pricing() {
               </Link>
               <NowPaymentsButton plan="test" className="w-full text-base bg-transparent border border-[hsl(210,60%,50%)]/30 text-foreground hover:bg-[hsl(210,60%,50%)] hover:text-foreground" />
               <OKXPayButton plan="test" className="w-full text-base bg-transparent border border-[hsl(210,60%,50%)]/30 text-foreground hover:bg-[hsl(210,60%,50%)] hover:text-foreground" />
+              <WhopPayButton plan="test" className="w-full text-base bg-transparent border border-[hsl(210,60%,50%)]/30 text-foreground hover:bg-[hsl(210,60%,50%)] hover:text-foreground" />
             </CardFooter>
           </Card>
         </div>
@@ -104,6 +105,7 @@ export function Pricing() {
               </Link>
               <NowPaymentsButton plan="starter" className="w-full text-base bg-transparent border border-[hsl(210,60%,50%)]/30 text-foreground hover:bg-[hsl(210,60%,50%)] hover:text-foreground" />
               <OKXPayButton plan="starter" className="w-full text-base bg-transparent border border-[hsl(210,60%,50%)]/30 text-foreground hover:bg-[hsl(210,60%,50%)] hover:text-foreground" />
+              <WhopPayButton plan="starter" className="w-full text-base bg-transparent border border-[hsl(210,60%,50%)]/30 text-foreground hover:bg-[hsl(210,60%,50%)] hover:text-foreground" />
             </CardFooter>
           </Card>
 
@@ -139,6 +141,7 @@ export function Pricing() {
               </Link>
               <NowPaymentsButton plan="coaching" className="w-full text-base bg-transparent border border-primary/30 text-foreground hover:bg-primary hover:text-primary-foreground" />
               <OKXPayButton plan="coaching" className="w-full text-base bg-transparent border border-primary/30 text-foreground hover:bg-primary hover:text-primary-foreground" />
+              <WhopPayButton plan="coaching" className="w-full text-base bg-transparent border border-primary/30 text-foreground hover:bg-primary hover:text-primary-foreground" />
             </CardFooter>
           </Card>
         </div>

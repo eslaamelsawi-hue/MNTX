@@ -7,6 +7,7 @@ const KEYS = [
   "payment_nowpayments_enabled",
   "payment_stripe_enabled",
   "payment_egypt_enabled",
+  "payment_whop_enabled",
 ]
 
 /**
@@ -26,6 +27,7 @@ export async function GET() {
       nowpayments: true,
       stripe: true,
       egypt: true,
+      whop: true,
     })
   }
 
@@ -39,5 +41,6 @@ export async function GET() {
     nowpayments: flag("payment_nowpayments_enabled"),
     stripe: flag("payment_stripe_enabled"),
     egypt: flag("payment_egypt_enabled"),
+    whop: flag("payment_whop_enabled"),
   })
 }

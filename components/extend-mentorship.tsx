@@ -15,7 +15,7 @@ import {
 } from "@/components/ui/dialog"
 import { Check, ArrowRight, Calendar, Loader2 } from "lucide-react"
 import { useLocale, useTranslations } from "next-intl"
-import { OKXPayButton, NowPaymentsButton } from "@/components/payment-buttons"
+import { OKXPayButton, NowPaymentsButton, WhopPayButton } from "@/components/payment-buttons"
 
 const plans = [
   {
@@ -297,6 +297,12 @@ export function ExtendMentorship() {
                     className="w-full text-base bg-transparent border border-primary/30 text-foreground hover:bg-primary hover:text-primary-foreground"
                   />
                   <OKXPayButton
+                    plan={selectedPlan ?? ""}
+                    prefillEmail={email}
+                    prefillTelegram={telegram}
+                    className="w-full text-base bg-transparent border border-primary/30 text-foreground hover:bg-primary hover:text-primary-foreground"
+                  />
+                  <WhopPayButton
                     plan={selectedPlan ?? ""}
                     prefillEmail={email}
                     prefillTelegram={telegram}

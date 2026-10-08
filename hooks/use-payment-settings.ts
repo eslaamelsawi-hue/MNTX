@@ -8,6 +8,7 @@ export type PaymentSettings = {
   nowpayments: boolean
   stripe: boolean
   egypt: boolean
+  whop: boolean
 }
 
 const DEFAULTS: PaymentSettings = {
@@ -16,6 +17,7 @@ const DEFAULTS: PaymentSettings = {
   nowpayments: true,
   stripe: true,
   egypt: true,
+  whop: true,
 }
 
 /** Fetches the admin-controlled payment kill-switches once per mount.
