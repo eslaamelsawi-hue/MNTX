@@ -36,7 +36,7 @@ export async function createWhopCheckout(opts: {
         company_id: WHOP_COMPANY_ID,
         product_id: WHOP_PRODUCT_ID,
         currency: "usd",
-        title: opts.planLabel,
+        title: opts.planLabel.slice(0, 30),
         plan_type: "one_time",
         initial_price: opts.amount,
       },
