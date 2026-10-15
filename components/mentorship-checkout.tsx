@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { Loader2, Check, Lock } from "lucide-react"
-import { OKXPayButton, NowPaymentsButton, WhopPayButton } from "@/components/payment-buttons"
+import { OKXPayButton, WhopPayButton } from "@/components/payment-buttons"
 import { alexandria } from "@/lib/fonts"
 
 const GRID_BG = [
@@ -77,12 +77,11 @@ export function MentorshipCheckout({ code, email }: { code?: string; email?: str
               <span className="text-lg text-muted-foreground line-through">{ORIGINAL_PRICE}$</span>
               <span className="text-4xl font-extrabold text-primary">{price ?? 600}$</span>
             </div>
-            <p className="mt-1 text-center text-xs text-muted-foreground">دفعة واحدة كاملة — بدون تقسيط</p>
+            <p className="mt-1 text-center text-xs text-muted-foreground">دفعة واحدة كاملة</p>
 
             <div className="mt-8 space-y-3">
-              <OKXPayButton plan={PLAN} couponCode={code} prefillEmail={email} className="w-full justify-center" />
-              <NowPaymentsButton plan={PLAN} couponCode={code} prefillEmail={email} className="w-full justify-center" />
               <WhopPayButton plan={PLAN} couponCode={code} prefillEmail={email} className="w-full justify-center" />
+              <OKXPayButton plan={PLAN} couponCode={code} prefillEmail={email} className="w-full justify-center" />
             </div>
 
             <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
