@@ -101,18 +101,18 @@ const initialForm: FormState = {
   investment_range: "", investment_reason: "",
 }
 
-const inputClass = "h-12 rounded-xl border-[#1e3a2a] bg-[#0a1a11] text-[#eef7f0] placeholder:text-[#5d7568] focus-visible:border-emerald-400 focus-visible:ring-emerald-400/40"
-const textareaClass = "min-h-[110px] rounded-xl border-[#1e3a2a] bg-[#0a1a11] text-[#eef7f0] placeholder:text-[#5d7568] focus-visible:border-emerald-400 focus-visible:ring-emerald-400/40"
+const inputClass = "h-12 rounded-xl border-border bg-background text-foreground focus-visible:border-primary focus-visible:ring-primary/40"
+const textareaClass = "min-h-[110px] rounded-xl border-border bg-background text-foreground focus-visible:border-primary focus-visible:ring-primary/40"
 
 const pillClass = (selected: boolean) =>
   `rounded-xl border px-4 py-3 text-sm font-medium transition-colors ${
-    selected ? "border-emerald-400 bg-emerald-400/15 text-emerald-300" : "border-[#1e3a2a] bg-[#0c1f14] text-[#c8d9cf] hover:border-emerald-400/40"
+    selected ? "border-primary bg-primary/15 text-primary" : "border-border bg-muted text-muted-foreground hover:border-primary/40 hover:text-foreground"
   }`
 
 function FieldLabel({ children }: { children: React.ReactNode }) {
   return (
-    <label className="mb-2 block text-sm font-medium text-[#eef7f0]">
-      {children} <span className="text-emerald-400">*</span>
+    <label className="mb-2 block text-sm font-medium text-foreground">
+      {children} <span className="text-primary">*</span>
     </label>
   )
 }
@@ -141,7 +141,7 @@ function YesNoPills({ value, onChange }: { value: boolean | null; onChange: (v: 
 }
 
 const GRID_BG = [
-  "radial-gradient(ellipse 800px 400px at 50% -10%, rgba(52,211,153,0.14), transparent 60%)",
+  "radial-gradient(ellipse 800px 400px at 50% -10%, hsl(var(--primary) / 0.14), transparent 60%)",
   "linear-gradient(rgba(255,255,255,0.035) 1px, transparent 1px)",
   "linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)",
 ].join(", ")
@@ -199,36 +199,36 @@ export function ApplyMentorship() {
     <div
       dir="rtl"
       lang="ar"
-      className={`${alexandria.className} min-h-screen bg-[#07120c] text-[#eef7f0]`}
+      className={`${alexandria.className} min-h-screen bg-background text-foreground`}
       style={{ backgroundImage: GRID_BG, backgroundSize: "100% 100%, 32px 32px, 32px 32px" }}
     >
       <div className="mx-auto max-w-5xl px-4 py-16 md:py-24">
         {/* Hero */}
         <section className="mx-auto max-w-3xl text-center">
-          <span className="inline-flex items-center gap-2 rounded-full border border-emerald-400/30 bg-emerald-400/10 px-4 py-1.5 text-sm font-medium text-emerald-300">
-            <span className="h-2 w-2 rounded-full bg-emerald-400" /> مينتورشيب فردي 1-1
+          <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
+            <span className="h-2 w-2 rounded-full bg-primary" /> مينتورشيب فردي 1-1
           </span>
           <h1 className="mt-6 text-4xl font-extrabold leading-tight text-balance md:text-5xl">
-            تدرّب تحت إشراف مباشر، <span className="text-emerald-400">بخصم 40%</span> لدفعة أكتوبر
+            تدرّب تحت إشراف مباشر، <span className="text-primary">بخصم 40%</span> لدفعة أكتوبر
           </h1>
-          <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-[#9db5a8] md:text-lg">
+          <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
             10 جلسات أسبوعية مباشرة، متابعة شخصية لصفقاتك وتفكيرك، ومجتمع خاص. قدّم طلبك الآن، ويراجعه فريقنا
             خلال أيام قليلة.
           </p>
-          <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5 text-sm text-[#c8d9cf]">
-            <span className="rounded-full border border-[#1e3a2a] bg-[#0c1f14] px-4 py-1.5">10 جلسات زووم أسبوعية</span>
-            <span className="rounded-full border border-[#1e3a2a] bg-[#0c1f14] px-4 py-1.5">متابعة شخصية ومراجعة صفقات</span>
-            <span className="rounded-full border border-[#1e3a2a] bg-[#0c1f14] px-4 py-1.5">مجتمع خاص على تيليجرام</span>
+          <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5 text-sm text-muted-foreground">
+            <span className="rounded-full border border-border bg-muted px-4 py-1.5">10 جلسات زووم أسبوعية</span>
+            <span className="rounded-full border border-border bg-muted px-4 py-1.5">متابعة شخصية ومراجعة صفقات</span>
+            <span className="rounded-full border border-border bg-muted px-4 py-1.5">مجتمع خاص على تيليجرام</span>
           </div>
         </section>
 
         {/* How it works */}
         <section className="mx-auto mt-14 grid max-w-4xl gap-4 sm:grid-cols-3">
           {PROCESS.map((p) => (
-            <div key={p.num} className="rounded-2xl border border-[#1e3a2a] bg-[#0c1f14] p-5">
-              <p className="text-3xl font-extrabold text-emerald-400/70">{p.num}</p>
-              <h3 className="mt-3 font-bold text-[#eef7f0]">{p.title}</h3>
-              <p className="mt-1.5 text-sm leading-relaxed text-[#9db5a8]">{p.desc}</p>
+            <div key={p.num} className="rounded-2xl border border-border bg-card p-5">
+              <p className="text-3xl font-extrabold text-primary/70">{p.num}</p>
+              <h3 className="mt-3 font-bold text-foreground">{p.title}</h3>
+              <p className="mt-1.5 text-sm leading-relaxed text-muted-foreground">{p.desc}</p>
             </div>
           ))}
         </section>
@@ -236,15 +236,15 @@ export function ApplyMentorship() {
         {/* Form card */}
         <section
           ref={formRef}
-          className="mx-auto mt-10 max-w-4xl scroll-mt-10 rounded-3xl border border-[#1e3a2a] bg-[#0b1a12] p-6 shadow-[0_0_80px_-20px_rgba(52,211,153,0.18)] md:p-10"
+          className="mx-auto mt-10 max-w-4xl scroll-mt-10 rounded-3xl border border-border bg-card p-6 shadow-[0_0_80px_-20px_hsl(var(--primary)/0.2)] md:p-10"
         >
           {submitted ? (
             <div className="py-10 text-center">
-              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-emerald-400/15">
-                <Check className="h-8 w-8 text-emerald-400" />
+              <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-primary/15">
+                <Check className="h-8 w-8 text-primary" />
               </div>
               <h2 className="text-2xl font-bold">تم استلام طلبك!</h2>
-              <p className="mx-auto mt-3 max-w-md text-[#9db5a8]">
+              <p className="mx-auto mt-3 max-w-md text-muted-foreground">
                 سيراجع فريقنا طلبك ويتواصل معك عبر واتساب أو تيليجرام خلال أيام قليلة لتأكيد التفاصيل وإرسال
                 كود خصم 40%.
               </p>
@@ -253,46 +253,46 @@ export function ApplyMentorship() {
             <>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex gap-2">
-                  <span className="rounded-full border border-emerald-400/30 bg-emerald-400/10 px-3 py-1 text-xs font-medium text-emerald-300">دفعة أكتوبر</span>
-                  <span className="rounded-full border border-[#1e3a2a] bg-[#0c1f14] px-3 py-1 text-xs font-medium text-[#c8d9cf]">5 مقاعد فقط</span>
+                  <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">دفعة أكتوبر</span>
+                  <span className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">5 مقاعد فقط</span>
                 </div>
                 <h2 className="text-xl font-extrabold md:text-2xl">نموذج التقديم</h2>
               </div>
 
               <div className="mt-6 flex gap-1.5">
                 {Array.from({ length: TOTAL_STEPS }).map((_, i) => (
-                  <div key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${i < step ? "bg-emerald-400" : "bg-[#1e3a2a]"}`} />
+                  <div key={i} className={`h-1.5 flex-1 rounded-full transition-colors ${i < step ? "bg-primary" : "bg-muted"}`} />
                 ))}
               </div>
-              <p className="mt-3 text-sm text-[#9db5a8]">
-                الخطوة <span className="font-semibold text-emerald-300">{step}</span> من {TOTAL_STEPS} • {STEP_LABELS[step - 1]}
+              <p className="mt-3 text-sm text-muted-foreground">
+                الخطوة <span className="font-semibold text-primary">{step}</span> من {TOTAL_STEPS} • {STEP_LABELS[step - 1]}
               </p>
 
               {error && (
-                <p className="mt-4 rounded-xl border border-red-500/30 bg-red-500/10 px-4 py-3 text-sm text-red-300">{error}</p>
+                <p className="mt-4 rounded-xl border border-destructive/30 bg-destructive/10 px-4 py-3 text-sm text-destructive">{error}</p>
               )}
 
               <div className="mt-6">
                 {step === 1 && (
                   <div>
-                    <div className="max-h-[420px] space-y-5 overflow-y-auto rounded-2xl border border-[#1e3a2a] bg-[#0a1a11] p-5 md:p-6">
+                    <div className="max-h-[420px] space-y-5 overflow-y-auto rounded-2xl border border-border bg-background p-5 md:p-6">
                       {TERMS.map((t, i) => (
-                        <div key={i} className="border-b border-[#16291c] pb-5 last:border-0 last:pb-0">
+                        <div key={i} className="border-b border-border pb-5 last:border-0 last:pb-0">
                           <div className="flex items-center gap-2">
-                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-emerald-400/15 text-xs font-bold text-emerald-300">
+                            <span className="flex h-7 w-7 shrink-0 items-center justify-center rounded-full bg-primary/15 text-xs font-bold text-primary">
                               {String(i + 1).padStart(2, "0")}
                             </span>
-                            <h3 className="font-bold text-[#eef7f0]">{t.title}</h3>
+                            <h3 className="font-bold text-foreground">{t.title}</h3>
                           </div>
-                          <div className="mt-2 space-y-1.5 pr-9 text-sm leading-relaxed text-[#9db5a8]">
+                          <div className="mt-2 space-y-1.5 pr-9 text-sm leading-relaxed text-muted-foreground">
                             {t.lines.map((l, li) => <p key={li}>{l}</p>)}
                           </div>
                         </div>
                       ))}
                     </div>
-                    <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-[#1e3a2a] bg-[#0c1f14] p-4">
-                      <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-emerald-400" />
-                      <span className="text-sm text-[#c8d9cf]">قرأت الشروط والأحكام أعلاه وأوافق عليها بالكامل.</span>
+                    <label className="mt-5 flex cursor-pointer items-start gap-3 rounded-xl border border-border bg-muted p-4">
+                      <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 h-4 w-4 shrink-0 accent-primary" />
+                      <span className="text-sm text-foreground">قرأت الشروط والأحكام أعلاه وأوافق عليها بالكامل.</span>
                     </label>
                   </div>
                 )}
@@ -418,7 +418,7 @@ export function ApplyMentorship() {
                               type="button"
                               onClick={() => set("commitment_rating", n)}
                               className={`flex h-10 w-10 items-center justify-center rounded-lg border text-sm font-bold transition-colors ${
-                                form.commitment_rating === n ? "border-emerald-400 bg-emerald-400/15 text-emerald-300" : "border-[#1e3a2a] bg-[#0a1a11] text-[#c8d9cf] hover:border-emerald-400/40"
+                                form.commitment_rating === n ? "border-primary bg-primary/15 text-primary" : "border-border bg-background text-muted-foreground hover:border-primary/40 hover:text-foreground"
                               }`}
                             >
                               {n}
@@ -426,7 +426,7 @@ export function ApplyMentorship() {
                           )
                         })}
                       </div>
-                      <div dir="ltr" className="mt-2 flex justify-between text-xs text-[#6d8577]">
+                      <div dir="ltr" className="mt-2 flex justify-between text-xs text-muted-foreground">
                         <span>ضعيف</span><span>ملتزم جدًا</span>
                       </div>
                     </div>
@@ -461,16 +461,16 @@ export function ApplyMentorship() {
 
               <div className="mt-8 flex gap-3">
                 {step < TOTAL_STEPS ? (
-                  <Button onClick={goNext} className="h-12 flex-1 gap-2 rounded-xl bg-emerald-500 text-base font-bold text-[#07120c] hover:bg-emerald-400 sm:flex-none sm:px-8">
+                  <Button onClick={goNext} className="h-12 flex-1 gap-2 rounded-xl text-base font-bold sm:flex-none sm:px-8">
                     التالي <ChevronLeft className="h-4 w-4" />
                   </Button>
                 ) : (
-                  <Button onClick={submit} disabled={submitting} className="h-12 flex-1 gap-2 rounded-xl bg-emerald-500 text-base font-bold text-[#07120c] hover:bg-emerald-400 sm:flex-none sm:px-8">
+                  <Button onClick={submit} disabled={submitting} className="h-12 flex-1 gap-2 rounded-xl text-base font-bold sm:flex-none sm:px-8">
                     {submitting ? <Loader2 className="h-4 w-4 animate-spin" /> : <ChevronLeft className="h-4 w-4" />} إرسال الطلب
                   </Button>
                 )}
                 {step > 1 && (
-                  <Button variant="outline" onClick={goPrev} className="h-12 gap-2 rounded-xl border-[#1e3a2a] bg-transparent text-base text-[#c8d9cf] hover:bg-[#0c1f14] hover:text-[#eef7f0]">
+                  <Button variant="outline" onClick={goPrev} className="h-12 gap-2 rounded-xl text-base">
                     <ChevronRight className="h-4 w-4" /> السابق
                   </Button>
                 )}
