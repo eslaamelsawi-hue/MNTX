@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { grantExtendHours, grantCoaching, EXTEND_PLAN_HOURS } from "@/lib/grant-hours"
+import { grantExtendHours, grantCoaching, EXTEND_PLAN_HOURS, grantConsultationHours, parseConsultationHours } from "@/lib/grant-hours"
 import { createStarterInviteLink } from "@/lib/tg-invite"
 import { sendConfirmationEmail } from "@/lib/email"
+import { sendConsultationEmails } from "@/lib/consultation-email"
 import { markInstallmentPaid } from "@/lib/invoicing"
 
 /** Whop signs webhooks per the Standard Webhooks spec: HMAC-SHA256 over
@@ -79,10 +80,17 @@ export async function POST(request: Request) {
     const isExtendPlan = !!EXTEND_PLAN_HOURS[planId]
     const isStarterPlan = planId === "starter"
     const isCoachingPlan = planId === "coaching"
+    const consultationHours = parseConsultationHours(planId)
 
     const splitInfo = order.split_payment
       ? { firstAmount: Number(order.charge_amount), secondAmount: Math.round((Number(order.full_amount) - Number(order.charge_amount)) * 100) / 100 }
       : undefined
+
+    if (consultationHours) {
+      await grantConsultationHours(email, consultationHours, undefined, order.full_amount)
+      await sendConsultationEmails({ email, hours: consultationHours, amount: order.full_amount, orderId })
+      return NextResponse.json({ ok: true })
+    }
 
     let tgInviteLink: string | null = null
     if (isExtendPlan) {

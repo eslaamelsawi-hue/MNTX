@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { getOrder, updateOrder } from "@/lib/okx-orders"
-import { grantExtendHours, grantExtendHoursIfMissing, grantCoaching } from "@/lib/grant-hours"
+import { grantExtendHours, grantExtendHoursIfMissing, grantCoaching, grantConsultationHours, parseConsultationHours } from "@/lib/grant-hours"
 import { createStarterInviteLink } from "@/lib/tg-invite"
 import { sendConfirmationEmail } from "@/lib/email"
+import { sendConsultationEmails } from "@/lib/consultation-email"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { markInstallmentPaid } from "@/lib/invoicing"
 
@@ -141,6 +142,13 @@ export async function POST(request: Request) {
     const splitInfo = order.splitPayment && order.fullAmount
       ? { firstAmount: parseFloat(order.amount), secondAmount: Math.round((parseFloat(order.fullAmount) - parseFloat(order.amount)) * 100) / 100 }
       : undefined
+
+    const consultationHours = parseConsultationHours(order.plan)
+    if (consultationHours) {
+      await grantConsultationHours(order.email, consultationHours, undefined, parseFloat(order.amount))
+      await sendConsultationEmails({ email: order.email, hours: consultationHours, amount: parseFloat(order.amount), orderId })
+      return NextResponse.json({ status: "paid", message: "Payment confirmed! Check your email for next steps." })
+    }
 
     // Grant hours if this is an extend plan
     await grantExtendHours(order.email, order.plan, undefined, parseFloat(order.amount), splitInfo)

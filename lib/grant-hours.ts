@@ -67,6 +67,61 @@ export async function grantExtendHours(
   await createInvoiceForPlan({ clientEmail: normalizedEmail, clientName, plan: planId, amount, split: splitInfo })
 }
 
+/** Matches "consultation-1h".."consultation-5h" plan ids and returns the
+ *  purchased hour count, or null if planId isn't a consultation plan. */
+export function parseConsultationHours(planId: string): number | null {
+  const match = /^consultation-(\d)h$/.exec(planId)
+  return match ? parseInt(match[1], 10) : null
+}
+
+/**
+ * Grants hours for a paid consultation booking (1-5 hours, $100 + $80/extra
+ * hour). Mirrors grantExtendHours exactly — merges into an existing active
+ * subscription if one exists, otherwise creates a new "consultation" one.
+ * Scheduling itself isn't self-service: the admin reaches out to arrange a
+ * time block matching the purchased duration.
+ */
+export async function grantConsultationHours(
+  email: string,
+  hours: number,
+  name?: string,
+  amount?: number
+): Promise<void> {
+  const supabase = createAdminClient()
+  const normalizedEmail = email.toLowerCase().trim()
+  const clientName = name || normalizedEmail.split("@")[0]
+
+  const { data: existing } = await supabase
+    .from("user_subscriptions")
+    .select("id, total_hours")
+    .eq("client_email", normalizedEmail)
+    .eq("status", "active")
+    .order("created_at", { ascending: false })
+    .limit(1)
+    .single()
+
+  if (existing) {
+    await supabase
+      .from("user_subscriptions")
+      .update({
+        total_hours: existing.total_hours + hours,
+        updated_at: new Date().toISOString(),
+      })
+      .eq("id", existing.id)
+  } else {
+    await supabase.from("user_subscriptions").insert({
+      client_email: normalizedEmail,
+      client_name: clientName,
+      plan: "consultation",
+      total_hours: hours,
+      used_hours: 0,
+      status: "active",
+    })
+  }
+
+  await createInvoiceForPlan({ clientEmail: normalizedEmail, clientName, plan: "consultation", amount })
+}
+
 /**
  * Only grants hours if the user has NO active subscription at all.
  * Safe to call on already-paid orders to avoid double-granting.

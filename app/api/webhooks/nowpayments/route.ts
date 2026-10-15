@@ -1,9 +1,10 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { grantExtendHours, grantCoaching, EXTEND_PLAN_HOURS } from "@/lib/grant-hours"
+import { grantExtendHours, grantCoaching, EXTEND_PLAN_HOURS, grantConsultationHours, parseConsultationHours } from "@/lib/grant-hours"
 import { createStarterInviteLink } from "@/lib/tg-invite"
 import { sendConfirmationEmail } from "@/lib/email"
+import { sendConsultationEmails } from "@/lib/consultation-email"
 import { markInstallmentPaid } from "@/lib/invoicing"
 
 function sortObjectKeys(obj: unknown): unknown {
@@ -76,8 +77,9 @@ export async function POST(request: Request) {
     const isExtendPlan = !!EXTEND_PLAN_HOURS[planId]
     const isStarterPlan = planId === "starter"
     const isCoachingPlan = planId === "coaching"
+    const consultationHours = parseConsultationHours(planId)
 
-    if (!isExtendPlan && !isStarterPlan && !isCoachingPlan) {
+    if (!isExtendPlan && !isStarterPlan && !isCoachingPlan && !consultationHours) {
       // Not a handled plan — nothing to do
       return NextResponse.json({ ok: true })
     }
@@ -145,6 +147,11 @@ export async function POST(request: Request) {
           tgInviteLink,
         })
       }
+    }
+
+    if (consultationHours) {
+      await grantConsultationHours(email, consultationHours, name, invoiceAmount)
+      await sendConsultationEmails({ email, name, hours: consultationHours, amount: invoiceAmount ?? 0, orderId: String(order_id) })
     }
 
     return NextResponse.json({ ok: true })
