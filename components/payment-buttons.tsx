@@ -1,5 +1,6 @@
 ﻿"use client"
 
+import type React from "react"
 import { useState } from "react"
 import { useLocale } from "next-intl"
 import { Button } from "@/components/ui/button"
@@ -80,6 +81,112 @@ const t = (locale: string, key: string) => {
   return (locale === "ar" ? ar[key] : en[key]) || en[key] || key;
 };
 
+
+
+// ─── Shared modal chrome ──────────────────────────────────────────────────────
+
+export const modalInputClass =
+  "h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
+
+const VisaMark = () => (
+  <svg className="mx-auto h-8 w-12" viewBox="0 0 48 32" aria-hidden="true">
+    <rect width="48" height="32" rx="4" fill="#1A1F71" />
+    <text x="24" y="21" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="bold" fontStyle="italic" fontSize="13" fill="#fff">VISA</text>
+  </svg>
+)
+
+const OkxMark = () => (
+  <svg className="mx-auto h-9 w-9" viewBox="0 0 32 32" fill="none" aria-hidden="true">
+    <rect width="32" height="32" rx="6" fill="#000" />
+    <rect x="6" y="13.5" width="6" height="5" rx="1" fill="#fff" />
+    <rect x="13" y="13.5" width="6" height="5" rx="1" fill="#fff" />
+    <rect x="20" y="13.5" width="6" height="5" rx="1" fill="#fff" />
+  </svg>
+)
+
+const CryptoMark = () => (
+  <svg className="mx-auto h-9 w-9 text-primary" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
+    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8zm.31-8.86c-1.77-.45-2.34-.94-2.34-1.67 0-.84.79-1.43 2.1-1.43 1.38 0 1.9.66 1.94 1.64h1.71c-.05-1.34-.87-2.57-2.49-2.97V5H10.9v1.69c-1.51.32-2.72 1.3-2.72 2.81 0 1.79 1.49 2.69 3.66 3.21 1.95.46 2.34 1.15 2.34 1.87 0 .53-.39 1.39-2.1 1.39-1.6 0-2.23-.72-2.32-1.64H8.04c.1 1.7 1.36 2.66 2.86 2.97V19h2.34v-1.67c1.52-.29 2.72-1.16 2.73-2.77-.01-2.2-1.9-2.96-3.66-3.42z" />
+  </svg>
+)
+
+/** One consistent frame for every payment modal: dimmed backdrop, a header
+ *  carrying the method's mark and a close button, and a padded body. The
+ *  direction follows the copy's language, so English text stays readable
+ *  inside the Arabic (RTL) checkout pages. */
+export function PaymentModalShell({
+  locale, icon, title, subtitle, onClose, closeDisabled, children,
+}: {
+  locale: string
+  icon: React.ReactNode
+  title: string
+  subtitle?: string
+  onClose: () => void
+  closeDisabled?: boolean
+  children: React.ReactNode
+}) {
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+      onClick={() => { if (!closeDisabled) onClose() }}
+    >
+      <div
+        dir={locale === "ar" ? "rtl" : "ltr"}
+        className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card shadow-2xl"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="relative border-b border-border px-6 py-5 text-center">
+          <button
+            type="button"
+            onClick={onClose}
+            disabled={closeDisabled}
+            aria-label={t(locale, "close")}
+            className="absolute end-4 top-4 rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
+          >
+            <X className="h-4 w-4" />
+          </button>
+          {icon}
+          <h3 className="mt-3 text-lg font-bold text-foreground">{title}</h3>
+          {subtitle && <p className="mt-1 text-sm text-muted-foreground">{subtitle}</p>}
+        </div>
+        <div className="space-y-4 px-6 py-5">{children}</div>
+      </div>
+    </div>
+  )
+}
+
+/** The refund warning plus its consent tick — deliberately loud, since it is
+ *  the one thing a buyer must not miss. */
+function NoRefundConsent({ locale, agreed, onToggle }: { locale: string; agreed: boolean; onToggle: () => void }) {
+  return (
+    <div className="rounded-xl border-2 border-red-500/50 bg-red-500/10 p-4">
+      <div className="flex items-start gap-2.5">
+        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-400" />
+        <p className="text-sm font-bold leading-relaxed text-red-400">{t(locale, "noRefundNotice")}</p>
+      </div>
+      <button
+        type="button"
+        role="checkbox"
+        aria-checked={agreed}
+        onClick={onToggle}
+        className={`mt-3.5 flex w-full items-start gap-3 rounded-lg border p-3 text-start transition-colors ${
+          agreed ? "border-emerald-500/50 bg-emerald-500/10" : "border-red-500/40 bg-background hover:border-red-500/70"
+        }`}
+      >
+        <span
+          className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors ${
+            agreed ? "border-emerald-500 bg-emerald-500 text-white" : "border-muted-foreground/60"
+          }`}
+        >
+          {agreed && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+        </span>
+        <span className={`text-xs leading-relaxed ${agreed ? "text-foreground" : "text-muted-foreground"}`}>
+          {t(locale, "noRefundAgree")}
+        </span>
+      </button>
+    </div>
+  )
+}
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -165,105 +272,126 @@ function OKXPayModal({
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-xl border border-[hsl(210,60%,50%)]/30 bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <h3 className="mb-1 text-center text-lg font-bold text-foreground">{t(locale, "payWithOKX")}</h3>
+    <PaymentModalShell
+      locale={locale}
+      icon={<OkxMark />}
+      title={t(locale, "payWithOKX")}
+      subtitle={!payInfo && !prefillEmail ? t(locale, "enterEmail") : undefined}
+      onClose={onClose}
+    >
+      {loading ? (
+        <div className="flex items-center justify-center py-10 text-muted-foreground">
+          <Loader2 className="mr-2 h-5 w-5 animate-spin" /> {t(locale, "loadingPayment")}
+        </div>
+      ) : !payInfo ? (
+        <>
+          {!prefillEmail && (
+            <div className="space-y-3">
+              <input
+                type="email"
+                dir="ltr"
+                placeholder="your@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={modalInputClass}
+              />
+              <input
+                type="text"
+                dir="ltr"
+                placeholder="Telegram username (optional)"
+                value={telegram}
+                onChange={(e) => setTelegram(e.target.value)}
+                className={modalInputClass}
+              />
+            </div>
+          )}
 
-        {loading ? (
-          <div className="flex items-center justify-center py-8 text-muted-foreground">
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" /> {t(locale, "loadingPayment")}
+          <NoRefundConsent locale={locale} agreed={agreed} onToggle={() => setAgreed(!agreed)} />
+
+          <Button type="button" size="lg" className="h-12 w-full rounded-xl text-base font-bold" onClick={handleGetDetails} disabled={!agreed}>
+            {prefillEmail ? t(locale, "continueToPayment") : t(locale, "getPaymentDetails")}
+          </Button>
+          <button type="button" onClick={onClose} className="w-full rounded-xl py-2 text-sm text-muted-foreground transition-colors hover:text-foreground">
+            {t(locale, "cancel")}
+          </button>
+        </>
+      ) : verifyResult?.status === "paid" ? (
+        <div className="text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15">
+            <Check className="h-7 w-7 text-emerald-400" strokeWidth={3} />
           </div>
-        ) : !payInfo ? (
-          <>
-            {!prefillEmail && (
-              <>
-                <p className="mb-4 text-center text-sm text-muted-foreground">{t(locale, "enterEmail")}</p>
-                <input
-                  type="email"
-                  placeholder="your@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
-                />
-                <input
-                  type="text"
-                  placeholder="Telegram username (optional)"
-                  value={telegram}
-                  onChange={(e) => setTelegram(e.target.value)}
-                  className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
-                />
-              </>
-            )}
-            <p className="mb-3 rounded-lg bg-red-500/10 p-3 text-center text-xs text-red-400">
-              ⚠️ {t(locale, "noRefundNotice")}
-            </p>
-            <label className="mb-3 flex items-start gap-2 text-xs text-muted-foreground">
-              <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 shrink-0" />
-              <span>{t(locale, "noRefundAgree")}</span>
-            </label>
-            <Button type="button" className="mb-2 w-full bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" onClick={handleGetDetails} disabled={!agreed}>
-              {prefillEmail ? t(locale, "continueToPayment") : t(locale, "getPaymentDetails")}
-            </Button>
-            <button type="button" onClick={onClose} className="w-full rounded-lg border border-[hsl(210,60%,50%)]/30 py-2 text-sm text-muted-foreground hover:bg-[hsl(210,60%,50%)]/10">{t(locale, "cancel")}</button>
-          </>
-        ) : verifyResult?.status === "paid" ? (
-          <div className="text-center">
-            <div className="mb-3 text-4xl">✅</div>
-            <p className="text-lg font-bold text-green-400">{t(locale, "paymentConfirmed")}</p>
-            <p className="mt-2 text-sm text-muted-foreground">{verifyResult.message}</p>
-            {verifyResult.tgInviteLink && (
-              <a
-                href={verifyResult.tgInviteLink}
-                target="_blank"
-                rel="noopener noreferrer"
-                className="mt-4 flex items-center justify-center gap-2 w-full rounded-lg bg-[#229ED9] py-3 text-sm font-bold text-white hover:bg-[#1a8bbf] transition-colors"
-              >
-                <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden="true"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248-2.04 9.613c-.15.677-.546.842-1.107.523l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.332-.373-.12L7.48 14.748l-2.95-.924c-.642-.2-.655-.642.134-.951l11.532-4.448c.535-.194 1.003.13.366.823z"/></svg>
-                {locale === "ar" ? "انضم إلى مجموعة تيليجرام" : "Join Telegram Group"}
-              </a>
-            )}
-            <button type="button" onClick={onClose} className="mt-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/30 py-2 text-sm text-muted-foreground hover:bg-[hsl(210,60%,50%)]/10">{t(locale, "close")}</button>
+          <p className="text-lg font-bold text-emerald-400">{t(locale, "paymentConfirmed")}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{verifyResult.message}</p>
+          {verifyResult.tgInviteLink && (
+            <a
+              href={verifyResult.tgInviteLink}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="mt-4 flex w-full items-center justify-center gap-2 rounded-xl bg-[#229ED9] py-3 text-sm font-bold text-white transition-colors hover:bg-[#1a8bbf]"
+            >
+              <svg viewBox="0 0 24 24" className="h-5 w-5 fill-current" aria-hidden="true"><path d="M12 0C5.373 0 0 5.373 0 12s5.373 12 12 12 12-5.373 12-12S18.627 0 12 0zm5.562 8.248-2.04 9.613c-.15.677-.546.842-1.107.523l-3-2.21-1.447 1.394c-.16.16-.295.295-.605.295l.213-3.053 5.56-5.023c.242-.213-.054-.332-.373-.12L7.48 14.748l-2.95-.924c-.642-.2-.655-.642.134-.951l11.532-4.448c.535-.194 1.003.13.366.823z"/></svg>
+              {locale === "ar" ? "انضم إلى مجموعة تيليجرام" : "Join Telegram Group"}
+            </a>
+          )}
+          <button type="button" onClick={onClose} className="mt-3 w-full rounded-xl py-2 text-sm text-muted-foreground transition-colors hover:text-foreground">
+            {t(locale, "close")}
+          </button>
+        </div>
+      ) : (
+        <>
+          <p className="text-center text-sm text-muted-foreground">{payInfo.description}</p>
+
+          {payInfo.splitPayment && (
+            <div className="rounded-xl border border-primary/30 bg-primary/10 p-3 text-center">
+              <p className="text-xs font-semibold text-primary">{t(locale, "splitPaymentBadge")}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t(locale, "splitPaymentNote")}{payInfo.secondAmount ? ` (${payInfo.secondAmount} ${payInfo.currency})` : ""}</p>
+            </div>
+          )}
+
+          <div className="rounded-xl border border-border bg-background p-4 text-center">
+            <p className="text-3xl font-extrabold text-primary">{payInfo.amount} {payInfo.currency}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{t(locale, "network")}: {payInfo.chain}</p>
           </div>
-        ) : (
-          <>
-            <p className="mb-3 text-center text-sm text-muted-foreground">{payInfo.description}</p>
-            {payInfo.splitPayment && (
-              <div className="mb-3 rounded-lg bg-primary/10 p-3 text-center">
-                <p className="text-xs font-semibold text-primary">{t(locale, "splitPaymentBadge")}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{t(locale, "splitPaymentNote")}{payInfo.secondAmount ? ` (${payInfo.secondAmount} ${payInfo.currency})` : ""}</p>
-              </div>
-            )}
-            <div className="mb-3 rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background p-4 text-center">
-              <p className="text-3xl font-bold text-[hsl(210,60%,50%)]">{payInfo.amount} {payInfo.currency}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{t(locale, "network")}: {payInfo.chain}</p>
+
+          <div>
+            <p className="mb-1.5 text-xs text-muted-foreground">{t(locale, "sendExactly")} {payInfo.amount} USDT {t(locale, "to")}</p>
+            <div className="flex items-center gap-2 rounded-xl border border-border bg-background p-3">
+              <span dir="ltr" className="flex-1 break-all font-mono text-xs text-foreground">{payInfo.address}</span>
+              <button type="button" onClick={() => copy(payInfo.address)} className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10">
+                {copied ? t(locale, "copied") : t(locale, "copy")}
+              </button>
             </div>
-            <div className="mb-3">
-              <p className="mb-1 text-xs text-muted-foreground">{t(locale, "sendExactly")} {payInfo.amount} USDT {t(locale, "to")}</p>
-              <div className="flex items-center gap-2 rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background p-3">
-                <span className="flex-1 break-all font-mono text-xs text-foreground">{payInfo.address}</span>
-                <button type="button" onClick={() => copy(payInfo.address)} className="shrink-0 rounded px-2 py-1 text-xs font-medium text-[hsl(210,60%,50%)] hover:bg-[hsl(210,60%,50%)]/10">
-                  {copied ? t(locale, "copied") : t(locale, "copy")}
-                </button>
-              </div>
+          </div>
+
+          <p className="text-xs text-muted-foreground">{t(locale, "orderRef")}: <span className="font-mono text-foreground">{payInfo.orderId}</span></p>
+
+          <div className="flex items-start gap-2.5 rounded-xl border border-border bg-muted/40 px-3.5 py-3">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+            <p className="text-xs leading-relaxed text-muted-foreground">{t(locale, "networkFeesNotice")}</p>
+          </div>
+
+          <div className="rounded-xl border-2 border-yellow-500/50 bg-yellow-500/10 p-3.5">
+            <div className="flex items-start gap-2.5">
+              <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-yellow-400" />
+              <p className="text-xs font-semibold leading-relaxed text-yellow-400">
+                {t(locale, "sendOnlyUSDT")} {payInfo.chain}. {t(locale, "wrongNetwork")}
+              </p>
             </div>
-            <p className="mb-1 text-xs text-muted-foreground">{t(locale, "orderRef")}: <span className="font-mono text-foreground">{payInfo.orderId}</span></p>
-        <p className="mb-2 rounded-lg bg-red-500/10 p-3 text-center text-xs text-red-400">
-              {t(locale, "networkFeesNotice")}
-            </p>
-            <p className="mb-4 rounded-lg bg-yellow-500/10 p-3 text-center text-xs text-yellow-400">
-              ⚠️ {t(locale, "sendOnlyUSDT")} {payInfo.chain}. {t(locale, "wrongNetwork")}
-            </p>
-            {verifyResult && verifyResult.status !== "paid" && (
-              <p className="mb-3 rounded-lg bg-red-500/10 p-3 text-center text-xs text-red-400">{verifyResult.message}</p>
-            )}
-            <Button type="button" className="mb-2 w-full bg-green-600 text-white hover:bg-green-700" onClick={handleVerify} disabled={verifying}>
-              {verifying ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t(locale, "checking")}</> : t(locale, "verifyPayment")}
-            </Button>
-            <button type="button" onClick={onClose} className="w-full rounded-lg border border-[hsl(210,60%,50%)]/30 py-2 text-sm text-muted-foreground hover:bg-[hsl(210,60%,50%)]/10">{t(locale, "close")}</button>
-          </>
-        )}
-      </div>
-    </div>
+          </div>
+
+          {verifyResult && verifyResult.status !== "paid" && (
+            <p className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-center text-xs text-red-400">{verifyResult.message}</p>
+          )}
+
+          <Button type="button" size="lg" className="h-12 w-full rounded-xl bg-emerald-600 text-base font-bold text-white hover:bg-emerald-700" onClick={handleVerify} disabled={verifying}>
+            {verifying ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t(locale, "checking")}</> : t(locale, "verifyPayment")}
+          </Button>
+          <button type="button" onClick={onClose} className="w-full rounded-xl py-2 text-sm text-muted-foreground transition-colors hover:text-foreground">
+            {t(locale, "close")}
+          </button>
+        </>
+      )}
+    </PaymentModalShell>
   )
 }
 
@@ -362,47 +490,51 @@ export function NowPaymentsButton({
   return (
     <>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => setOpen(false)}>
-          <div className="w-full max-w-sm rounded-xl border border-[hsl(210,60%,50%)]/30 bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="mb-1 text-center text-lg font-bold text-foreground">{t(locale, "payWithCrypto")}</h3>
-            {!prefillEmail && (
-              <>
-                <p className="mb-4 text-center text-sm text-muted-foreground">{t(locale, "enterEmailContinue")}</p>
-                <input
-                  type="email"
-                  placeholder="your@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
-                />
-                <input
-                  type="text"
-                  placeholder="Telegram username (optional)"
-                  value={telegram}
-                  onChange={(e) => setTelegram(e.target.value)}
-                  className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
-                />
-              </>
-            )}
-            {splitPayment && (
-              <div className="mb-3 rounded-lg bg-primary/10 p-3 text-center">
-                <p className="text-xs font-semibold text-primary">{t(locale, "splitPaymentBadge")}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{t(locale, "splitPaymentNote")}</p>
-              </div>
-            )}
-            <p className="mb-3 rounded-lg bg-red-500/10 p-3 text-center text-xs text-red-400">
-              ⚠️ {t(locale, "noRefundNotice")}
-            </p>
-            <label className="mb-3 flex items-start gap-2 text-xs text-muted-foreground">
-              <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 shrink-0" />
-              <span>{t(locale, "noRefundAgree")}</span>
-            </label>
-            <Button type="button" className="mb-2 w-full bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" onClick={handlePay} disabled={loading || !agreed}>
-              {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t(locale, "loading")}</> : t(locale, "continueToPayment")}
-            </Button>
-            <button type="button" onClick={() => setOpen(false)} className="w-full rounded-lg border border-[hsl(210,60%,50%)]/30 py-2 text-sm text-muted-foreground hover:bg-[hsl(210,60%,50%)]/10">{t(locale, "cancel")}</button>
-          </div>
-        </div>
+        <PaymentModalShell
+          locale={locale}
+          icon={<CryptoMark />}
+          title={t(locale, "payWithCrypto")}
+          subtitle={!prefillEmail ? t(locale, "enterEmailContinue") : undefined}
+          onClose={() => setOpen(false)}
+          closeDisabled={loading}
+        >
+          {!prefillEmail && (
+            <div className="space-y-3">
+              <input
+                type="email"
+                dir="ltr"
+                placeholder="your@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={modalInputClass}
+              />
+              <input
+                type="text"
+                dir="ltr"
+                placeholder="Telegram username (optional)"
+                value={telegram}
+                onChange={(e) => setTelegram(e.target.value)}
+                className={modalInputClass}
+              />
+            </div>
+          )}
+
+          {splitPayment && (
+            <div className="rounded-xl border border-primary/30 bg-primary/10 p-3 text-center">
+              <p className="text-xs font-semibold text-primary">{t(locale, "splitPaymentBadge")}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t(locale, "splitPaymentNote")}</p>
+            </div>
+          )}
+
+          <NoRefundConsent locale={locale} agreed={agreed} onToggle={() => setAgreed(!agreed)} />
+
+          <Button type="button" size="lg" className="h-12 w-full rounded-xl text-base font-bold" onClick={handlePay} disabled={loading || !agreed}>
+            {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t(locale, "loading")}</> : t(locale, "continueToPayment")}
+          </Button>
+          <button type="button" onClick={() => setOpen(false)} disabled={loading} className="w-full rounded-xl py-2 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40">
+            {t(locale, "cancel")}
+          </button>
+        </PaymentModalShell>
       )}
       <Button type="button" className={className} size="lg" onClick={handleClick} disabled={loading}>
         {loading ? (
@@ -482,128 +614,64 @@ export function WhopPayButton({
   return (
     <>
       {open && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
-          onClick={() => !loading && setOpen(false)}
+        <PaymentModalShell
+          locale={locale}
+          icon={<VisaMark />}
+          title={t(locale, "payWithVisa")}
+          subtitle={!prefillEmail ? t(locale, "enterEmailContinue") : undefined}
+          onClose={() => setOpen(false)}
+          closeDisabled={loading}
         >
-          <div
-            dir={locale === "ar" ? "rtl" : "ltr"}
-            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card shadow-2xl"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Header */}
-            <div className="relative border-b border-border px-6 py-5 text-center">
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                disabled={loading}
-                aria-label={t(locale, "close")}
-                className="absolute end-4 top-4 rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
-              >
-                <X className="h-4 w-4" />
-              </button>
-              <svg className="mx-auto h-8 w-12" viewBox="0 0 48 32" aria-hidden="true">
-                <rect width="48" height="32" rx="4" fill="#1A1F71" />
-                <text x="24" y="21" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="bold" fontStyle="italic" fontSize="13" fill="#fff">VISA</text>
-              </svg>
-              <h3 className="mt-3 text-lg font-bold text-foreground">{t(locale, "payWithVisa")}</h3>
-              {!prefillEmail && (
-                <p className="mt-1 text-sm text-muted-foreground">{t(locale, "enterEmailContinue")}</p>
-              )}
+          {!prefillEmail && (
+            <div className="space-y-3">
+              <input
+                type="email"
+                dir="ltr"
+                placeholder="your@email.com"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                className={modalInputClass}
+              />
+              <input
+                type="text"
+                dir="ltr"
+                placeholder="Telegram username (optional)"
+                value={telegram}
+                onChange={(e) => setTelegram(e.target.value)}
+                className={modalInputClass}
+              />
             </div>
+          )}
 
-            <div className="space-y-4 px-6 py-5">
-              {!prefillEmail && (
-                <div className="space-y-3">
-                  <input
-                    type="email"
-                    dir="ltr"
-                    placeholder="your@email.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
-                  />
-                  <input
-                    type="text"
-                    dir="ltr"
-                    placeholder="Telegram username (optional)"
-                    value={telegram}
-                    onChange={(e) => setTelegram(e.target.value)}
-                    className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
-                  />
-                </div>
-              )}
-
-              {splitPayment && (
-                <div className="rounded-xl border border-primary/30 bg-primary/10 p-3 text-center">
-                  <p className="text-xs font-semibold text-primary">{t(locale, "splitPaymentBadge")}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">{t(locale, "splitPaymentNote")}</p>
-                </div>
-              )}
-
-              <div className="rounded-xl border border-border bg-muted/40 px-3.5 py-3">
-                <div className="flex items-start gap-2.5">
-                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
-                  <p className="text-xs leading-relaxed text-muted-foreground">{t(locale, "visaFeeNotice")}</p>
-                </div>
-                {totalDue !== null && (
-                  <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
-                    <span className="text-sm text-muted-foreground">{t(locale, "visaTotalLabel")}</span>
-                    <span className="text-lg font-extrabold text-foreground">${totalDue}</span>
-                  </div>
-                )}
-              </div>
-
-              {/* Non-refundable — the one thing they must not miss */}
-              <div className="rounded-xl border-2 border-red-500/50 bg-red-500/10 p-4">
-                <div className="flex items-start gap-2.5">
-                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-400" />
-                  <p className="text-sm font-bold leading-relaxed text-red-400">{t(locale, "noRefundNotice")}</p>
-                </div>
-                <button
-                  type="button"
-                  role="checkbox"
-                  aria-checked={agreed}
-                  onClick={() => setAgreed(!agreed)}
-                  className={`mt-3.5 flex w-full items-start gap-3 rounded-lg border p-3 text-start transition-colors ${
-                    agreed
-                      ? "border-emerald-500/50 bg-emerald-500/10"
-                      : "border-red-500/40 bg-background hover:border-red-500/70"
-                  }`}
-                >
-                  <span
-                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors ${
-                      agreed ? "border-emerald-500 bg-emerald-500 text-white" : "border-muted-foreground/60"
-                    }`}
-                  >
-                    {agreed && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
-                  </span>
-                  <span className={`text-xs leading-relaxed ${agreed ? "text-foreground" : "text-muted-foreground"}`}>
-                    {t(locale, "noRefundAgree")}
-                  </span>
-                </button>
-              </div>
-
-              <Button
-                type="button"
-                size="lg"
-                className="h-12 w-full rounded-xl text-base font-bold"
-                onClick={handlePay}
-                disabled={loading || !agreed}
-              >
-                {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t(locale, "redirecting")}</> : t(locale, "continueToPayment")}
-              </Button>
-              <button
-                type="button"
-                onClick={() => setOpen(false)}
-                disabled={loading}
-                className="w-full rounded-xl py-2 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
-              >
-                {t(locale, "cancel")}
-              </button>
+          {splitPayment && (
+            <div className="rounded-xl border border-primary/30 bg-primary/10 p-3 text-center">
+              <p className="text-xs font-semibold text-primary">{t(locale, "splitPaymentBadge")}</p>
+              <p className="mt-1 text-xs text-muted-foreground">{t(locale, "splitPaymentNote")}</p>
             </div>
+          )}
+
+          <div className="rounded-xl border border-border bg-muted/40 px-3.5 py-3">
+            <div className="flex items-start gap-2.5">
+              <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+              <p className="text-xs leading-relaxed text-muted-foreground">{t(locale, "visaFeeNotice")}</p>
+            </div>
+            {totalDue !== null && (
+              <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+                <span className="text-sm text-muted-foreground">{t(locale, "visaTotalLabel")}</span>
+                <span className="text-lg font-extrabold text-foreground">${totalDue}</span>
+              </div>
+            )}
           </div>
-        </div>
+
+          <NoRefundConsent locale={locale} agreed={agreed} onToggle={() => setAgreed(!agreed)} />
+
+          <Button type="button" size="lg" className="h-12 w-full rounded-xl text-base font-bold" onClick={handlePay} disabled={loading || !agreed}>
+            {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t(locale, "redirecting")}</> : t(locale, "continueToPayment")}
+          </Button>
+          <button type="button" onClick={() => setOpen(false)} disabled={loading} className="w-full rounded-xl py-2 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40">
+            {t(locale, "cancel")}
+          </button>
+        </PaymentModalShell>
       )}
       <Button type="button" className={className} size="lg" onClick={handleClick} disabled={loading}>
         {loading ? (

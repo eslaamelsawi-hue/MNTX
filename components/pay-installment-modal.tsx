@@ -2,9 +2,10 @@
 
 import { useState } from "react"
 import { useLocale } from "next-intl"
-import { Loader2, X, CheckCircle2 } from "lucide-react"
+import { Loader2, CheckCircle2, Wallet, Info } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { usePaymentSettings } from "@/hooks/use-payment-settings"
+import { PaymentModalShell } from "@/components/payment-buttons"
 
 const dict = {
   en: {
@@ -135,71 +136,81 @@ export function PayInstallmentModal({
   const disabledWhop = !settingsLoading && !settings.whop
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={onClose}>
-      <div className="w-full max-w-md rounded-xl border border-border bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-3 flex items-center justify-between">
-          <h3 className="text-lg font-bold text-foreground">{l.title}</h3>
-          <button type="button" onClick={onClose} className="text-muted-foreground hover:text-foreground"><X className="h-4 w-4" /></button>
+    <PaymentModalShell
+      locale={locale}
+      icon={<Wallet className="mx-auto h-8 w-8 text-primary" />}
+      title={l.title}
+      subtitle={!paid && !payInfo && !loading ? l.choose : undefined}
+      onClose={onClose}
+      closeDisabled={loading}
+    >
+      {paid ? (
+        <div className="text-center">
+          <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500/15">
+            <CheckCircle2 className="h-8 w-8 text-emerald-500" />
+          </div>
+          <p className="text-lg font-bold text-emerald-500">{l.paid}</p>
+          <p className="mt-2 text-sm text-muted-foreground">{l.paidMessage}</p>
+          <Button type="button" size="lg" className="mt-5 h-12 w-full rounded-xl text-base font-bold" onClick={onClose}>{l.close}</Button>
         </div>
+      ) : loading ? (
+        <div className="flex items-center justify-center py-10 text-muted-foreground">
+          <Loader2 className="mr-2 h-5 w-5 animate-spin" /> {l.loading}
+        </div>
+      ) : !payInfo ? (
+        <>
+          {error && <p className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-center text-xs text-red-400">{error}</p>}
+          {disabledOkx && disabledNow && disabledWhop ? (
+            <p className="rounded-xl border border-border p-3 text-center text-sm text-muted-foreground">{l.unavailable}</p>
+          ) : (
+            <div className="space-y-2.5">
+              {!disabledWhop && (
+                <Button type="button" variant="outline" size="lg" className="h-12 w-full rounded-xl" onClick={() => startPayment("whop")}>{l.visa}</Button>
+              )}
+              {!disabledOkx && (
+                <Button type="button" variant="outline" size="lg" className="h-12 w-full rounded-xl" onClick={() => startPayment("okx")}>{l.okx}</Button>
+              )}
+              {!disabledNow && (
+                <Button type="button" variant="outline" size="lg" className="h-12 w-full rounded-xl" onClick={() => startPayment("nowpayments")}>{l.crypto}</Button>
+              )}
+            </div>
+          )}
+          <button type="button" onClick={onClose} className="w-full rounded-xl py-2 text-sm text-muted-foreground transition-colors hover:text-foreground">{l.cancel}</button>
+        </>
+      ) : (
+        <>
+          <p className="text-center text-sm text-muted-foreground">{payInfo.description}</p>
 
-        {paid ? (
-          <div className="text-center">
-            <CheckCircle2 className="mx-auto mb-3 h-10 w-10 text-emerald-500" />
-            <p className="text-lg font-bold text-emerald-500">{l.paid}</p>
-            <p className="mt-2 text-sm text-muted-foreground">{l.paidMessage}</p>
-            <Button type="button" className="mt-4 w-full" onClick={onClose}>{l.close}</Button>
+          <div className="rounded-xl border border-border bg-background p-4 text-center">
+            <p className="text-3xl font-extrabold text-primary">{payInfo.amount} {payInfo.currency}</p>
+            <p className="mt-1 text-xs text-muted-foreground">{l.network}: {payInfo.chain}</p>
           </div>
-        ) : loading ? (
-          <div className="flex items-center justify-center py-8 text-muted-foreground">
-            <Loader2 className="mr-2 h-5 w-5 animate-spin" /> {l.loading}
+
+          <div>
+            <p className="mb-1.5 text-xs text-muted-foreground">{l.sendExactly} {payInfo.amount} USDT {l.to}</p>
+            <div className="flex items-center gap-2 rounded-xl border border-border bg-background p-3">
+              <span dir="ltr" className="flex-1 break-all font-mono text-xs text-foreground">{payInfo.address}</span>
+              <button type="button" onClick={() => copy(payInfo.address)} className="shrink-0 rounded-lg px-2 py-1 text-xs font-medium text-primary transition-colors hover:bg-primary/10">
+                {copied ? l.copied : l.copy}
+              </button>
+            </div>
           </div>
-        ) : !payInfo ? (
-          <>
-            <p className="mb-3 text-sm text-muted-foreground">{l.choose}</p>
-            {error && <p className="mb-3 rounded-lg bg-red-500/10 p-3 text-center text-xs text-red-400">{error}</p>}
-            {disabledOkx && disabledNow && disabledWhop ? (
-              <p className="rounded-lg border border-border/60 p-3 text-center text-sm text-muted-foreground">{l.unavailable}</p>
-            ) : (
-              <div className="space-y-2">
-                {!disabledOkx && (
-                  <Button type="button" className="w-full" onClick={() => startPayment("okx")}>{l.okx}</Button>
-                )}
-                {!disabledNow && (
-                  <Button type="button" variant="outline" className="w-full" onClick={() => startPayment("nowpayments")}>{l.crypto}</Button>
-                )}
-                {!disabledWhop && (
-                  <Button type="button" variant="outline" className="w-full" onClick={() => startPayment("whop")}>{l.visa}</Button>
-                )}
-              </div>
-            )}
-            <button type="button" onClick={onClose} className="mt-3 w-full rounded-lg border border-border py-2 text-sm text-muted-foreground hover:bg-muted">{l.cancel}</button>
-          </>
-        ) : (
-          <>
-            <p className="mb-3 text-center text-sm text-muted-foreground">{payInfo.description}</p>
-            <div className="mb-3 rounded-lg border border-border bg-background p-4 text-center">
-              <p className="text-3xl font-bold text-primary">{payInfo.amount} {payInfo.currency}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{l.network}: {payInfo.chain}</p>
-            </div>
-            <div className="mb-3">
-              <p className="mb-1 text-xs text-muted-foreground">{l.sendExactly} {payInfo.amount} USDT {l.to}</p>
-              <div className="flex items-center gap-2 rounded-lg border border-border bg-background p-3">
-                <span className="flex-1 break-all font-mono text-xs text-foreground">{payInfo.address}</span>
-                <button type="button" onClick={() => copy(payInfo.address)} className="shrink-0 rounded px-2 py-1 text-xs font-medium text-primary hover:bg-primary/10">
-                  {copied ? l.copied : l.copy}
-                </button>
-              </div>
-            </div>
-            <p className="mb-1 text-xs text-muted-foreground">{l.orderRef}: <span className="font-mono text-foreground">{payInfo.orderId}</span></p>
-            <p className="mb-3 rounded-lg bg-red-500/10 p-3 text-center text-xs text-red-400">{l.networkFeesNotice}</p>
-            {error && <p className="mb-3 rounded-lg bg-red-500/10 p-3 text-center text-xs text-red-400">{error}</p>}
-            <Button type="button" className="mb-2 w-full bg-emerald-600 text-white hover:bg-emerald-700" onClick={handleVerify} disabled={verifying}>
-              {verifying ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {l.checking}</> : l.verifyPayment}
-            </Button>
-            <button type="button" onClick={onClose} className="w-full rounded-lg border border-border py-2 text-sm text-muted-foreground hover:bg-muted">{l.close}</button>
-          </>
-        )}
-      </div>
-    </div>
+
+          <p className="text-xs text-muted-foreground">{l.orderRef}: <span className="font-mono text-foreground">{payInfo.orderId}</span></p>
+
+          <div className="flex items-start gap-2.5 rounded-xl border border-border bg-muted/40 px-3.5 py-3">
+            <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+            <p className="text-xs leading-relaxed text-muted-foreground">{l.networkFeesNotice}</p>
+          </div>
+
+          {error && <p className="rounded-xl border border-red-500/30 bg-red-500/10 p-3 text-center text-xs text-red-400">{error}</p>}
+
+          <Button type="button" size="lg" className="h-12 w-full rounded-xl bg-emerald-600 text-base font-bold text-white hover:bg-emerald-700" onClick={handleVerify} disabled={verifying}>
+            {verifying ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {l.checking}</> : l.verifyPayment}
+          </Button>
+          <button type="button" onClick={onClose} className="w-full rounded-xl py-2 text-sm text-muted-foreground transition-colors hover:text-foreground">{l.close}</button>
+        </>
+      )}
+    </PaymentModalShell>
   )
 }
