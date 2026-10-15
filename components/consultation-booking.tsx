@@ -378,7 +378,7 @@ export function ConsultationBooking() {
               </div>
 
               <div className="mt-6 space-y-3">
-                <WhopPayButton plan={selected.plan} preferredDate={preferredStart} preferredSlotId={pickedSlot?.id} couponCode={appliedCoupon?.code} className="w-full justify-center" />
+                <WhopPayButton plan={selected.plan} preferredDate={preferredStart} preferredSlotId={pickedSlot?.id} couponCode={appliedCoupon?.code} amount={finalPrice} className="w-full justify-center" />
                 <OKXPayButton plan={selected.plan} preferredDate={preferredStart} preferredSlotId={pickedSlot?.id} couponCode={appliedCoupon?.code} className="w-full justify-center" />
               </div>
 

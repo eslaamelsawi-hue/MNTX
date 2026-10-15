@@ -80,7 +80,7 @@ export function MentorshipCheckout({ code, email }: { code?: string; email?: str
             <p className="mt-1 text-center text-xs text-muted-foreground">دفعة واحدة كاملة</p>
 
             <div className="mt-8 space-y-3">
-              <WhopPayButton plan={PLAN} couponCode={code} prefillEmail={email} className="w-full justify-center" />
+              <WhopPayButton plan={PLAN} couponCode={code} prefillEmail={email} amount={price ?? undefined} className="w-full justify-center" />
               <OKXPayButton plan={PLAN} couponCode={code} prefillEmail={email} className="w-full justify-center" />
             </div>
 

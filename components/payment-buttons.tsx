@@ -3,9 +3,10 @@
 import { useState } from "react"
 import { useLocale } from "next-intl"
 import { Button } from "@/components/ui/button"
-import { Loader2 } from "lucide-react"
+import { Loader2, X, Check, AlertTriangle, Info } from "lucide-react"
 import { usePaymentSettings } from "@/hooks/use-payment-settings"
-import { VISA_FEE_RATE } from "@/lib/payment-fees"
+import { VISA_FEE_PERCENT, withVisaFee } from "@/lib/payment-fees"
+import { PLAN_PRICES } from "@/lib/plan-pricing"
 
 const t = (locale: string, key: string) => {
   const ar: Record<string, string> = {
@@ -39,7 +40,8 @@ const t = (locale: string, key: string) => {
     splitPaymentNote: "المتبقي مستحق خلال 30 يومًا، ويمكنك دفعه في أي وقت من لوحة التحكم.",
     payWithVisa: "الدفع بالفيزا",
     redirecting: "جاري التحويل إلى صفحة الدفع…",
-    visaFeeNotice: `تُضاف رسوم معالجة ${VISA_FEE_RATE * 100}% على الدفع بالبطاقة، وتظهر في صفحة الدفع.`,
+    visaFeeNotice: `تُضاف رسوم معالجة ${VISA_FEE_PERCENT}% على الدفع بالبطاقة، وتظهر في صفحة الدفع.`,
+    visaTotalLabel: "الإجمالي المستحق",
   };
   const en: Record<string, string> = {
     payWithOKX: "Pay with OKX",
@@ -72,7 +74,8 @@ const t = (locale: string, key: string) => {
     splitPaymentNote: "The remaining balance is due within 30 days — payable anytime from your dashboard.",
     payWithVisa: "Pay with Visa",
     redirecting: "Redirecting to checkout…",
-    visaFeeNotice: `A ${VISA_FEE_RATE * 100}% card processing fee is added at checkout.`,
+    visaFeeNotice: `A ${VISA_FEE_PERCENT}% card processing fee is added at checkout.`,
+    visaTotalLabel: "Total due",
   };
   return (locale === "ar" ? ar[key] : en[key]) || en[key] || key;
 };
@@ -426,6 +429,7 @@ export function WhopPayButton({
   splitPayment,
   preferredDate,
   preferredSlotId,
+  amount,
 }: {
   plan: string
   className?: string
@@ -435,6 +439,10 @@ export function WhopPayButton({
   splitPayment?: boolean
   preferredDate?: string
   preferredSlotId?: string
+  /** Final price being charged, so the modal can show the fee-inclusive
+   *  total. Falls back to the plan's list price; omitted when a coupon is in
+   *  play and no amount was passed, since the total would be wrong. */
+  amount?: number
 }) {
   const locale = useLocale()
   const [open, setOpen] = useState(false)
@@ -444,6 +452,9 @@ export function WhopPayButton({
   const [agreed, setAgreed] = useState(false)
   const { settings: paySettings, loading: settingsLoading } = usePaymentSettings()
   const disabled = !settingsLoading && (!paySettings.subscriptionsOpen || !paySettings.whop)
+
+  const baseAmount = amount ?? (couponCode ? undefined : PLAN_PRICES[plan]?.amount)
+  const totalDue = baseAmount !== undefined ? withVisaFee(splitPayment ? Math.round(baseAmount * 0.6 * 100) / 100 : baseAmount) : null
 
   const handlePay = async () => {
     const useEmail = prefillEmail || email
@@ -471,48 +482,126 @@ export function WhopPayButton({
   return (
     <>
       {open && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4" onClick={() => !loading && setOpen(false)}>
-          <div className="w-full max-w-sm rounded-xl border border-[hsl(210,60%,50%)]/30 bg-card p-6 shadow-2xl" onClick={(e) => e.stopPropagation()}>
-            <h3 className="mb-1 text-center text-lg font-bold text-foreground">{t(locale, "payWithVisa")}</h3>
-            {!prefillEmail && (
-              <>
-                <p className="mb-4 text-center text-sm text-muted-foreground">{t(locale, "enterEmailContinue")}</p>
-                <input
-                  type="email"
-                  placeholder="your@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
-                />
-                <input
-                  type="text"
-                  placeholder="Telegram username (optional)"
-                  value={telegram}
-                  onChange={(e) => setTelegram(e.target.value)}
-                  className="mb-3 w-full rounded-lg border border-[hsl(210,60%,50%)]/20 bg-background px-4 py-2 text-sm text-foreground outline-none focus:border-[hsl(210,60%,50%)]"
-                />
-              </>
-            )}
-            {splitPayment && (
-              <div className="mb-3 rounded-lg bg-primary/10 p-3 text-center">
-                <p className="text-xs font-semibold text-primary">{t(locale, "splitPaymentBadge")}</p>
-                <p className="mt-1 text-xs text-muted-foreground">{t(locale, "splitPaymentNote")}</p>
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm"
+          onClick={() => !loading && setOpen(false)}
+        >
+          <div
+            dir={locale === "ar" ? "rtl" : "ltr"}
+            className="max-h-[90vh] w-full max-w-md overflow-y-auto rounded-2xl border border-border bg-card shadow-2xl"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header */}
+            <div className="relative border-b border-border px-6 py-5 text-center">
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                disabled={loading}
+                aria-label={t(locale, "close")}
+                className="absolute end-4 top-4 rounded-lg p-1 text-muted-foreground transition-colors hover:bg-muted hover:text-foreground disabled:opacity-40"
+              >
+                <X className="h-4 w-4" />
+              </button>
+              <svg className="mx-auto h-8 w-12" viewBox="0 0 48 32" aria-hidden="true">
+                <rect width="48" height="32" rx="4" fill="#1A1F71" />
+                <text x="24" y="21" textAnchor="middle" fontFamily="Arial, sans-serif" fontWeight="bold" fontStyle="italic" fontSize="13" fill="#fff">VISA</text>
+              </svg>
+              <h3 className="mt-3 text-lg font-bold text-foreground">{t(locale, "payWithVisa")}</h3>
+              {!prefillEmail && (
+                <p className="mt-1 text-sm text-muted-foreground">{t(locale, "enterEmailContinue")}</p>
+              )}
+            </div>
+
+            <div className="space-y-4 px-6 py-5">
+              {!prefillEmail && (
+                <div className="space-y-3">
+                  <input
+                    type="email"
+                    dir="ltr"
+                    placeholder="your@email.com"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
+                  />
+                  <input
+                    type="text"
+                    dir="ltr"
+                    placeholder="Telegram username (optional)"
+                    value={telegram}
+                    onChange={(e) => setTelegram(e.target.value)}
+                    className="h-11 w-full rounded-xl border border-border bg-background px-4 text-sm text-foreground outline-none transition-colors placeholder:text-muted-foreground focus:border-primary"
+                  />
+                </div>
+              )}
+
+              {splitPayment && (
+                <div className="rounded-xl border border-primary/30 bg-primary/10 p-3 text-center">
+                  <p className="text-xs font-semibold text-primary">{t(locale, "splitPaymentBadge")}</p>
+                  <p className="mt-1 text-xs text-muted-foreground">{t(locale, "splitPaymentNote")}</p>
+                </div>
+              )}
+
+              <div className="rounded-xl border border-border bg-muted/40 px-3.5 py-3">
+                <div className="flex items-start gap-2.5">
+                  <Info className="mt-0.5 h-4 w-4 shrink-0 text-muted-foreground" />
+                  <p className="text-xs leading-relaxed text-muted-foreground">{t(locale, "visaFeeNotice")}</p>
+                </div>
+                {totalDue !== null && (
+                  <div className="mt-3 flex items-center justify-between border-t border-border pt-3">
+                    <span className="text-sm text-muted-foreground">{t(locale, "visaTotalLabel")}</span>
+                    <span className="text-lg font-extrabold text-foreground">${totalDue}</span>
+                  </div>
+                )}
               </div>
-            )}
-            <p className="mb-3 rounded-lg bg-muted p-3 text-center text-xs text-muted-foreground">
-              {t(locale, "visaFeeNotice")}
-            </p>
-            <p className="mb-3 rounded-lg bg-red-500/10 p-3 text-center text-xs text-red-400">
-              ⚠️ {t(locale, "noRefundNotice")}
-            </p>
-            <label className="mb-3 flex items-start gap-2 text-xs text-muted-foreground">
-              <input type="checkbox" checked={agreed} onChange={(e) => setAgreed(e.target.checked)} className="mt-0.5 shrink-0" />
-              <span>{t(locale, "noRefundAgree")}</span>
-            </label>
-            <Button type="button" className="mb-2 w-full bg-[hsl(210,60%,50%)] text-foreground hover:bg-[hsl(210,60%,40%)]" onClick={handlePay} disabled={loading || !agreed}>
-              {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t(locale, "redirecting")}</> : t(locale, "continueToPayment")}
-            </Button>
-            <button type="button" onClick={() => setOpen(false)} disabled={loading} className="w-full rounded-lg border border-[hsl(210,60%,50%)]/30 py-2 text-sm text-muted-foreground hover:bg-[hsl(210,60%,50%)]/10">{t(locale, "cancel")}</button>
+
+              {/* Non-refundable — the one thing they must not miss */}
+              <div className="rounded-xl border-2 border-red-500/50 bg-red-500/10 p-4">
+                <div className="flex items-start gap-2.5">
+                  <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-red-400" />
+                  <p className="text-sm font-bold leading-relaxed text-red-400">{t(locale, "noRefundNotice")}</p>
+                </div>
+                <button
+                  type="button"
+                  role="checkbox"
+                  aria-checked={agreed}
+                  onClick={() => setAgreed(!agreed)}
+                  className={`mt-3.5 flex w-full items-start gap-3 rounded-lg border p-3 text-start transition-colors ${
+                    agreed
+                      ? "border-emerald-500/50 bg-emerald-500/10"
+                      : "border-red-500/40 bg-background hover:border-red-500/70"
+                  }`}
+                >
+                  <span
+                    className={`mt-0.5 flex h-5 w-5 shrink-0 items-center justify-center rounded border-2 transition-colors ${
+                      agreed ? "border-emerald-500 bg-emerald-500 text-white" : "border-muted-foreground/60"
+                    }`}
+                  >
+                    {agreed && <Check className="h-3.5 w-3.5" strokeWidth={3} />}
+                  </span>
+                  <span className={`text-xs leading-relaxed ${agreed ? "text-foreground" : "text-muted-foreground"}`}>
+                    {t(locale, "noRefundAgree")}
+                  </span>
+                </button>
+              </div>
+
+              <Button
+                type="button"
+                size="lg"
+                className="h-12 w-full rounded-xl text-base font-bold"
+                onClick={handlePay}
+                disabled={loading || !agreed}
+              >
+                {loading ? <><Loader2 className="mr-2 h-4 w-4 animate-spin" /> {t(locale, "redirecting")}</> : t(locale, "continueToPayment")}
+              </Button>
+              <button
+                type="button"
+                onClick={() => setOpen(false)}
+                disabled={loading}
+                className="w-full rounded-xl py-2 text-sm text-muted-foreground transition-colors hover:text-foreground disabled:opacity-40"
+              >
+                {t(locale, "cancel")}
+              </button>
+            </div>
           </div>
         </div>
       )}
