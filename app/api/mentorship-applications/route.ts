@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server"
 import { cookies } from "next/headers"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { sendEmail } from "@/lib/resend-send"
+import { getApprovedSeatsStatus } from "@/lib/mentorship-seats"
 
 async function isAdmin() {
   const cookieStore = await cookies()
@@ -63,6 +64,11 @@ function adminNotificationHtml(a: Record<string, unknown>): string {
 
 export async function POST(request: NextRequest) {
   try {
+    const { seatsFull } = await getApprovedSeatsStatus()
+    if (seatsFull) {
+      return NextResponse.json({ error: "عذرًا، اكتمل عدد المقاعد لهذه الدفعة. تابعنا لمعرفة موعد فتح الدفعة القادمة." }, { status: 400 })
+    }
+
     const body = await request.json()
 
     for (const field of REQUIRED_FIELDS) {

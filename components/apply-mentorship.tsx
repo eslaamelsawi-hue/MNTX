@@ -146,7 +146,7 @@ const GRID_BG = [
   "linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)",
 ].join(", ")
 
-export function ApplyMentorship() {
+export function ApplyMentorship({ seatsFull, remaining }: { seatsFull: boolean; remaining: number }) {
   const [step, setStep] = useState(1)
   const [agreed, setAgreed] = useState(false)
   const [form, setForm] = useState<FormState>(initialForm)
@@ -222,6 +222,18 @@ export function ApplyMentorship() {
           </div>
         </section>
 
+        {seatsFull ? (
+          <section className="mx-auto mt-14 max-w-2xl rounded-3xl border border-border bg-card p-10 text-center">
+            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-muted px-4 py-1.5 text-sm font-medium text-muted-foreground">
+              اكتملت مقاعد هذه الدفعة
+            </span>
+            <h2 className="mt-5 text-2xl font-extrabold text-balance md:text-3xl">التقديم مغلق حاليًا</h2>
+            <p className="mx-auto mt-3 max-w-md leading-relaxed text-muted-foreground">
+              وصلنا للعدد المطلوب من المقبولين في دفعة أكتوبر. تابعنا لمعرفة موعد فتح التقديم للدفعة القادمة.
+            </p>
+          </section>
+        ) : (
+          <>
         {/* How it works */}
         <section className="mx-auto mt-14 grid max-w-4xl gap-4 sm:grid-cols-3">
           {PROCESS.map((p) => (
@@ -254,7 +266,7 @@ export function ApplyMentorship() {
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex gap-2">
                   <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">دفعة أكتوبر</span>
-                  <span className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">5 مقاعد فقط</span>
+                  <span className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">{remaining} مقاعد متبقية فقط</span>
                 </div>
                 <h2 className="text-xl font-extrabold md:text-2xl">نموذج التقديم</h2>
               </div>
@@ -478,6 +490,8 @@ export function ApplyMentorship() {
             </>
           )}
         </section>
+          </>
+        )}
       </div>
     </div>
   )
