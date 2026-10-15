@@ -89,18 +89,31 @@ export function ConsultationBooking() {
     }
   }
 
-  /** Free-text summary of the chosen time, carried on the order through to
-   *  the confirmation + admin emails. */
-  const preferredDate = isFreeDate
+  /** Machine-readable start time carried on the order: an absolute UTC
+   *  instant for free-date picks (built from the visitor's own clock), or a
+   *  bare Cairo wall-clock stamp for slots, which are stored in Cairo time. */
+  const preferredStart = (() => {
+    if (isFreeDate) {
+      if (!pickedDate || !customTime) return ""
+      const [hh, mm] = customTime.split(":").map(Number)
+      const local = new Date(pickedDate)
+      local.setHours(hh, mm, 0, 0)
+      return local.toISOString()
+    }
+    return pickedSlot ? `${pickedSlot.date}T${pickedSlot.start_time.slice(0, 5)}` : ""
+  })()
+
+  /** Same moment, formatted for the on-screen summary. */
+  const preferredDateLabel = isFreeDate
     ? pickedDate && customTime
-      ? `${format(pickedDate, "yyyy-MM-dd")} ${customTime} (بتوقيت العميل المحلي)`
+      ? `${format(pickedDate, "yyyy-MM-dd")} ${customTime}`
       : ""
     : pickedSlot
       ? `${pickedSlot.date} ${pickedSlot.start_time.slice(0, 5)} (بتوقيت القاهرة)`
       : ""
 
   const goToPayment = () => {
-    if (!preferredDate) {
+    if (!preferredStart) {
       setDateError(isFreeDate ? "اختر التاريخ والوقت المناسب لك." : "اختر أحد المواعيد المتاحة.")
       return
     }
@@ -282,7 +295,7 @@ export function ConsultationBooking() {
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-muted-foreground">الموعد</span>
-                  <span className="font-medium text-foreground">{preferredDate}</span>
+                  <span className="font-medium text-foreground">{preferredDateLabel}</span>
                 </div>
                 <div className="flex items-center justify-between border-t border-border pt-2">
                   <span className="text-muted-foreground">المجموع</span>
@@ -291,12 +304,12 @@ export function ConsultationBooking() {
               </div>
 
               <div className="mt-6 space-y-3">
-                <WhopPayButton plan={selected.plan} preferredDate={preferredDate} className="w-full justify-center" />
-                <OKXPayButton plan={selected.plan} preferredDate={preferredDate} className="w-full justify-center" />
+                <WhopPayButton plan={selected.plan} preferredDate={preferredStart} preferredSlotId={pickedSlot?.id} className="w-full justify-center" />
+                <OKXPayButton plan={selected.plan} preferredDate={preferredStart} preferredSlotId={pickedSlot?.id} className="w-full justify-center" />
               </div>
 
               <p className="mt-6 text-center text-xs text-muted-foreground">
-                بعد إتمام الدفع سنؤكد موعدك عبر البريد الإلكتروني، أو نقترح أقرب وقت متاح إن لزم.
+                بعد إتمام الدفع سنرسل لك رابط جلسة Zoom على بريدك الإلكتروني مباشرة.
               </p>
             </>
           )}

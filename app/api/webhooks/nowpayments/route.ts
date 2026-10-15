@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { grantExtendHours, grantCoaching, EXTEND_PLAN_HOURS, grantConsultationHours, parseConsultationHours } from "@/lib/grant-hours"
+import { grantExtendHours, grantCoaching, EXTEND_PLAN_HOURS, parseConsultationHours } from "@/lib/grant-hours"
 import { createStarterInviteLink } from "@/lib/tg-invite"
 import { sendConfirmationEmail } from "@/lib/email"
-import { sendConsultationEmails } from "@/lib/consultation-email"
+import { fulfillConsultation } from "@/lib/consultation"
 import { markInstallmentPaid } from "@/lib/invoicing"
 
 function sortObjectKeys(obj: unknown): unknown {
@@ -150,8 +150,14 @@ export async function POST(request: Request) {
     }
 
     if (consultationHours) {
-      await grantConsultationHours(email, consultationHours, name, invoiceAmount)
-      await sendConsultationEmails({ email, name, hours: consultationHours, amount: invoiceAmount ?? 0, orderId: String(order_id) })
+      await fulfillConsultation({
+        baseUrl: new URL(request.url).origin,
+        email,
+        name,
+        hours: consultationHours,
+        amount: invoiceAmount ?? 0,
+        orderId: String(order_id),
+      })
     }
 
     return NextResponse.json({ ok: true })

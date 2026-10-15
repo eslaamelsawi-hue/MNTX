@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { getOrder, updateOrder } from "@/lib/okx-orders"
-import { grantExtendHours, grantExtendHoursIfMissing, grantCoaching, grantConsultationHours, parseConsultationHours } from "@/lib/grant-hours"
+import { grantExtendHours, grantExtendHoursIfMissing, grantCoaching, parseConsultationHours } from "@/lib/grant-hours"
 import { createStarterInviteLink } from "@/lib/tg-invite"
 import { sendConfirmationEmail } from "@/lib/email"
-import { sendConsultationEmails } from "@/lib/consultation-email"
+import { fulfillConsultation } from "@/lib/consultation"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { markInstallmentPaid } from "@/lib/invoicing"
 
@@ -145,8 +145,15 @@ export async function POST(request: Request) {
 
     const consultationHours = parseConsultationHours(order.plan)
     if (consultationHours) {
-      await grantConsultationHours(order.email, consultationHours, undefined, parseFloat(order.amount))
-      await sendConsultationEmails({ email: order.email, hours: consultationHours, amount: parseFloat(order.amount), orderId, preferredDate: order.preferredDate })
+      await fulfillConsultation({
+        baseUrl: new URL(request.url).origin,
+        email: order.email,
+        hours: consultationHours,
+        amount: parseFloat(order.amount),
+        orderId,
+        preferredStart: order.preferredDate,
+        preferredSlotId: order.preferredSlotId,
+      })
       return NextResponse.json({ status: "paid", message: "Payment confirmed! Check your email for next steps." })
     }
 

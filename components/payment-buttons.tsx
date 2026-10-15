@@ -97,6 +97,7 @@ function OKXPayModal({
   couponCode,
   splitPayment,
   preferredDate,
+  preferredSlotId,
   onClose,
 }: {
   plan: string
@@ -105,6 +106,7 @@ function OKXPayModal({
   couponCode?: string
   splitPayment?: boolean
   preferredDate?: string
+  preferredSlotId?: string
   onClose: () => void
 }) {
   const locale = useLocale()
@@ -132,7 +134,7 @@ function OKXPayModal({
       const res = await fetch("/api/okx-pay", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, email: useEmail, telegram, couponCode, splitPayment, preferredDate }),
+        body: JSON.stringify({ plan, email: useEmail, telegram, couponCode, splitPayment, preferredDate, preferredSlotId }),
       })
       const data = await res.json()
       if (data.address) setPayInfo(data)
@@ -269,6 +271,7 @@ export function OKXPayButton({
   couponCode,
   splitPayment,
   preferredDate,
+  preferredSlotId,
 }: {
   plan: string
   className?: string
@@ -277,6 +280,7 @@ export function OKXPayButton({
   couponCode?: string
   splitPayment?: boolean
   preferredDate?: string
+  preferredSlotId?: string
 }) {
   const locale = useLocale()
   const [open, setOpen] = useState(false)
@@ -287,7 +291,7 @@ export function OKXPayButton({
   }
   return (
     <>
-      {open && <OKXPayModal plan={plan} prefillEmail={prefillEmail} prefillTelegram={prefillTelegram} couponCode={couponCode} splitPayment={splitPayment} preferredDate={preferredDate} onClose={() => setOpen(false)} />}
+      {open && <OKXPayModal plan={plan} prefillEmail={prefillEmail} prefillTelegram={prefillTelegram} couponCode={couponCode} splitPayment={splitPayment} preferredDate={preferredDate} preferredSlotId={preferredSlotId} onClose={() => setOpen(false)} />}
       <Button type="button" className={className} size="lg" onClick={() => setOpen(true)}>
         <svg className="mr-2 h-5 w-5" viewBox="0 0 32 32" fill="none" aria-hidden="true">
           <rect width="32" height="32" rx="6" fill="#000"/>
@@ -418,6 +422,7 @@ export function WhopPayButton({
   couponCode,
   splitPayment,
   preferredDate,
+  preferredSlotId,
 }: {
   plan: string
   className?: string
@@ -426,6 +431,7 @@ export function WhopPayButton({
   couponCode?: string
   splitPayment?: boolean
   preferredDate?: string
+  preferredSlotId?: string
 }) {
   const locale = useLocale()
   const [open, setOpen] = useState(false)
@@ -445,7 +451,7 @@ export function WhopPayButton({
       const res = await fetch("/api/whop-pay", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, email: useEmail, telegram, couponCode, locale, splitPayment, preferredDate }),
+        body: JSON.stringify({ plan, email: useEmail, telegram, couponCode, locale, splitPayment, preferredDate, preferredSlotId }),
       })
       const data = await res.json()
       if (data.url) window.location.href = data.url

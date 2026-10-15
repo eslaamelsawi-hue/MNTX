@@ -16,8 +16,11 @@ export async function confirmBookingWithZoomAndHours(opts: {
   duration: number
   slot: { date: string; start_time: string }
   clientTimezone?: string | null
+  /** Paid consultations send their own (Arabic) confirmation carrying the
+   *  Zoom link, so they opt out of the standard booking email. */
+  sendEmail?: boolean
 }): Promise<{ zoomJoinUrl: string | null }> {
-  const { baseUrl, bookingId, clientName, clientEmail, duration, slot, clientTimezone } = opts
+  const { baseUrl, bookingId, clientName, clientEmail, duration, slot, clientTimezone, sendEmail = true } = opts
 
   let zoomData: { id?: number; join_url?: string; start_url?: string } | null = null
   try {
@@ -75,6 +78,8 @@ export async function confirmBookingWithZoomAndHours(opts: {
       updated_at: new Date().toISOString(),
     })
     .eq("id", bookingId)
+
+  if (!sendEmail) return { zoomJoinUrl: zoomData?.join_url || null }
 
   try {
     await fetch(`${baseUrl}/api/email/send-confirmation`, {

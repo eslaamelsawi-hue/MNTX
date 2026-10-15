@@ -24,6 +24,9 @@ export type OKXOrder = {
   /** Client's chosen consultation date/time (set before payment on
    *  /consultation), surfaced in the confirmation/admin emails. */
   preferredDate?: string
+  /** The open availability slot they picked, when the consultation was short
+   *  enough to book from the public calendar. */
+  preferredSlotId?: string
 }
 
 export async function createOrder(order: OKXOrder): Promise<void> {
@@ -42,6 +45,7 @@ export async function createOrder(order: OKXOrder): Promise<void> {
     split_payment: !!order.splitPayment,
     installment_id: order.installmentId || null,
     preferred_date: order.preferredDate || null,
+    preferred_slot_id: order.preferredSlotId || null,
   })
   if (error) throw new Error("Failed to create order: " + error.message)
 }
@@ -69,6 +73,7 @@ export async function getOrder(orderId: string): Promise<OKXOrder | null> {
     splitPayment: !!data.split_payment,
     installmentId: data.installment_id || undefined,
     preferredDate: data.preferred_date || undefined,
+    preferredSlotId: data.preferred_slot_id || undefined,
   }
 }
 

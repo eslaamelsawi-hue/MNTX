@@ -1,10 +1,10 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { grantExtendHours, grantCoaching, EXTEND_PLAN_HOURS, grantConsultationHours, parseConsultationHours } from "@/lib/grant-hours"
+import { grantExtendHours, grantCoaching, EXTEND_PLAN_HOURS, parseConsultationHours } from "@/lib/grant-hours"
 import { createStarterInviteLink } from "@/lib/tg-invite"
 import { sendConfirmationEmail } from "@/lib/email"
-import { sendConsultationEmails } from "@/lib/consultation-email"
+import { fulfillConsultation } from "@/lib/consultation"
 import { markInstallmentPaid } from "@/lib/invoicing"
 
 /** Whop signs webhooks per the Standard Webhooks spec: HMAC-SHA256 over
@@ -87,8 +87,15 @@ export async function POST(request: Request) {
       : undefined
 
     if (consultationHours) {
-      await grantConsultationHours(email, consultationHours, undefined, order.full_amount)
-      await sendConsultationEmails({ email, hours: consultationHours, amount: order.full_amount, orderId, preferredDate: order.preferred_date ?? undefined })
+      await fulfillConsultation({
+        baseUrl: new URL(request.url).origin,
+        email,
+        hours: consultationHours,
+        amount: order.full_amount,
+        orderId,
+        preferredStart: order.preferred_date,
+        preferredSlotId: order.preferred_slot_id,
+      })
       return NextResponse.json({ ok: true })
     }
 

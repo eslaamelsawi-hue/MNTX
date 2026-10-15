@@ -46,7 +46,7 @@ function generateSignature(
 
 export async function POST(request: Request) {
   try {
-    const { plan, email, telegram, couponCode, splitPayment, preferredDate } = await request.json()
+    const { plan, email, telegram, couponCode, splitPayment, preferredDate, preferredSlotId } = await request.json()
 
     const accessKey = process.env.OKX_ACCESS_KEY
     const secretKey = process.env.OKX_SECRET_KEY
@@ -120,6 +120,7 @@ export async function POST(request: Request) {
       fullAmount: isSplit ? String(finalAmount) : undefined,
       splitPayment: isSplit,
       preferredDate: typeof preferredDate === "string" && preferredDate.trim() ? preferredDate.trim() : undefined,
+      preferredSlotId: typeof preferredSlotId === "string" && preferredSlotId.trim() ? preferredSlotId.trim() : undefined,
     })
 
     return NextResponse.json({
