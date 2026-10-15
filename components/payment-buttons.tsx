@@ -5,6 +5,7 @@ import { useLocale } from "next-intl"
 import { Button } from "@/components/ui/button"
 import { Loader2 } from "lucide-react"
 import { usePaymentSettings } from "@/hooks/use-payment-settings"
+import { VISA_FEE_RATE } from "@/lib/payment-fees"
 
 const t = (locale: string, key: string) => {
   const ar: Record<string, string> = {
@@ -38,6 +39,7 @@ const t = (locale: string, key: string) => {
     splitPaymentNote: "المتبقي مستحق خلال 30 يومًا، ويمكنك دفعه في أي وقت من لوحة التحكم.",
     payWithVisa: "الدفع بالفيزا",
     redirecting: "جاري التحويل إلى صفحة الدفع…",
+    visaFeeNotice: `تُضاف رسوم معالجة ${VISA_FEE_RATE * 100}% على الدفع بالبطاقة، وتظهر في صفحة الدفع.`,
   };
   const en: Record<string, string> = {
     payWithOKX: "Pay with OKX",
@@ -70,6 +72,7 @@ const t = (locale: string, key: string) => {
     splitPaymentNote: "The remaining balance is due within 30 days — payable anytime from your dashboard.",
     payWithVisa: "Pay with Visa",
     redirecting: "Redirecting to checkout…",
+    visaFeeNotice: `A ${VISA_FEE_RATE * 100}% card processing fee is added at checkout.`,
   };
   return (locale === "ar" ? ar[key] : en[key]) || en[key] || key;
 };
@@ -496,6 +499,9 @@ export function WhopPayButton({
                 <p className="mt-1 text-xs text-muted-foreground">{t(locale, "splitPaymentNote")}</p>
               </div>
             )}
+            <p className="mb-3 rounded-lg bg-muted p-3 text-center text-xs text-muted-foreground">
+              {t(locale, "visaFeeNotice")}
+            </p>
             <p className="mb-3 rounded-lg bg-red-500/10 p-3 text-center text-xs text-red-400">
               ⚠️ {t(locale, "noRefundNotice")}
             </p>

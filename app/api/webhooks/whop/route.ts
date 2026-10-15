@@ -6,6 +6,7 @@ import { createStarterInviteLink } from "@/lib/tg-invite"
 import { sendConfirmationEmail } from "@/lib/email"
 import { fulfillConsultation } from "@/lib/consultation"
 import { markInstallmentPaid } from "@/lib/invoicing"
+import { withVisaFee } from "@/lib/payment-fees"
 
 /** Whop signs webhooks per the Standard Webhooks spec: HMAC-SHA256 over
  *  "{webhook-id}.{webhook-timestamp}.{raw body}", secret is base64 after a
@@ -113,7 +114,7 @@ export async function POST(request: Request) {
     await sendConfirmationEmail({
       to: email,
       planLabel,
-      amount: `$${order.charge_amount}`,
+      amount: `$${withVisaFee(Number(order.charge_amount))}`,
       orderId,
       tgInviteLink,
     })

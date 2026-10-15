@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createWhopCheckout } from "@/lib/whop"
 import { PLAN_PRICES } from "@/lib/plan-pricing"
+import { withVisaFee } from "@/lib/payment-fees"
 
 async function applyCouponDiscount(code: string, plan: string, amountDollars: number): Promise<number> {
   try {
@@ -71,9 +72,11 @@ export async function POST(request: Request) {
     })
     if (orderError) console.error("[whop-pay] Failed to record order:", orderError)
 
+    // The customer pays the plan amount plus the card processing fee; the
+    // order row keeps the fee-free amount so invoicing/splits stay correct.
     const checkout = await createWhopCheckout({
       planLabel: planInfo.description,
-      amount: chargeAmount,
+      amount: withVisaFee(chargeAmount),
       redirectUrl,
       metadata: { order_id: orderId, plan, email: email.toLowerCase().trim() },
     })
