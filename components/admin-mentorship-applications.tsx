@@ -4,10 +4,10 @@ import { useEffect, useState } from "react"
 import { Card, CardContent } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { Textarea } from "@/components/ui/textarea"
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StatusPill } from "@/components/status-pill"
-import { Loader2, RefreshCw, Gift, CheckCircle2, XCircle, Eye } from "lucide-react"
+import { Loader2, RefreshCw, CheckCircle2, XCircle, Eye, Link as LinkIcon } from "lucide-react"
 
 type Application = {
   id: string
@@ -39,6 +39,9 @@ type Application = {
   investment_reason: string | null
   status: "new" | "reviewed" | "approved" | "rejected"
   admin_notes: string | null
+  coupon_code: string | null
+  checkout_url: string | null
+  decline_reason: string | null
   created_at: string
 }
 
@@ -62,6 +65,9 @@ export function AdminMentorshipApplications() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [declineTarget, setDeclineTarget] = useState<Application | null>(null)
+  const [declineReason, setDeclineReason] = useState("")
+  const [declineError, setDeclineError] = useState("")
 
   const load = async () => {
     setLoading(true)
@@ -82,41 +88,21 @@ export function AdminMentorshipApplications() {
     setSuccess("")
   }
 
-  const updateStatus = async (id: string, status: Application["status"]) => {
-    setActionLoading(id + status)
-    setError("")
-    try {
-      const res = await fetch("/api/mentorship-applications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, status }),
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        setError(data.error || "Failed to update status.")
-        return
-      }
-      setApplications((prev) => prev.map((a) => (a.id === id ? { ...a, status } : a)))
-      setSelected((prev) => (prev && prev.id === id ? { ...prev, status } : prev))
-    } finally {
-      setActionLoading(null)
-    }
+  const patch = async (id: string, body: Record<string, unknown>) => {
+    const res = await fetch("/api/mentorship-applications", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id, ...body }),
+    })
+    return { res, data: await res.json().catch(() => ({})) }
   }
 
   const saveNotes = async (id: string) => {
     setActionLoading(id + "notes")
     setError("")
     try {
-      const res = await fetch("/api/mentorship-applications", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ id, admin_notes: notes }),
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        setError(data.error || "Failed to save notes.")
-        return
-      }
+      const { res, data } = await patch(id, { admin_notes: notes })
+      if (!res.ok) { setError(data.error || "Failed to save notes."); return }
       setApplications((prev) => prev.map((a) => (a.id === id ? { ...a, admin_notes: notes } : a)))
       setSuccess("Notes saved.")
     } finally {
@@ -124,23 +110,59 @@ export function AdminMentorshipApplications() {
     }
   }
 
-  const approveAndSendOffer = async (app: Application) => {
-    setActionLoading(app.id + "offer")
+  const markReviewed = async (id: string) => {
+    setActionLoading(id + "reviewed")
+    setError("")
+    try {
+      const { res, data } = await patch(id, { status: "reviewed" })
+      if (!res.ok) { setError(data.error || "Failed to update status."); return }
+      setApplications((prev) => prev.map((a) => (a.id === id ? { ...a, status: "reviewed" } : a)))
+      setSelected((prev) => (prev && prev.id === id ? { ...prev, status: "reviewed" } : prev))
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const approve = async (app: Application) => {
+    setActionLoading(app.id + "approve")
     setError("")
     setSuccess("")
     try {
-      const res = await fetch("/api/admin/discount-offer", {
+      const res = await fetch(`/api/mentorship-applications/${app.id}/approve`, { method: "POST" })
+      const data = await res.json()
+      if (!res.ok) { setError(data.error || "Failed to approve and send the checkout link."); return }
+      const updated = { status: "approved" as const, coupon_code: data.couponCode, checkout_url: data.checkoutUrl }
+      setApplications((prev) => prev.map((a) => (a.id === app.id ? { ...a, ...updated } : a)))
+      setSelected((prev) => (prev && prev.id === app.id ? { ...prev, ...updated } : prev))
+      setSuccess(`Approved! $600 checkout link emailed to ${app.email}.`)
+    } finally {
+      setActionLoading(null)
+    }
+  }
+
+  const openDeclineDialog = (app: Application) => {
+    setDeclineTarget(app)
+    setDeclineReason("")
+    setDeclineError("")
+  }
+
+  const confirmDecline = async () => {
+    if (!declineTarget) return
+    if (!declineReason.trim()) { setDeclineError("Enter a reason to send to the applicant."); return }
+    setActionLoading(declineTarget.id + "decline")
+    setDeclineError("")
+    try {
+      const res = await fetch(`/api/mentorship-applications/${declineTarget.id}/decline`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ client_email: app.email, discount_percent: 40, expiry_days: 7 }),
+        body: JSON.stringify({ reason: declineReason.trim() }),
       })
       const data = await res.json()
-      if (!res.ok) {
-        setError(data.error || "Failed to send the 40% offer.")
-        return
-      }
-      await updateStatus(app.id, "approved")
-      setSuccess(`Approved! Code ${data.couponCode} emailed to ${app.email}.`)
+      if (!res.ok) { setDeclineError(data.error || "Failed to send the decline email."); return }
+      const updated = { status: "rejected" as const, decline_reason: declineReason.trim() }
+      setApplications((prev) => prev.map((a) => (a.id === declineTarget.id ? { ...a, ...updated } : a)))
+      setSelected((prev) => (prev && prev.id === declineTarget.id ? { ...prev, ...updated } : prev))
+      setDeclineTarget(null)
     } finally {
       setActionLoading(null)
     }
@@ -153,7 +175,7 @@ export function AdminMentorshipApplications() {
           <div className="flex items-center justify-between border-b border-border p-4">
             <div>
               <h3 className="font-semibold text-foreground">Mentorship Applications</h3>
-              <p className="text-xs text-muted-foreground">Submitted through the /apply 1-on-1 Coaching funnel.</p>
+              <p className="text-xs text-muted-foreground">Submitted through the /apply 1-on-1 Coaching funnel. Approving emails a one-time $600 full-payment checkout link.</p>
             </div>
             <Button variant="outline" size="sm" onClick={load} disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -195,10 +217,10 @@ export function AdminMentorshipApplications() {
                             variant="ghost"
                             size="sm"
                             className="gap-1 text-emerald-400 hover:text-emerald-300"
-                            disabled={actionLoading === a.id + "offer"}
-                            onClick={() => approveAndSendOffer(a)}
+                            disabled={actionLoading === a.id + "approve"}
+                            onClick={() => approve(a)}
                           >
-                            {actionLoading === a.id + "offer" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Gift className="h-3.5 w-3.5" />} Approve
+                            {actionLoading === a.id + "approve" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />} Approve
                           </Button>
                         )}
                         {a.status !== "rejected" && (
@@ -206,10 +228,10 @@ export function AdminMentorshipApplications() {
                             variant="ghost"
                             size="sm"
                             className="gap-1 text-red-400 hover:text-red-300"
-                            disabled={actionLoading === a.id + "rejected"}
-                            onClick={() => updateStatus(a.id, "rejected")}
+                            disabled={actionLoading === a.id + "decline"}
+                            onClick={() => openDeclineDialog(a)}
                           >
-                            {actionLoading === a.id + "rejected" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <XCircle className="h-3.5 w-3.5" />} Reject
+                            <XCircle className="h-3.5 w-3.5" /> Decline
                           </Button>
                         )}
                       </div>
@@ -222,6 +244,7 @@ export function AdminMentorshipApplications() {
         </CardContent>
       </Card>
 
+      {/* Detail dialog */}
       <Dialog open={!!selected} onOpenChange={(open) => !open && setSelected(null)}>
         <DialogContent className="max-h-[85vh] max-w-2xl overflow-y-auto">
           {selected && (
@@ -277,6 +300,21 @@ export function AdminMentorshipApplications() {
                 <Field label="Why this number" value={selected.investment_reason} />
               </div>
 
+              {(selected.checkout_url || selected.decline_reason) && (
+                <div className="space-y-1 pt-3">
+                  <p className="mb-1 text-xs font-semibold uppercase tracking-wide text-primary">Decision</p>
+                  {selected.checkout_url && (
+                    <div className="border-b border-border/60 py-2">
+                      <p className="text-[11px] font-medium uppercase tracking-wide text-muted-foreground">Checkout link sent</p>
+                      <a href={selected.checkout_url} target="_blank" rel="noopener noreferrer" className="mt-0.5 flex items-center gap-1.5 break-all text-sm text-primary hover:underline">
+                        <LinkIcon className="h-3.5 w-3.5 shrink-0" /> {selected.checkout_url}
+                      </a>
+                    </div>
+                  )}
+                  <Field label="Decline reason sent" value={selected.decline_reason} />
+                </div>
+              )}
+
               <div className="space-y-2 pt-3">
                 <p className="text-xs font-semibold uppercase tracking-wide text-primary">Admin notes</p>
                 <Textarea value={notes} onChange={(e) => setNotes(e.target.value)} rows={3} placeholder="Private notes about this applicant…" />
@@ -289,14 +327,14 @@ export function AdminMentorshipApplications() {
                 {selected.status !== "approved" && (
                   <Button
                     className="gap-1.5"
-                    disabled={actionLoading === selected.id + "offer"}
-                    onClick={() => approveAndSendOffer(selected)}
+                    disabled={actionLoading === selected.id + "approve"}
+                    onClick={() => approve(selected)}
                   >
-                    {actionLoading === selected.id + "offer" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Gift className="h-4 w-4" />} Approve & Send 40% Offer
+                    {actionLoading === selected.id + "approve" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Approve & Send $600 Checkout
                   </Button>
                 )}
                 {selected.status === "new" && (
-                  <Button variant="outline" className="gap-1.5" disabled={actionLoading === selected.id + "reviewed"} onClick={() => updateStatus(selected.id, "reviewed")}>
+                  <Button variant="outline" className="gap-1.5" disabled={actionLoading === selected.id + "reviewed"} onClick={() => markReviewed(selected.id)}>
                     {actionLoading === selected.id + "reviewed" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Mark Reviewed
                   </Button>
                 )}
@@ -304,12 +342,43 @@ export function AdminMentorshipApplications() {
                   <Button
                     variant="outline"
                     className="gap-1.5 text-red-400 hover:text-red-300"
-                    disabled={actionLoading === selected.id + "rejected"}
-                    onClick={() => updateStatus(selected.id, "rejected")}
+                    onClick={() => openDeclineDialog(selected)}
                   >
-                    {actionLoading === selected.id + "rejected" ? <Loader2 className="h-4 w-4 animate-spin" /> : <XCircle className="h-4 w-4" />} Reject
+                    <XCircle className="h-4 w-4" /> Decline
                   </Button>
                 )}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Decline reason dialog */}
+      <Dialog open={!!declineTarget} onOpenChange={(open) => !open && setDeclineTarget(null)}>
+        <DialogContent className="max-w-md">
+          {declineTarget && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Decline {declineTarget.full_name}'s application</DialogTitle>
+                <DialogDescription>This reason is emailed directly to the applicant — keep it clear and respectful.</DialogDescription>
+              </DialogHeader>
+              <Textarea
+                value={declineReason}
+                onChange={(e) => setDeclineReason(e.target.value)}
+                rows={4}
+                placeholder="e.g. We're looking for applicants with more hands-on trading experience right now…"
+                autoFocus
+              />
+              {declineError && <p className="text-sm text-destructive">{declineError}</p>}
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setDeclineTarget(null)}>Cancel</Button>
+                <Button
+                  variant="destructive"
+                  disabled={actionLoading === declineTarget.id + "decline"}
+                  onClick={confirmDecline}
+                >
+                  {actionLoading === declineTarget.id + "decline" ? <Loader2 className="h-4 w-4 animate-spin" /> : "Send Decline Email"}
+                </Button>
               </div>
             </>
           )}
