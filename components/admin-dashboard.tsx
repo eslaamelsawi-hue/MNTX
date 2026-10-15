@@ -22,6 +22,7 @@ import { AdminOverview } from "@/components/admin-overview"
 import { AdminBacktests } from "@/components/admin-backtests"
 import { AdminCertification } from "@/components/admin-certification"
 import { AdminDiscountOffers } from "@/components/admin-discount-offers"
+import { AdminMentorshipApplications } from "@/components/admin-mentorship-applications"
 import { AdminPaymentSettings } from "@/components/admin-payment-settings"
 import { StatusPill } from "@/components/status-pill"
 import { AdminCourses } from "@/components/admin-courses"
@@ -70,6 +71,7 @@ import {
   LineChart,
   Award,
   Gift,
+  UserCheck,
 } from "lucide-react"
 
 type Slot = {
@@ -1023,6 +1025,7 @@ export function AdminDashboard() {
       { value: "orders", label: "Orders", icon: ShoppingCart },
       { value: "coupons", label: "Coupons", icon: Tag },
       { value: "discount-offers", label: "Discount Offers", icon: Gift },
+      { value: "mentorship-applications", label: "Mentorship Applications", icon: UserCheck },
     ] },
     { label: "Content", items: [
       { value: "articles", label: "Gold Articles", icon: Newspaper },
@@ -2577,6 +2580,11 @@ export function AdminDashboard() {
           {/* Discount Offers Tab */}
           <TabsContent value="discount-offers" className="space-y-4">
             <AdminDiscountOffers />
+          </TabsContent>
+
+          {/* Mentorship Applications Tab */}
+          <TabsContent value="mentorship-applications" className="space-y-4">
+            <AdminMentorshipApplications />
           </TabsContent>
 
           {/* Subscriptions Tab */}
