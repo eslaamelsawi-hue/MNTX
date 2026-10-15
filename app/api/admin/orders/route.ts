@@ -3,7 +3,9 @@ import { cookies } from "next/headers"
 import { getPendingOrders, getOrder, updateOrder, deleteOrder } from "@/lib/okx-orders"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { sendConfirmationEmail } from "@/lib/email"
-import { grantExtendHours, grantCoaching } from "@/lib/grant-hours"
+import { grantExtendHours, grantCoaching, parseConsultationHours } from "@/lib/grant-hours"
+import { fulfillConsultation } from "@/lib/consultation"
+import { sendConsultationEmails } from "@/lib/consultation-email"
 import { createStarterInviteLink } from "@/lib/tg-invite"
 import { markInstallmentPaid } from "@/lib/invoicing"
 
@@ -127,6 +129,22 @@ export async function PATCH(request: Request) {
       ? { firstAmount: parseFloat(order.amount), secondAmount: Math.round((parseFloat(order.fullAmount) - parseFloat(order.amount)) * 100) / 100 }
       : undefined
 
+    // Consultations book their session + Zoom meeting and send their own
+    // email — the generic confirmation below doesn't apply to them.
+    const markPaidConsultationHours = parseConsultationHours(order.plan)
+    if (markPaidConsultationHours) {
+      await fulfillConsultation({
+        baseUrl: new URL(request.url).origin,
+        email: order.email,
+        hours: markPaidConsultationHours,
+        amount: parseFloat(order.amount),
+        orderId,
+        preferredStart: order.preferredDate,
+        preferredSlotId: order.preferredSlotId,
+      })
+      return NextResponse.json({ success: true })
+    }
+
     // Grant hours if this is an extend plan
     await grantExtendHours(order.email, order.plan, undefined, parseFloat(order.amount), splitInfo)
 
@@ -154,6 +172,27 @@ export async function PATCH(request: Request) {
   if (action === "resend_email") {
     if (order.status !== "paid") {
       return NextResponse.json({ error: "Can only resend email for paid orders" }, { status: 400 })
+    }
+
+    const resendConsultationHours = parseConsultationHours(order.plan)
+    if (resendConsultationHours) {
+      const supabase = createAdminClient()
+      const { data: existingBooking } = await supabase
+        .from("bookings")
+        .select("zoom_join_url")
+        .ilike("client_message", `%(order ${orderId})%`)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      await sendConsultationEmails({
+        email: order.email,
+        hours: resendConsultationHours,
+        amount: parseFloat(order.amount),
+        orderId,
+        preferredDate: order.preferredDate ? order.preferredDate.replace("T", " ").slice(0, 16) : undefined,
+        zoomJoinUrl: existingBooking?.zoom_join_url ?? null,
+      })
+      return NextResponse.json({ success: true })
     }
 
     const planLabel = order.plan.charAt(0).toUpperCase() + order.plan.slice(1).replace(/-/g, " ")
