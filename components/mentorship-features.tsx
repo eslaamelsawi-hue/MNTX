@@ -113,7 +113,7 @@ export function MentorshipFeatures() {
       className={`${alexandria.className} min-h-screen bg-background text-foreground`}
       style={{ backgroundImage: GRID_BG, backgroundSize: "100% 100%, 32px 32px, 32px 32px" }}
     >
-      <div className="mx-auto max-w-5xl px-4 py-16 md:py-24">
+      <div className="mx-auto w-[80%] py-16 md:py-24">
         <section className="mx-auto max-w-2xl text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
             <span className="h-2 w-2 rounded-full bg-primary" /> مينتورشيب فردي 1-1
@@ -126,7 +126,7 @@ export function MentorshipFeatures() {
           </p>
         </section>
 
-        <section className="mx-auto mt-14 max-w-4xl rounded-3xl border border-border bg-card p-6 shadow-[0_0_80px_-20px_hsl(var(--primary)/0.2)] md:p-10">
+        <section className="mx-auto mt-14 w-full rounded-3xl border border-border bg-card p-6 shadow-[0_0_80px_-20px_hsl(var(--primary)/0.2)] md:p-10">
           {SECTION_ROWS.map((row, i) => (
             <div key={i} className={i > 0 ? "mt-8 border-t border-border pt-8" : ""}>
               <div className={row.length > 1 ? "grid gap-8 sm:grid-cols-2" : ""}>
