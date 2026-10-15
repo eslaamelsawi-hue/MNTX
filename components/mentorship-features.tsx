@@ -12,7 +12,7 @@ type Section = { title: string; badge?: string; items: string[] }
 const SECTION_ROWS: Section[][] = [
   [
     {
-      title: "خلال الـ8 أسابيع",
+      title: "خلال الـ8 أسابيع (8 جلسات)",
       items: [
         "شرح وتدريب خطوة بخطوة",
         "جلسات مباشرة معي",
@@ -121,7 +121,7 @@ export function MentorshipFeatures() {
             مميزات <span className="text-primary">المينتورشيب</span>
           </h1>
           <p className="mx-auto mt-5 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
-            كل ما تحصل عليه عند انضمامك لمينتورشيب Mentix الفردي — تدريب، متابعة، ومجتمع، على مدار 8 أسابيع.
+            كل ما تحصل عليه عند انضمامك لمينتورشيب Mentix الفردي — تدريب، متابعة، ومجتمع، على مدار 8 أسابيع (8 جلسات).
           </p>
         </section>
 
