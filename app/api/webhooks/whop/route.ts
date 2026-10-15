@@ -88,7 +88,7 @@ export async function POST(request: Request) {
 
     if (consultationHours) {
       await grantConsultationHours(email, consultationHours, undefined, order.full_amount)
-      await sendConsultationEmails({ email, hours: consultationHours, amount: order.full_amount, orderId })
+      await sendConsultationEmails({ email, hours: consultationHours, amount: order.full_amount, orderId, preferredDate: order.preferred_date ?? undefined })
       return NextResponse.json({ ok: true })
     }
 

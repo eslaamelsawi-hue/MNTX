@@ -32,7 +32,7 @@ async function applyCouponDiscount(code: string, plan: string, amountDollars: nu
 
 export async function POST(request: Request) {
   try {
-    const { plan, email, telegram, couponCode, locale, splitPayment } = await request.json()
+    const { plan, email, telegram, couponCode, locale, splitPayment, preferredDate } = await request.json()
 
     const planInfo = PLAN_PRICES[plan]
     if (!planInfo) {
@@ -65,6 +65,7 @@ export async function POST(request: Request) {
       full_amount: finalAmount,
       charge_amount: chargeAmount,
       split_payment: isSplit,
+      preferred_date: typeof preferredDate === "string" && preferredDate.trim() ? preferredDate.trim() : null,
       status: "pending",
     })
     if (orderError) console.error("[whop-pay] Failed to record order:", orderError)

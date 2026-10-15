@@ -10,10 +10,14 @@ export async function sendConsultationEmails(opts: {
   hours: number
   amount: number
   orderId: string
+  preferredDate?: string
 }): Promise<void> {
-  const { email, name, hours, amount, orderId } = opts
+  const { email, name, hours, amount, orderId, preferredDate } = opts
   const displayName = name || email.split("@")[0]
   const hoursLabel = hours === 1 ? "ساعة واحدة" : `${hours} ساعات`
+  const dateRow = preferredDate
+    ? `<p style="color: #ccc; line-height: 1.8;">الموعد المفضّل الذي اخترته: <strong style="color:#f5f5f5;">${preferredDate}</strong> — سنؤكده معك أو نقترح أقرب وقت متاح.</p>`
+    : ""
 
   const clientResult = await sendEmail({
     to: email,
@@ -28,9 +32,10 @@ export async function sendConsultationEmails(opts: {
         <h2 style="color: #f5f5f5;">مرحبًا ${displayName}،</h2>
         <p style="color: #ccc; line-height: 1.8;">
           تم تأكيد دفعتك لاستشارة مدتها <strong style="color:#f5f5f5;">${hoursLabel}</strong> بقيمة
-          <strong style="color:#f5f5f5;">${amount}$</strong>. سيتواصل معك فريقنا قريبًا لتحديد الموعد
-          المناسب لك.
+          <strong style="color:#f5f5f5;">${amount}$</strong>.
         </p>
+        ${dateRow}
+        <p style="color: #ccc; line-height: 1.8;">سيتواصل معك فريقنا قريبًا لتأكيد التفاصيل النهائية.</p>
         <p style="color: #888; font-size: 13px;">رقم الطلب: ${orderId}</p>
       </div>
       <div style="text-align: center; padding: 20px 0; border-top: 1px solid #333; color: #666; font-size: 12px;">
@@ -58,6 +63,7 @@ export async function sendConsultationEmails(opts: {
           <p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Email:</strong> ${email}</p>
           <p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Duration:</strong> ${hours} hour${hours > 1 ? "s" : ""}</p>
           <p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Amount:</strong> $${amount}</p>
+          ${preferredDate ? `<p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Requested date:</strong> ${preferredDate}</p>` : ""}
           <p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Order:</strong> ${orderId}</p>
         </div>
       </div>

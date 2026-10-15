@@ -96,6 +96,7 @@ function OKXPayModal({
   prefillTelegram,
   couponCode,
   splitPayment,
+  preferredDate,
   onClose,
 }: {
   plan: string
@@ -103,6 +104,7 @@ function OKXPayModal({
   prefillTelegram?: string
   couponCode?: string
   splitPayment?: boolean
+  preferredDate?: string
   onClose: () => void
 }) {
   const locale = useLocale()
@@ -130,7 +132,7 @@ function OKXPayModal({
       const res = await fetch("/api/okx-pay", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, email: useEmail, telegram, couponCode, splitPayment }),
+        body: JSON.stringify({ plan, email: useEmail, telegram, couponCode, splitPayment, preferredDate }),
       })
       const data = await res.json()
       if (data.address) setPayInfo(data)
@@ -266,6 +268,7 @@ export function OKXPayButton({
   prefillTelegram,
   couponCode,
   splitPayment,
+  preferredDate,
 }: {
   plan: string
   className?: string
@@ -273,6 +276,7 @@ export function OKXPayButton({
   prefillTelegram?: string
   couponCode?: string
   splitPayment?: boolean
+  preferredDate?: string
 }) {
   const locale = useLocale()
   const [open, setOpen] = useState(false)
@@ -283,7 +287,7 @@ export function OKXPayButton({
   }
   return (
     <>
-      {open && <OKXPayModal plan={plan} prefillEmail={prefillEmail} prefillTelegram={prefillTelegram} couponCode={couponCode} splitPayment={splitPayment} onClose={() => setOpen(false)} />}
+      {open && <OKXPayModal plan={plan} prefillEmail={prefillEmail} prefillTelegram={prefillTelegram} couponCode={couponCode} splitPayment={splitPayment} preferredDate={preferredDate} onClose={() => setOpen(false)} />}
       <Button type="button" className={className} size="lg" onClick={() => setOpen(true)}>
         <svg className="mr-2 h-5 w-5" viewBox="0 0 32 32" fill="none" aria-hidden="true">
           <rect width="32" height="32" rx="6" fill="#000"/>
@@ -413,6 +417,7 @@ export function WhopPayButton({
   prefillTelegram,
   couponCode,
   splitPayment,
+  preferredDate,
 }: {
   plan: string
   className?: string
@@ -420,6 +425,7 @@ export function WhopPayButton({
   prefillTelegram?: string
   couponCode?: string
   splitPayment?: boolean
+  preferredDate?: string
 }) {
   const locale = useLocale()
   const [open, setOpen] = useState(false)
@@ -439,7 +445,7 @@ export function WhopPayButton({
       const res = await fetch("/api/whop-pay", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plan, email: useEmail, telegram, couponCode, locale, splitPayment }),
+        body: JSON.stringify({ plan, email: useEmail, telegram, couponCode, locale, splitPayment, preferredDate }),
       })
       const data = await res.json()
       if (data.url) window.location.href = data.url

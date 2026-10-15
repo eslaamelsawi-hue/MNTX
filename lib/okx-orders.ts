@@ -21,6 +21,9 @@ export type OKXOrder = {
    *  (the "Pay Now" flow in the client dashboard) rather than a fresh plan
    *  purchase — the verify/webhook handler must not re-grant hours in that case. */
   installmentId?: string
+  /** Client's chosen consultation date/time (set before payment on
+   *  /consultation), surfaced in the confirmation/admin emails. */
+  preferredDate?: string
 }
 
 export async function createOrder(order: OKXOrder): Promise<void> {
@@ -38,6 +41,7 @@ export async function createOrder(order: OKXOrder): Promise<void> {
     full_amount: order.fullAmount || null,
     split_payment: !!order.splitPayment,
     installment_id: order.installmentId || null,
+    preferred_date: order.preferredDate || null,
   })
   if (error) throw new Error("Failed to create order: " + error.message)
 }
@@ -64,6 +68,7 @@ export async function getOrder(orderId: string): Promise<OKXOrder | null> {
     fullAmount: data.full_amount != null ? String(data.full_amount) : undefined,
     splitPayment: !!data.split_payment,
     installmentId: data.installment_id || undefined,
+    preferredDate: data.preferred_date || undefined,
   }
 }
 

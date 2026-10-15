@@ -146,7 +146,7 @@ export async function POST(request: Request) {
     const consultationHours = parseConsultationHours(order.plan)
     if (consultationHours) {
       await grantConsultationHours(order.email, consultationHours, undefined, parseFloat(order.amount))
-      await sendConsultationEmails({ email: order.email, hours: consultationHours, amount: parseFloat(order.amount), orderId })
+      await sendConsultationEmails({ email: order.email, hours: consultationHours, amount: parseFloat(order.amount), orderId, preferredDate: order.preferredDate })
       return NextResponse.json({ status: "paid", message: "Payment confirmed! Check your email for next steps." })
     }
 
