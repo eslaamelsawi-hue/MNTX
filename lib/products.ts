@@ -57,4 +57,11 @@ export const PRODUCTS: Product[] = [
     description: "A complete mastery program to pass any prop firm challenge and manage funded accounts like a professional — live sessions, daily analysis, expert risk management, and certified results.",
     priceInCents: 50000, // $500.00/month
   },
+  // Paid 1-on-1 consultations: $100 for the first hour, +$80 per extra hour.
+  // Listed here so coupon validation (/api/validate-coupon) recognises them.
+  { id: "consultation-1h", name: "1-Hour Consultation", description: "A one-on-one consultation session.", priceInCents: 10000 },
+  { id: "consultation-2h", name: "2-Hour Consultation", description: "A one-on-one consultation session.", priceInCents: 18000 },
+  { id: "consultation-3h", name: "3-Hour Consultation", description: "A one-on-one consultation session.", priceInCents: 26000 },
+  { id: "consultation-4h", name: "4-Hour Consultation", description: "A one-on-one consultation session.", priceInCents: 34000 },
+  { id: "consultation-5h", name: "5-Hour Consultation", description: "A one-on-one consultation session.", priceInCents: 42000 },
 ]

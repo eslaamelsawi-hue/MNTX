@@ -43,6 +43,11 @@ export function ConsultationBooking() {
   const [customTime, setCustomTime] = useState("")
   const [dateError, setDateError] = useState("")
 
+  const [couponInput, setCouponInput] = useState("")
+  const [appliedCoupon, setAppliedCoupon] = useState<{ code: string; discountCents: number } | null>(null)
+  const [couponError, setCouponError] = useState("")
+  const [checkingCoupon, setCheckingCoupon] = useState(false)
+
   const isFreeDate = selected.hours > FREE_DATE_THRESHOLD
 
   const fetchMonthSlots = useCallback(async (month: string) => {
@@ -69,7 +74,38 @@ export function ConsultationBooking() {
     setCustomTime("")
     setDateError("")
     setDaySlots([])
+    // A coupon can be scoped to one duration, so it has to be re-checked.
+    setAppliedCoupon(null)
+    setCouponError("")
   }
+
+  const applyCoupon = async () => {
+    const code = couponInput.trim()
+    if (!code) return
+    setCheckingCoupon(true)
+    setCouponError("")
+    try {
+      const res = await fetch("/api/validate-coupon", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ code, plan: selected.plan }),
+      })
+      const data = await res.json()
+      if (!data.valid) {
+        setAppliedCoupon(null)
+        setCouponError(data.error === "Invalid coupon code" ? "كود الخصم غير صحيح." : data.error === "This coupon has expired" ? "انتهت صلاحية هذا الكود." : data.error === "This coupon has reached its maximum uses" ? "تم استخدام هذا الكود بالفعل." : "هذا الكود لا ينطبق على هذه المدة.")
+        return
+      }
+      setAppliedCoupon({ code: data.coupon.code, discountCents: data.coupon.discountCents })
+    } catch {
+      setCouponError("تعذر التحقق من الكود. حاول مرة أخرى.")
+    } finally {
+      setCheckingCoupon(false)
+    }
+  }
+
+  const discount = (appliedCoupon?.discountCents ?? 0) / 100
+  const finalPrice = Math.max(0, selected.price - discount)
 
   const handleDaySelect = async (date: Date | undefined) => {
     if (!date) return
@@ -297,15 +333,53 @@ export function ConsultationBooking() {
                   <span className="text-muted-foreground">الموعد</span>
                   <span className="font-medium text-foreground">{preferredDateLabel}</span>
                 </div>
+                {appliedCoupon && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-muted-foreground">خصم ({appliedCoupon.code})</span>
+                    <span className="font-medium text-primary">-{discount}$</span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between border-t border-border pt-2">
                   <span className="text-muted-foreground">المجموع</span>
-                  <span className="text-2xl font-extrabold text-primary">{selected.price}$</span>
+                  <span className="flex items-baseline gap-2">
+                    {appliedCoupon && <span className="text-sm text-muted-foreground line-through">{selected.price}$</span>}
+                    <span className="text-2xl font-extrabold text-primary">{finalPrice}$</span>
+                  </span>
                 </div>
               </div>
 
+              {/* Coupon */}
+              <div className="mt-5">
+                <label className="mb-2 block text-sm font-medium text-foreground">كود الخصم (اختياري)</label>
+                <div className="flex gap-2">
+                  <Input
+                    value={couponInput}
+                    onChange={(e) => { setCouponInput(e.target.value); setCouponError("") }}
+                    placeholder="أدخل الكود"
+                    disabled={!!appliedCoupon}
+                    className="h-11 flex-1 rounded-xl border-border bg-background text-foreground"
+                  />
+                  {appliedCoupon ? (
+                    <Button
+                      variant="outline"
+                      className="h-11 rounded-xl"
+                      onClick={() => { setAppliedCoupon(null); setCouponInput(""); setCouponError("") }}
+                    >
+                      إزالة
+                    </Button>
+                  ) : (
+                    <Button variant="outline" className="h-11 rounded-xl" onClick={applyCoupon} disabled={checkingCoupon || !couponInput.trim()}>
+                      {checkingCoupon ? <Loader2 className="h-4 w-4 animate-spin" /> : "تطبيق"}
+                    </Button>
+                  )}
+                </div>
+                {couponError && <p className="mt-2 text-sm text-destructive">{couponError}</p>}
+                {appliedCoupon && <p className="mt-2 text-sm text-primary">تم تطبيق الكود بنجاح.</p>}
+              </div>
+
               <div className="mt-6 space-y-3">
-                <WhopPayButton plan={selected.plan} preferredDate={preferredStart} preferredSlotId={pickedSlot?.id} className="w-full justify-center" />
-                <OKXPayButton plan={selected.plan} preferredDate={preferredStart} preferredSlotId={pickedSlot?.id} className="w-full justify-center" />
+                <WhopPayButton plan={selected.plan} preferredDate={preferredStart} preferredSlotId={pickedSlot?.id} couponCode={appliedCoupon?.code} className="w-full justify-center" />
+                <OKXPayButton plan={selected.plan} preferredDate={preferredStart} preferredSlotId={pickedSlot?.id} couponCode={appliedCoupon?.code} className="w-full justify-center" />
               </div>
 
               <p className="mt-6 text-center text-xs text-muted-foreground">
