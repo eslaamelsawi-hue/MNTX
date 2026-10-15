@@ -105,6 +105,8 @@ function SectionBlock({ section }: { section: Section }) {
   )
 }
 
+const APPLY_URL = `${process.env.NEXT_PUBLIC_BASE_URL || "https://mentixtrading.com"}/en/apply`
+
 export function MentorshipFeatures() {
   return (
     <div
@@ -139,7 +141,7 @@ export function MentorshipFeatures() {
 
           <div className="mt-10 border-t border-border pt-8 text-center">
             <a
-              href="/en/apply"
+              href={APPLY_URL}
               className="inline-flex h-12 items-center gap-2 rounded-xl bg-primary px-8 text-base font-bold text-primary-foreground transition-colors hover:bg-primary/90"
             >
               قدّم على المينتورشيب

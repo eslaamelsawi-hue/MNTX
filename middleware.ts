@@ -13,7 +13,23 @@ function isProtected(path: string): boolean {
   )
 }
 
+/** mentorship.mentixtrading.com is a single-page microsite: every request to
+ *  it (any path) serves the mentorship-features page, regardless of what's
+ *  in the URL bar. Links on that page back into the app (e.g. "Apply") use
+ *  absolute URLs to the main domain, since this rewrite would otherwise
+ *  swallow a relative /apply link too. */
+function isMentorshipSubdomain(host: string): boolean {
+  return host === 'mentorship.mentixtrading.com' || host.startsWith('mentorship.localhost');
+}
+
 export default async function middleware(request: NextRequest) {
+  const host = request.headers.get('host') || '';
+  if (isMentorshipSubdomain(host) && !request.nextUrl.pathname.startsWith('/api/') && !request.nextUrl.pathname.startsWith('/_next/')) {
+    const url = request.nextUrl.clone();
+    url.pathname = '/en/mentorship-features';
+    return NextResponse.rewrite(url);
+  }
+
   // API routes: only refresh the Supabase session cookie (so an expired
   // access token gets rotated before the route handler reads it) — never
   // run next-intl's locale routing here, since it would try to redirect
