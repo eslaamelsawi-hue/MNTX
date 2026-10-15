@@ -49,7 +49,12 @@ export async function fulfillConsultation(opts: {
 
   const cairo = preferredStart ? toCairoDateTime(preferredStart) : null
   if (!cairo) {
-    await sendConsultationEmails({ email: normalizedEmail, name, hours, amount, orderId })
+    await sendConsultationEmails({
+      email: normalizedEmail, name, hours, amount, orderId,
+      schedulingError: preferredStart
+        ? `Could not parse the chosen time: "${preferredStart}"`
+        : "No time was captured with this order (paid before picking a date?)",
+    })
     return
   }
 
@@ -92,7 +97,7 @@ export async function fulfillConsultation(opts: {
       .single()
     if (bookingError || !booking) throw new Error(bookingError?.message || "Failed to create booking")
 
-    const { zoomJoinUrl } = await confirmBookingWithZoomAndHours({
+    const { zoomJoinUrl, zoomError } = await confirmBookingWithZoomAndHours({
       baseUrl,
       bookingId: booking.id,
       clientName,
@@ -110,6 +115,7 @@ export async function fulfillConsultation(opts: {
       orderId,
       preferredDate: `${cairo.date} ${cairo.time.slice(0, 5)} (بتوقيت القاهرة)`,
       zoomJoinUrl,
+      schedulingError: zoomError,
     })
   } catch (e) {
     console.error("[consultation] booking/Zoom setup failed — falling back to manual scheduling:", e)
@@ -120,6 +126,7 @@ export async function fulfillConsultation(opts: {
       amount,
       orderId,
       preferredDate: `${cairo.date} ${cairo.time.slice(0, 5)} (بتوقيت القاهرة)`,
+      schedulingError: e instanceof Error ? e.message : String(e),
     })
   }
 }

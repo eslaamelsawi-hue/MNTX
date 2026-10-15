@@ -12,8 +12,10 @@ export async function sendConsultationEmails(opts: {
   orderId: string
   preferredDate?: string
   zoomJoinUrl?: string | null
+  /** Why scheduling didn't complete, shown to the admin only. */
+  schedulingError?: string | null
 }): Promise<void> {
-  const { email, name, hours, amount, orderId, preferredDate, zoomJoinUrl } = opts
+  const { email, name, hours, amount, orderId, preferredDate, zoomJoinUrl, schedulingError } = opts
   const displayName = name || email.split("@")[0]
   const hoursLabel = hours === 1 ? "ساعة واحدة" : `${hours} ساعات`
   const dateRow = preferredDate
@@ -76,6 +78,7 @@ export async function sendConsultationEmails(opts: {
           <p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Amount:</strong> $${amount}</p>
           ${preferredDate ? `<p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Session time:</strong> ${preferredDate}</p>` : ""}
           ${zoomJoinUrl ? `<p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Zoom:</strong> <a href="${zoomJoinUrl}" style="color: #d4a017;">${zoomJoinUrl}</a></p>` : `<p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Scheduling:</strong> not set — reach out to arrange a time</p>`}
+          ${!zoomJoinUrl && schedulingError ? `<p style="margin: 8px 0; color: #e57373; font-size: 13px;"><strong style="color: #f5f5f5;">Why:</strong> ${schedulingError}</p>` : ""}
           <p style="margin: 8px 0; color: #ccc;"><strong style="color: #f5f5f5;">Order:</strong> ${orderId}</p>
         </div>
       </div>

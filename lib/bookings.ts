@@ -19,10 +19,11 @@ export async function confirmBookingWithZoomAndHours(opts: {
   /** Paid consultations send their own (Arabic) confirmation carrying the
    *  Zoom link, so they opt out of the standard booking email. */
   sendEmail?: boolean
-}): Promise<{ zoomJoinUrl: string | null }> {
+}): Promise<{ zoomJoinUrl: string | null; zoomError: string | null }> {
   const { baseUrl, bookingId, clientName, clientEmail, duration, slot, clientTimezone, sendEmail = true } = opts
 
   let zoomData: { id?: number; join_url?: string; start_url?: string } | null = null
+  let zoomError: string | null = null
   try {
     const zoomRes = await fetch(`${baseUrl}/api/zoom/create-meeting-s2s`, {
       method: "POST",
@@ -40,10 +41,16 @@ export async function confirmBookingWithZoomAndHours(opts: {
         duration,
       }),
     })
-    if (zoomRes.ok) zoomData = await zoomRes.json()
-    else console.error("[bookings] Zoom meeting creation error:", await zoomRes.json())
+    if (zoomRes.ok) {
+      zoomData = await zoomRes.json()
+    } else {
+      const details = await zoomRes.text().catch(() => "")
+      zoomError = `Zoom API ${zoomRes.status}: ${details.slice(0, 300)}`
+      console.error("[bookings] Zoom meeting creation error:", zoomError)
+    }
   } catch (e) {
-    console.error("[bookings] Zoom meeting creation failed:", e)
+    zoomError = e instanceof Error ? e.message : String(e)
+    console.error("[bookings] Zoom meeting creation failed:", zoomError)
   }
 
   const admin = createAdminClient()
@@ -79,7 +86,7 @@ export async function confirmBookingWithZoomAndHours(opts: {
     })
     .eq("id", bookingId)
 
-  if (!sendEmail) return { zoomJoinUrl: zoomData?.join_url || null }
+  if (!sendEmail) return { zoomJoinUrl: zoomData?.join_url || null, zoomError }
 
   try {
     await fetch(`${baseUrl}/api/email/send-confirmation`, {
@@ -100,7 +107,7 @@ export async function confirmBookingWithZoomAndHours(opts: {
     console.error("[bookings] confirmation email failed:", e)
   }
 
-  return { zoomJoinUrl: zoomData?.join_url || null }
+  return { zoomJoinUrl: zoomData?.join_url || null, zoomError }
 }
 
 /** True if this client has an auto-approve rule matching the requested Cairo
