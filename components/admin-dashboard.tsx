@@ -838,6 +838,12 @@ export function AdminDashboard() {
     { value: "extend-3m", label: "Extend 3M" },
     { value: "extend-6m", label: "Extend 6M" },
     { value: "gold-pro", label: "Gold Pro" },
+    { value: "funded-challenge", label: "Funded Challenge" },
+    { value: "consultation-1h", label: "Consultation 1h" },
+    { value: "consultation-2h", label: "Consultation 2h" },
+    { value: "consultation-3h", label: "Consultation 3h" },
+    { value: "consultation-4h", label: "Consultation 4h" },
+    { value: "consultation-5h", label: "Consultation 5h" },
   ]
 
   // ========== Gold Articles functions ==========
