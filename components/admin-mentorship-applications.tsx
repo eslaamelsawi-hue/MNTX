@@ -8,6 +8,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } f
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StatusPill } from "@/components/status-pill"
 import { Loader2, RefreshCw, CheckCircle2, XCircle, Eye, Link as LinkIcon } from "lucide-react"
+import { MENTORSHIP_DISCOUNTED_PRICE } from "@/lib/plan-pricing"
 
 type Application = {
   id: string
@@ -134,7 +135,7 @@ export function AdminMentorshipApplications() {
       const updated = { status: "approved" as const, coupon_code: data.couponCode, checkout_url: data.checkoutUrl }
       setApplications((prev) => prev.map((a) => (a.id === app.id ? { ...a, ...updated } : a)))
       setSelected((prev) => (prev && prev.id === app.id ? { ...prev, ...updated } : prev))
-      setSuccess(`Approved! $600 checkout link emailed to ${app.email}.`)
+      setSuccess(`Approved! $${MENTORSHIP_DISCOUNTED_PRICE} checkout link emailed to ${app.email}.`)
     } finally {
       setActionLoading(null)
     }
@@ -175,7 +176,7 @@ export function AdminMentorshipApplications() {
           <div className="flex items-center justify-between border-b border-border p-4">
             <div>
               <h3 className="font-semibold text-foreground">Mentorship Applications</h3>
-              <p className="text-xs text-muted-foreground">Submitted through the /apply 1-on-1 Coaching funnel. Approving emails a one-time $600 full-payment checkout link.</p>
+              <p className="text-xs text-muted-foreground">Submitted through the /apply 1-on-1 Coaching funnel. Approving emails a one-time {`$${MENTORSHIP_DISCOUNTED_PRICE}`} full-payment checkout link.</p>
             </div>
             <Button variant="outline" size="sm" onClick={load} disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -330,7 +331,7 @@ export function AdminMentorshipApplications() {
                     disabled={actionLoading === selected.id + "approve"}
                     onClick={() => approve(selected)}
                   >
-                    {actionLoading === selected.id + "approve" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Approve & Send $600 Checkout
+                    {actionLoading === selected.id + "approve" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Approve &amp; Send {`$${MENTORSHIP_DISCOUNTED_PRICE}`} Checkout
                   </Button>
                 )}
                 {selected.status === "new" && (

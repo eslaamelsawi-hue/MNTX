@@ -17,3 +17,12 @@ export const PLAN_PRICES: Record<string, { amount: number; description: string }
   "consultation-4h": { amount: 340, description: "Mentix Trading - 4-Hour Consultation" },
   "consultation-5h": { amount: 420, description: "Mentix Trading - 5-Hour Consultation" },
 }
+
+/** Discount an approved mentorship applicant gets on the coaching plan.
+ *  Single source of truth: the checkout price, the generated coupon and all
+ *  the marketing copy derive from it, so they can't drift apart. Rounded to
+ *  whole dollars (in the buyer's favour) rather than showing cents. */
+export const MENTORSHIP_DISCOUNT_PERCENT = 30
+export const MENTORSHIP_DISCOUNTED_PRICE = Math.round(
+  PLAN_PRICES.coaching.amount * (1 - MENTORSHIP_DISCOUNT_PERCENT / 100)
+)

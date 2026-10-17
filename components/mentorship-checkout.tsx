@@ -4,6 +4,7 @@ import { useEffect, useState } from "react"
 import { Loader2, Check, Lock } from "lucide-react"
 import { OKXPayButton, WhopPayButton } from "@/components/payment-buttons"
 import { alexandria } from "@/lib/fonts"
+import { MENTORSHIP_DISCOUNTED_PRICE } from "@/lib/plan-pricing"
 
 const GRID_BG = [
   "radial-gradient(ellipse 800px 400px at 50% -10%, hsl(var(--primary) / 0.14), transparent 60%)",
@@ -75,12 +76,12 @@ export function MentorshipCheckout({ code, email }: { code?: string; email?: str
 
             <div className="mt-7 flex items-center justify-center gap-3">
               <span className="text-lg text-muted-foreground line-through">{ORIGINAL_PRICE}$</span>
-              <span className="text-4xl font-extrabold text-primary">{price ?? 600}$</span>
+              <span className="text-4xl font-extrabold text-primary">{price ?? MENTORSHIP_DISCOUNTED_PRICE}$</span>
             </div>
             <p className="mt-1 text-center text-xs text-muted-foreground">دفعة واحدة كاملة</p>
 
             <div className="mt-8 space-y-3">
-              <WhopPayButton plan={PLAN} couponCode={code} prefillEmail={email} amount={price ?? undefined} className="w-full justify-center" />
+              <WhopPayButton plan={PLAN} couponCode={code} prefillEmail={email} amount={price ?? MENTORSHIP_DISCOUNTED_PRICE} className="w-full justify-center" />
               <OKXPayButton plan={PLAN} couponCode={code} prefillEmail={email} className="w-full justify-center" />
             </div>
 

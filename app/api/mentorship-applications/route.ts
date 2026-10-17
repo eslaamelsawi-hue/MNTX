@@ -3,6 +3,7 @@ import { cookies } from "next/headers"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { sendEmail } from "@/lib/resend-send"
 import { getApprovedSeatsStatus } from "@/lib/mentorship-seats"
+import { MENTORSHIP_DISCOUNT_PERCENT } from "@/lib/plan-pricing"
 
 async function isAdmin() {
   const cookieStore = await cookies()
@@ -147,7 +148,7 @@ export async function POST(request: NextRequest) {
           <h2 style="color: #f5f5f5;">Hello ${record.full_name},</h2>
           <p style="color: #ccc; line-height: 1.6;">
             Thanks for applying to the 1-on-1 Coaching Mentorship. We're reviewing your application now and will reach out
-            on WhatsApp or Telegram within a few days to confirm the next steps and your 40% discount.
+            on WhatsApp or Telegram within a few days to confirm the next steps and your ${MENTORSHIP_DISCOUNT_PERCENT}% discount.
           </p>
         </div>
         <div style="text-align: center; padding: 20px 0; border-top: 1px solid #333; color: #666; font-size: 12px;">
