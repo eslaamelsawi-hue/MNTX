@@ -4,13 +4,15 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { markInstallmentPaid } from "@/lib/invoicing"
 import { fulfillWhopOrder } from "@/lib/whop-fulfillment"
 
-/** Whop signs webhooks per the Standard Webhooks spec: HMAC-SHA256 over
- *  "{webhook-id}.{webhook-timestamp}.{raw body}", secret is base64 after a
- *  whsec_/ws_ prefix, header value is "v1,<base64 sig>" (possibly several,
- *  space-separated, during secret rotation). */
+/** Whop signs "{webhook-id}.{webhook-timestamp}.{raw body}" with HMAC-SHA256
+ *  and sends the result base64-encoded as "v1,<sig>" — possibly several,
+ *  space-separated, while a secret is being rotated.
+ *
+ *  Per Whop's docs the HMAC key is the secret exactly as issued, "ws_" prefix
+ *  included: not stripped, not base64-decoded. Getting this wrong rejects
+ *  every delivery, and Whop disables an endpoint after repeated failures. */
 function verifySignature(id: string, timestamp: string, rawBody: string, signatureHeader: string, secret: string): boolean {
-  const secretBytes = Buffer.from(secret.replace(/^whsec_|^ws_/, ""), "base64")
-  const expected = crypto.createHmac("sha256", secretBytes).update(`${id}.${timestamp}.${rawBody}`).digest("base64")
+  const expected = crypto.createHmac("sha256", secret).update(`${id}.${timestamp}.${rawBody}`).digest("base64")
   const expectedFull = `v1,${expected}`
 
   return signatureHeader.split(" ").some((candidate) => {
