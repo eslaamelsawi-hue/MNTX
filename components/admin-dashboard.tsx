@@ -424,6 +424,29 @@ export function AdminDashboard() {
     setOrderActionLoading(null)
   }
 
+  const handleSyncWhop = async () => {
+    setOrderActionLoading("sync_whop")
+    try {
+      const res = await fetch("/api/admin/orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "sync_whop" }),
+      })
+      const data = await res.json()
+      if (data.success) {
+        alert(data.settled > 0
+          ? `Settled ${data.settled} paid order(s) out of ${data.checked} pending.`
+          : `Checked ${data.checked} pending order(s) — none are paid on Whop yet.`)
+        fetchOrders()
+      } else {
+        alert(data.error || "Sync failed")
+      }
+    } catch {
+      alert("Something went wrong")
+    }
+    setOrderActionLoading(null)
+  }
+
   const handleDeleteAllPaid = async () => {
     const paidCount = orders.filter(o => o.status === "paid").length
     if (paidCount === 0) { alert("No paid orders to delete"); return }
@@ -2152,6 +2175,16 @@ export function AdminDashboard() {
                 </div>
                 <Button variant="outline" size="sm" onClick={fetchOrders}>
                   <RefreshCw className="mr-2 h-4 w-4" /> Refresh
+                </Button>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="border-blue-500/30 text-blue-400 hover:bg-blue-500/10"
+                  onClick={handleSyncWhop}
+                  disabled={orderActionLoading === "sync_whop"}
+                >
+                  <RefreshCw className={`mr-2 h-4 w-4 ${orderActionLoading === "sync_whop" ? "animate-spin" : ""}`} />
+                  {orderActionLoading === "sync_whop" ? "Syncing…" : "Sync Visa Orders"}
                 </Button>
                 {orders.filter(o => o.status === "pending" && o.provider === "okx").length > 0 && (
                   <Button

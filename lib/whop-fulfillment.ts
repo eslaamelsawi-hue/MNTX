@@ -4,6 +4,9 @@ import { createStarterInviteLink } from "@/lib/tg-invite"
 import { sendConfirmationEmail } from "@/lib/email"
 import { fulfillConsultation } from "@/lib/consultation"
 import { withVisaFee } from "@/lib/payment-fees"
+import { createAdminClient } from "@/lib/supabase/admin"
+import { findWhopPayment } from "@/lib/whop"
+import { markInstallmentPaid } from "@/lib/invoicing"
 
 export type WhopOrderRow = {
   order_id: string
@@ -68,4 +71,43 @@ export async function fulfillWhopOrder(order: WhopOrderRow, baseUrl: string): Pr
     orderId: order.order_id,
     tgInviteLink,
   })
+}
+
+/**
+ * Reconciles one pending card order against Whop. Used by the post-checkout
+ * verify call, the admin "Sync with Whop" action and the nightly sweep, so a
+ * missed webhook self-heals instead of needing a manual Mark Paid.
+ *
+ * Returns the resulting state; "pending" means Whop has no completed payment
+ * for it (yet).
+ */
+export async function settleWhopOrderIfPaid(
+  orderId: string,
+  baseUrl: string
+): Promise<{ status: "paid" | "pending" | "not_found"; alreadyPaid?: boolean }> {
+  const admin = createAdminClient()
+  const { data: order } = await admin.from("whop_orders").select("*").eq("order_id", orderId).maybeSingle()
+  if (!order) return { status: "not_found" }
+  if (order.status === "paid") return { status: "paid", alreadyPaid: true }
+
+  const { paid } = await findWhopPayment({ orderId, checkoutId: order.checkout_id })
+  if (!paid) return { status: "pending" }
+
+  // Claim the order before fulfilling, so a webhook arriving at the same
+  // moment can't grant everything twice.
+  const { data: claimed } = await admin
+    .from("whop_orders")
+    .update({ status: "paid" })
+    .eq("order_id", orderId)
+    .eq("status", "pending")
+    .select("order_id")
+  if (!claimed || claimed.length === 0) return { status: "paid", alreadyPaid: true }
+
+  if (order.installment_id) {
+    await markInstallmentPaid(order.installment_id)
+    return { status: "paid" }
+  }
+
+  await fulfillWhopOrder(order, baseUrl)
+  return { status: "paid" }
 }

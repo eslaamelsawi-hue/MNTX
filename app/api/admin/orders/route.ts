@@ -8,7 +8,7 @@ import { fulfillConsultation } from "@/lib/consultation"
 import { sendConsultationEmails } from "@/lib/consultation-email"
 import { createStarterInviteLink } from "@/lib/tg-invite"
 import { markInstallmentPaid } from "@/lib/invoicing"
-import { fulfillWhopOrder } from "@/lib/whop-fulfillment"
+import { fulfillWhopOrder, settleWhopOrderIfPaid } from "@/lib/whop-fulfillment"
 import { withVisaFee } from "@/lib/payment-fees"
 
 async function getAllOrders() {
@@ -101,6 +101,29 @@ export async function PATCH(request: Request) {
   }
 
   const { orderId, action, provider } = await request.json()
+
+  // Reconcile every pending card order against Whop — catches payments whose
+  // webhook never arrived.
+  if (action === "sync_whop") {
+    const supabase = createAdminClient()
+    const { data: pending, error } = await supabase
+      .from("whop_orders")
+      .select("order_id")
+      .eq("status", "pending")
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    const origin = new URL(request.url).origin
+    let settled = 0
+    for (const row of pending ?? []) {
+      try {
+        const result = await settleWhopOrderIfPaid(row.order_id, origin)
+        if (result.status === "paid" && !result.alreadyPaid) settled++
+      } catch (e) {
+        console.error(`[admin/orders] sync ${row.order_id} failed:`, e)
+      }
+    }
+    return NextResponse.json({ success: true, checked: pending?.length ?? 0, settled })
+  }
 
   if (provider === "whop") {
     return handleWhopAction(request, orderId, action)

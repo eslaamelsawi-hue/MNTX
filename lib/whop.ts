@@ -54,3 +54,47 @@ export async function createWhopCheckout(opts: {
   if (!data.purchase_url) throw new Error("Whop did not return a purchase_url")
   return { url: data.purchase_url, checkoutId: data.id }
 }
+
+type WhopPayment = {
+  id: string
+  status?: string
+  checkout_configuration_id?: string | null
+  metadata?: Record<string, string> | null
+}
+
+/**
+ * Asks Whop directly whether an order was paid, so a webhook that never
+ * arrives can't leave a real payment sitting as "pending".
+ *
+ * Whop's /payments endpoint ignores filter params (passing
+ * checkout_configuration_id or status still returns the full recent list),
+ * so the match is done here — on the order_id we attached as checkout
+ * metadata, falling back to the checkout id we stored on the order.
+ */
+export async function findWhopPayment(opts: {
+  orderId: string
+  checkoutId?: string | null
+}): Promise<{ found: boolean; paid: boolean; paymentId?: string }> {
+  const apiKey = process.env.WHOP_API_KEY
+  if (!apiKey) throw new Error("Whop is not configured — set WHOP_API_KEY.")
+
+  const res = await fetch(`${WHOP_API_BASE}/payments`, {
+    headers: { Authorization: `Bearer ${apiKey}` },
+    cache: "no-store",
+  })
+  if (!res.ok) {
+    const body = await res.text().catch(() => "")
+    throw new Error(`Whop payment lookup failed (${res.status}): ${body.slice(0, 200) || res.statusText}`)
+  }
+
+  const data = await res.json()
+  const payments: WhopPayment[] = Array.isArray(data?.data) ? data.data : []
+  const match = payments.find(
+    (p) =>
+      p?.metadata?.order_id === opts.orderId ||
+      (!!opts.checkoutId && p?.checkout_configuration_id === opts.checkoutId)
+  )
+
+  if (!match) return { found: false, paid: false }
+  return { found: true, paid: match.status === "paid", paymentId: match.id }
+}

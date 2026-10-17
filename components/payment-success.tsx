@@ -1,5 +1,6 @@
 "use client"
 
+import { useEffect } from "react"
 import { Link } from "@/i18n/navigation"
 import { useTranslations } from "next-intl"
 import { CheckCircle2, ArrowRight, Home, Mail, Clock, Send } from "lucide-react"
@@ -27,6 +28,20 @@ export function PaymentSuccess({
   provider?: string
 }) {
   const t = useTranslations("paymentSuccess")
+
+  // Whop's webhook is the primary fulfilment path, but it can be missed or
+  // delayed — so the moment the buyer lands back here, confirm the payment
+  // against Whop directly and settle the order if it went through.
+  useEffect(() => {
+    if (provider !== "whop" || !order) return
+    fetch("/api/whop-verify", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ orderId: order }),
+    }).catch(() => {
+      // Non-fatal: the scheduled sweep retries, and the payment itself is safe.
+    })
+  }, [provider, order])
   const planName = plan && KNOWN_PLANS.includes(plan) ? t(`plans.${plan}`) : plan
   const isStarter = plan === "starter"
   // Card providers (Whop) confirm instantly; crypto (NowPayments) confirms on-chain.
