@@ -68,15 +68,19 @@ export async function createInvoiceForPlan(opts: {
     ])
     if (instError) console.error("[invoicing] Failed to auto-create split installments:", instError)
   } else {
+    // Paid in full: this only runs once a payment is confirmed, so the
+    // installment is settled on creation — otherwise the client's dashboard
+    // shows an invoice they've already paid as still outstanding.
     const { error: instError } = await supabase
       .from("invoice_installments")
-      .insert({ invoice_id: invoice.id, amount: totalAmount, due_date: today })
+      .insert({ invoice_id: invoice.id, amount: totalAmount, due_date: today, status: "paid", paid_at: new Date().toISOString() })
     if (instError) console.error("[invoicing] Failed to auto-create invoice installment:", instError)
+    await recomputeInvoiceStatus(invoice.id)
   }
 
   const message = opts.split
     ? `A new invoice "${invoice.title}" for ${invoice.currency} ${invoice.total_amount} has been added to your account. You paid ${invoice.currency} ${opts.split.firstAmount} now — the remaining ${invoice.currency} ${opts.split.secondAmount} is due by ${addDays(30)}.`
-    : `A new invoice "${invoice.title}" for ${invoice.currency} ${invoice.total_amount} has been added to your account.`
+    : `Your invoice "${invoice.title}" for ${invoice.currency} ${invoice.total_amount} has been paid in full. Thank you!`
 
   await createNotification({
     clientEmail: invoice.client_email,
