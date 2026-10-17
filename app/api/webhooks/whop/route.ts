@@ -1,12 +1,8 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { grantExtendHours, grantCoaching, EXTEND_PLAN_HOURS, parseConsultationHours } from "@/lib/grant-hours"
-import { createStarterInviteLink } from "@/lib/tg-invite"
-import { sendConfirmationEmail } from "@/lib/email"
-import { fulfillConsultation } from "@/lib/consultation"
 import { markInstallmentPaid } from "@/lib/invoicing"
-import { withVisaFee } from "@/lib/payment-fees"
+import { fulfillWhopOrder } from "@/lib/whop-fulfillment"
 
 /** Whop signs webhooks per the Standard Webhooks spec: HMAC-SHA256 over
  *  "{webhook-id}.{webhook-timestamp}.{raw body}", secret is base64 after a
@@ -76,48 +72,7 @@ export async function POST(request: Request) {
 
     await admin.from("whop_orders").update({ status: "paid" }).eq("order_id", orderId)
 
-    const email = order.email
-    const planId = order.plan
-    const isExtendPlan = !!EXTEND_PLAN_HOURS[planId]
-    const isStarterPlan = planId === "starter"
-    const isCoachingPlan = planId === "coaching"
-    const consultationHours = parseConsultationHours(planId)
-
-    const splitInfo = order.split_payment
-      ? { firstAmount: Number(order.charge_amount), secondAmount: Math.round((Number(order.full_amount) - Number(order.charge_amount)) * 100) / 100 }
-      : undefined
-
-    if (consultationHours) {
-      await fulfillConsultation({
-        baseUrl: new URL(request.url).origin,
-        email,
-        hours: consultationHours,
-        amount: order.full_amount,
-        orderId,
-        preferredStart: order.preferred_date,
-        preferredSlotId: order.preferred_slot_id,
-      })
-      return NextResponse.json({ ok: true })
-    }
-
-    let tgInviteLink: string | null = null
-    if (isExtendPlan) {
-      await grantExtendHours(email, planId, undefined, order.full_amount, splitInfo)
-    } else if (isStarterPlan) {
-      tgInviteLink = await createStarterInviteLink(orderId)
-    } else if (isCoachingPlan) {
-      const res = await grantCoaching(email, orderId, undefined, order.full_amount, splitInfo)
-      tgInviteLink = res.tgInviteLink
-    }
-
-    const planLabel = planId.charAt(0).toUpperCase() + planId.slice(1).replace(/-/g, " ")
-    await sendConfirmationEmail({
-      to: email,
-      planLabel,
-      amount: `$${withVisaFee(Number(order.charge_amount))}`,
-      orderId,
-      tgInviteLink,
-    })
+    await fulfillWhopOrder(order, new URL(request.url).origin)
 
     return NextResponse.json({ ok: true })
   } catch (error) {

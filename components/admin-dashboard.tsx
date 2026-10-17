@@ -101,18 +101,22 @@ type Booking = {
 }
 
 type OKXOrder = {
+  provider: "okx" | "whop"
   orderId: string
   plan: string
   amount: string
+  currency: string
   email: string
   telegramUsername?: string
-  address: string
-  chain: string
+  /** OKX only — card orders have no deposit address or chain. */
+  address?: string
+  chain?: string
   status: "pending" | "paid" | "expired"
   createdAt: string
   paidAt?: string
   txId?: string
   tgToken?: string
+  preferredDate?: string
 }
 
 type GoldArticle = {
@@ -400,13 +404,13 @@ export function AdminDashboard() {
     setLoadingOrders(false)
   }, [])
 
-  const handleOrderAction = async (orderId: string, action: string) => {
+  const handleOrderAction = async (orderId: string, action: string, provider: "okx" | "whop" = "okx") => {
     setOrderActionLoading(`${orderId}-${action}`)
     try {
       const res = await fetch("/api/admin/orders", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId, action }),
+        body: JSON.stringify({ orderId, action, provider }),
       })
       const data = await res.json()
       if (data.success) {
@@ -2127,7 +2131,7 @@ export function AdminDashboard() {
           <TabsContent value="orders" className="space-y-4">
             <div className="flex flex-wrap items-center justify-between gap-3">
               <div className="flex items-center gap-3">
-                <h2 className="text-xl font-semibold text-foreground">Crypto Orders</h2>
+                <h2 className="text-xl font-semibold text-foreground">Orders</h2>
                 {remainingTokens !== null && (
                   <span className={`text-xs font-medium px-2 py-0.5 rounded-full ${remainingTokens === 0 ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-green-500/20 text-green-400 border border-green-500/30"}`}>
                     {remainingTokens === 0 ? "⚠ No TG tokens left" : `${remainingTokens} TG tokens`}
@@ -2149,7 +2153,7 @@ export function AdminDashboard() {
                 <Button variant="outline" size="sm" onClick={fetchOrders}>
                   <RefreshCw className="mr-2 h-4 w-4" /> Refresh
                 </Button>
-                {orders.filter(o => o.status === "pending").length > 0 && (
+                {orders.filter(o => o.status === "pending" && o.provider === "okx").length > 0 && (
                   <Button
                     variant="outline"
                     size="sm"
@@ -2158,7 +2162,7 @@ export function AdminDashboard() {
                     disabled={orderActionLoading === "expire_all"}
                   >
                     <XCircle className="mr-2 h-4 w-4" />
-                    {orderActionLoading === "expire_all" ? "Expiring…" : `Expire All Pending (${orders.filter(o => o.status === "pending").length})`}
+                    {orderActionLoading === "expire_all" ? "Expiring…" : `Expire All Pending OKX (${orders.filter(o => o.status === "pending" && o.provider === "okx").length})`}
                   </Button>
                 )}
                 {orders.filter(o => o.status === "paid").length > 0 && (
@@ -2182,7 +2186,7 @@ export function AdminDashboard() {
                 { label: "Total", value: orders.length, color: "text-foreground" },
                 { label: "Pending", value: orders.filter(o => o.status === "pending").length, color: "text-yellow-400" },
                 { label: "Paid", value: orders.filter(o => o.status === "paid").length, color: "text-green-400" },
-                { label: "Revenue (USDT)", value: orders.filter(o => o.status === "paid").reduce((s, o) => s + parseFloat(o.amount), 0).toFixed(2), color: "text-primary" },
+                { label: "Revenue", value: orders.filter(o => o.status === "paid").reduce((s, o) => s + parseFloat(o.amount), 0).toFixed(2), color: "text-primary" },
               ].map(stat => (
                 <Card key={stat.label} className="border-border bg-card">
                   <CardContent className="p-4">
@@ -2206,6 +2210,7 @@ export function AdminDashboard() {
                 <Table>
                   <TableHeader>
                     <TableRow>
+                      <TableHead>Method</TableHead>
                       <TableHead>Order ID</TableHead>
                       <TableHead>Date</TableHead>
                       <TableHead>Email</TableHead>
@@ -2225,6 +2230,11 @@ export function AdminDashboard() {
                       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
                       .map(order => (
                         <TableRow key={order.orderId}>
+                          <TableCell>
+                            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${order.provider === "whop" ? "bg-blue-500/15 text-blue-400" : "bg-muted text-muted-foreground"}`}>
+                              {order.provider === "whop" ? "Visa" : "OKX"}
+                            </span>
+                          </TableCell>
                           <TableCell>
                             <div className="flex items-center gap-1">
                               <span className="max-w-[110px] truncate font-mono text-xs">{order.orderId}</span>
@@ -2263,7 +2273,7 @@ export function AdminDashboard() {
                               {order.plan.replace(/-/g, " ")}
                             </span>
                           </TableCell>
-                          <TableCell className="font-mono font-semibold tabular-nums text-yellow-400">{order.amount} USDT</TableCell>
+                          <TableCell className="font-mono font-semibold tabular-nums text-yellow-400">{order.amount} {order.currency}</TableCell>
                           <TableCell className="text-xs text-muted-foreground">{order.chain || "—"}</TableCell>
                           <TableCell>
                             <StatusPill status={order.status} />
@@ -2305,7 +2315,7 @@ export function AdminDashboard() {
                                   variant="outline"
                                   className="h-7 text-xs border-green-500/30 text-green-400 hover:bg-green-500/10"
                                   disabled={orderActionLoading === `${order.orderId}-mark_paid`}
-                                  onClick={() => handleOrderAction(order.orderId, "mark_paid")}
+                                  onClick={() => handleOrderAction(order.orderId, "mark_paid", order.provider)}
                                 >
                                   <CheckCircle2 className="mr-1 h-3 w-3" />
                                   {orderActionLoading === `${order.orderId}-mark_paid` ? "…" : "Mark Paid"}
@@ -2317,19 +2327,19 @@ export function AdminDashboard() {
                                   variant="outline"
                                   className="h-7 text-xs"
                                   disabled={orderActionLoading === `${order.orderId}-resend_email`}
-                                  onClick={() => handleOrderAction(order.orderId, "resend_email")}
+                                  onClick={() => handleOrderAction(order.orderId, "resend_email", order.provider)}
                                 >
                                   <Mail className="mr-1 h-3 w-3" />
                                   {orderActionLoading === `${order.orderId}-resend_email` ? "…" : "Resend Email"}
                                 </Button>
                               )}
-                              {order.status === "pending" && (
+                              {order.status === "pending" && order.provider === "okx" && (
                                 <Button
                                   size="sm"
                                   variant="outline"
                                   className="h-7 text-xs border-red-500/30 text-red-400 hover:bg-red-500/10"
                                   disabled={orderActionLoading === `${order.orderId}-mark_expired`}
-                                  onClick={() => handleOrderAction(order.orderId, "mark_expired")}
+                                  onClick={() => handleOrderAction(order.orderId, "mark_expired", order.provider)}
                                 >
                                   <XCircle className="mr-1 h-3 w-3" />
                                   {orderActionLoading === `${order.orderId}-mark_expired` ? "…" : "Expire"}
@@ -2342,22 +2352,24 @@ export function AdminDashboard() {
                                 disabled={orderActionLoading === `${order.orderId}-delete`}
                                 onClick={() => {
                                   if (confirm(`Permanently delete this ${order.status} order for ${order.email}? This cannot be undone.`)) {
-                                    handleOrderAction(order.orderId, "delete")
+                                    handleOrderAction(order.orderId, "delete", order.provider)
                                   }
                                 }}
                               >
                                 <Trash2 className="mr-1 h-3 w-3" />
                                 {orderActionLoading === `${order.orderId}-delete` ? "…" : "Delete"}
                               </Button>
-                              <div className="flex items-center gap-1">
-                                <button
-                                  className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
-                                  onClick={() => copyToClipboard(order.address, order.orderId + "-addr")}
-                                >
-                                  <Copy className="h-3 w-3" /> Address
-                                </button>
-                                {copiedId === order.orderId + "-addr" && <span className="text-xs text-green-400">Copied</span>}
-                              </div>
+                              {order.address && (
+                                <div className="flex items-center gap-1">
+                                  <button
+                                    className="flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+                                    onClick={() => copyToClipboard(order.address!, order.orderId + "-addr")}
+                                  >
+                                    <Copy className="h-3 w-3" /> Address
+                                  </button>
+                                  {copiedId === order.orderId + "-addr" && <span className="text-xs text-green-400">Copied</span>}
+                                </div>
+                              )}
                             </div>
                           </TableCell>
                         </TableRow>

@@ -8,36 +8,66 @@ import { fulfillConsultation } from "@/lib/consultation"
 import { sendConsultationEmails } from "@/lib/consultation-email"
 import { createStarterInviteLink } from "@/lib/tg-invite"
 import { markInstallmentPaid } from "@/lib/invoicing"
+import { fulfillWhopOrder } from "@/lib/whop-fulfillment"
+import { withVisaFee } from "@/lib/payment-fees"
 
 async function getAllOrders() {
-  try {
-    const supabase = createAdminClient()
-    const { data, error } = await supabase
-      .from("okx_orders")
-      .select("*")
-      .order("created_at", { ascending: false })
-    if (error || !data) return []
-    const orderIds = data.map((d: Record<string, unknown>) => d.order_id as string)
-    const { data: tokens } = await supabase.rpc("get_tg_tokens_for_orders", { order_ids: orderIds })
-    const tokenMap = Object.fromEntries((tokens ?? []).map((t: { token: string; order_ref: string }) => [t.order_ref, t.token]))
+  const supabase = createAdminClient()
 
-    return data.map((d: Record<string, unknown>) => ({
-      orderId: d.order_id,
-      plan: d.plan,
-      amount: d.amount,
-      email: d.email,
-      telegramUsername: d.telegram_username || undefined,
-      address: d.address,
-      chain: d.chain,
-      status: d.status,
-      createdAt: d.created_at,
-      paidAt: d.paid_at || undefined,
-      txId: d.tx_id || undefined,
-      tgToken: tokenMap[d.order_id as string] || undefined,
-    }))
-  } catch {
-    return []
-  }
+  const okx = await (async () => {
+    try {
+      const { data, error } = await supabase.from("okx_orders").select("*").order("created_at", { ascending: false })
+      if (error || !data) return []
+      const orderIds = data.map((d: Record<string, unknown>) => d.order_id as string)
+      const { data: tokens } = await supabase.rpc("get_tg_tokens_for_orders", { order_ids: orderIds })
+      const tokenMap = Object.fromEntries((tokens ?? []).map((t: { token: string; order_ref: string }) => [t.order_ref, t.token]))
+
+      return data.map((d: Record<string, unknown>) => ({
+        provider: "okx" as const,
+        orderId: d.order_id,
+        plan: d.plan,
+        amount: d.amount,
+        currency: "USDT",
+        email: d.email,
+        telegramUsername: d.telegram_username || undefined,
+        address: d.address,
+        chain: d.chain,
+        status: d.status,
+        createdAt: d.created_at,
+        paidAt: d.paid_at || undefined,
+        txId: d.tx_id || undefined,
+        tgToken: tokenMap[d.order_id as string] || undefined,
+      }))
+    } catch {
+      return []
+    }
+  })()
+
+  const whop = await (async () => {
+    try {
+      const { data, error } = await supabase.from("whop_orders").select("*").order("created_at", { ascending: false })
+      if (error || !data) return []
+      return data.map((d: Record<string, unknown>) => ({
+        provider: "whop" as const,
+        orderId: d.order_id,
+        plan: d.plan,
+        // What the customer was actually charged, card fee included.
+        amount: String(withVisaFee(Number(d.charge_amount))),
+        currency: "USD",
+        email: d.email,
+        telegramUsername: d.telegram_username || undefined,
+        status: d.status,
+        createdAt: d.created_at,
+        preferredDate: d.preferred_date || undefined,
+      }))
+    } catch {
+      return []
+    }
+  })()
+
+  return [...okx, ...whop].sort(
+    (a, b) => new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime()
+  )
 }
 
 async function isAdmin() {
@@ -70,7 +100,11 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { orderId, action } = await request.json()
+  const { orderId, action, provider } = await request.json()
+
+  if (provider === "whop") {
+    return handleWhopAction(request, orderId, action)
+  }
 
   // Handle bulk action: expire all pending orders
   if (action === "expire_all_pending") {
@@ -91,6 +125,8 @@ export async function PATCH(request: Request) {
       const supabase = createAdminClient()
       const { error } = await supabase.from("okx_orders").delete().eq("status", "paid")
       if (error) throw error
+      const { error: whopError } = await supabase.from("whop_orders").delete().eq("status", "paid")
+      if (whopError) throw whopError
       return NextResponse.json({ success: true })
     } catch (e) {
       console.error("Failed to delete paid orders:", e)
@@ -233,4 +269,71 @@ export async function PATCH(request: Request) {
   }
 
   return NextResponse.json({ error: "Invalid action" }, { status: 400 })
+}
+
+/** Card orders live in their own table and have no deposit address, tx id or
+ *  "expired" state, so they get a smaller set of actions than OKX orders. */
+async function handleWhopAction(request: Request, orderId: string, action: string) {
+  const supabase = createAdminClient()
+  const { data: order } = await supabase.from("whop_orders").select("*").eq("order_id", orderId).maybeSingle()
+  if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 })
+
+  if (action === "delete") {
+    const { error } = await supabase.from("whop_orders").delete().eq("order_id", orderId)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true })
+  }
+
+  if (action === "mark_paid") {
+    if (order.status === "paid") {
+      return NextResponse.json({ error: "This order is already paid" }, { status: 400 })
+    }
+    await supabase.from("whop_orders").update({ status: "paid" }).eq("order_id", orderId)
+
+    if (order.installment_id) {
+      await markInstallmentPaid(order.installment_id)
+      return NextResponse.json({ success: true })
+    }
+
+    await fulfillWhopOrder(order, new URL(request.url).origin)
+    return NextResponse.json({ success: true })
+  }
+
+  if (action === "resend_email") {
+    if (order.status !== "paid") {
+      return NextResponse.json({ error: "Can only resend email for paid orders" }, { status: 400 })
+    }
+
+    const consultationHours = parseConsultationHours(order.plan)
+    if (consultationHours) {
+      const { data: existingBooking } = await supabase
+        .from("bookings")
+        .select("zoom_join_url")
+        .ilike("client_message", `%(order ${orderId})%`)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle()
+      await sendConsultationEmails({
+        email: order.email,
+        hours: consultationHours,
+        amount: Number(order.full_amount),
+        orderId,
+        preferredDate: order.preferred_date ? String(order.preferred_date).replace("T", " ").slice(0, 16) : undefined,
+        zoomJoinUrl: existingBooking?.zoom_join_url ?? null,
+      })
+      return NextResponse.json({ success: true })
+    }
+
+    const planLabel = order.plan.charAt(0).toUpperCase() + order.plan.slice(1).replace(/-/g, " ")
+    await sendConfirmationEmail({
+      to: order.email,
+      planLabel,
+      amount: `$${withVisaFee(Number(order.charge_amount))}`,
+      orderId,
+      tgInviteLink: null,
+    })
+    return NextResponse.json({ success: true })
+  }
+
+  return NextResponse.json({ error: "Unsupported action for card orders" }, { status: 400 })
 }
