@@ -10,6 +10,11 @@ export const dynamic = "force-dynamic"
  * paid — the safety net for buyers who closed the tab before the success
  * page could verify, and for webhooks that never arrived at all.
  *
+ * Runs daily: Vercel's Hobby plan allows at most one cron run per day, and a
+ * more frequent schedule fails the whole deployment. Nothing waits on this
+ * anyway — the webhook and the post-checkout verify both settle instantly,
+ * and the admin's "Sync Visa Orders" runs it on demand.
+ *
  * Only looks at the last 7 days: older pending rows are abandoned
  * checkouts, and Whop's payment list only reaches back so far anyway.
  */

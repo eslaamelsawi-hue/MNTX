@@ -18,3 +18,4 @@ tsconfig.tsbuildinfo
 
 # Protected course media (not committed)
 private-media/
+.env*
