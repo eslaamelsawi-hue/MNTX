@@ -113,7 +113,7 @@ export function MentorshipFeatures() {
       className={`${alexandria.className} min-h-screen bg-background text-foreground`}
       style={{ backgroundImage: GRID_BG, backgroundSize: "100% 100%, 32px 32px, 32px 32px" }}
     >
-      <div className="mx-auto w-[80%] py-16 md:py-24">
+      <div className="mx-auto w-[90%] py-16 md:w-[60%] md:py-24">
         <section className="mx-auto max-w-2xl text-center">
           <span className="inline-flex items-center gap-2 rounded-full border border-primary/30 bg-primary/10 px-4 py-1.5 text-sm font-medium text-primary">
             <span className="h-2 w-2 rounded-full bg-primary" /> مينتورشيب فردي 1-1
