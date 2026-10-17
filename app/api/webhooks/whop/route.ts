@@ -58,7 +58,30 @@ export async function POST(request: Request) {
         return NextResponse.json({ error: "Timestamp too old" }, { status: 401 })
       }
       if (!verifySignature(id, timestamp, rawBody, signature, secret)) {
-        return NextResponse.json({ error: "Invalid signature" }, { status: 401 })
+        // Whop's test-event API returns this body verbatim, which is the only
+        // window into a failing delivery from outside. Nothing secret is
+        // exposed: header names, lengths, and short HMAC prefixes only — the
+        // secret itself and full signatures stay out of it.
+        const signed = `${id}.${timestamp}.${rawBody}`
+        const diagnostic = {
+          error: "Invalid signature",
+          diagnostic: {
+            receivedHeaders: [...request.headers.keys()].filter((h) => h.includes("webhook") || h.includes("whop")),
+            secretPrefix: secret.slice(0, 3),
+            secretLength: secret.length,
+            timestampSkewSeconds: Math.round(Date.now() / 1000 - Number(timestamp)),
+            bodyLength: rawBody.length,
+            provided: signature.slice(0, 14),
+            computed: Object.fromEntries(
+              secretKeyCandidates(secret).map(({ label, key }) => [
+                label,
+                `v1,${crypto.createHmac("sha256", key).update(signed).digest("base64")}`.slice(0, 14),
+              ])
+            ),
+          },
+        }
+        console.warn("[webhooks/whop] signature mismatch:", JSON.stringify(diagnostic.diagnostic))
+        return NextResponse.json(diagnostic, { status: 401 })
       }
     } else {
       console.warn("[webhooks/whop] WHOP_WEBHOOK_SECRET not set — accepting unverified webhook")
