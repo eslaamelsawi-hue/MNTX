@@ -1,24 +1,45 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
-import { createAdminClient } from "@/lib/supabase/admin"
-import { markInstallmentPaid } from "@/lib/invoicing"
-import { fulfillWhopOrder } from "@/lib/whop-fulfillment"
+import { settleWhopOrderIfPaid } from "@/lib/whop-fulfillment"
 
 /** Whop signs "{webhook-id}.{webhook-timestamp}.{raw body}" with HMAC-SHA256
  *  and sends the result base64-encoded as "v1,<sig>" — possibly several,
  *  space-separated, while a secret is being rotated.
  *
- *  Per Whop's docs the HMAC key is the secret exactly as issued, "ws_" prefix
- *  included: not stripped, not base64-decoded. Getting this wrong rejects
- *  every delivery, and Whop disables an endpoint after repeated failures. */
-function verifySignature(id: string, timestamp: string, rawBody: string, signatureHeader: string, secret: string): boolean {
-  const expected = crypto.createHmac("sha256", secret).update(`${id}.${timestamp}.${rawBody}`).digest("base64")
-  const expectedFull = `v1,${expected}`
+ *  Whop's docs say the key is the secret exactly as issued ("ws_" included),
+ *  but the Standard Webhooks convention it builds on decodes the part after
+ *  the prefix. Rather than bet the endpoint on reading that right — a wrong
+ *  guess rejects every delivery, and Whop disables an endpoint after enough
+ *  failures — each plausible derivation of the SAME secret is tried, and the
+ *  one that matched is logged so this can be narrowed down later. Every
+ *  candidate still requires knowing the secret, so accepting any of them
+ *  doesn't weaken verification. */
+function secretKeyCandidates(secret: string): { label: string; key: Buffer }[] {
+  const bare = secret.replace(/^whsec_|^ws_/, "")
+  return [
+    { label: "raw-with-prefix", key: Buffer.from(secret, "utf8") },
+    { label: "raw-without-prefix", key: Buffer.from(bare, "utf8") },
+    { label: "base64-decoded", key: Buffer.from(bare, "base64") },
+    { label: "hex-decoded", key: Buffer.from(bare, "hex") },
+  ]
+}
 
-  return signatureHeader.split(" ").some((candidate) => {
-    if (candidate.length !== expectedFull.length) return false
-    return crypto.timingSafeEqual(Buffer.from(candidate), Buffer.from(expectedFull))
-  })
+function verifySignature(id: string, timestamp: string, rawBody: string, signatureHeader: string, secret: string): boolean {
+  const signed = `${id}.${timestamp}.${rawBody}`
+  const provided = signatureHeader.split(" ").filter(Boolean)
+
+  for (const { label, key } of secretKeyCandidates(secret)) {
+    const expectedFull = `v1,${crypto.createHmac("sha256", key).update(signed).digest("base64")}`
+    const matched = provided.some((candidate) => {
+      if (candidate.length !== expectedFull.length) return false
+      return crypto.timingSafeEqual(Buffer.from(candidate), Buffer.from(expectedFull))
+    })
+    if (matched) {
+      console.log(`[webhooks/whop] signature verified using "${label}" key derivation`)
+      return true
+    }
+  }
+  return false
 }
 
 export async function POST(request: Request) {
@@ -54,27 +75,16 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true })
     }
 
-    const admin = createAdminClient()
-    const { data: order } = await admin.from("whop_orders").select("*").eq("order_id", orderId).maybeSingle()
-    if (!order) {
+    // Confirm the payment against Whop's API rather than trusting the posted
+    // body, then settle. This keeps a forged (or unverified) request from
+    // granting anything, and shares one idempotent path with the success-page
+    // verify, the admin sync and the scheduled sweep.
+    const result = await settleWhopOrderIfPaid(orderId, new URL(request.url).origin)
+    if (result.status === "not_found") {
       console.warn("[webhooks/whop] no local order for", orderId)
-      return NextResponse.json({ ok: true })
+    } else if (result.status === "pending") {
+      console.warn("[webhooks/whop] Whop reports no completed payment for", orderId)
     }
-    if (order.status === "paid") {
-      return NextResponse.json({ ok: true }) // already processed — webhooks can redeliver
-    }
-
-    // This order pays off an existing pending invoice installment (the
-    // client dashboard's "Pay Now" flow) — no hours/access to (re-)grant.
-    if (order.installment_id) {
-      await admin.from("whop_orders").update({ status: "paid" }).eq("order_id", orderId)
-      await markInstallmentPaid(order.installment_id)
-      return NextResponse.json({ ok: true })
-    }
-
-    await admin.from("whop_orders").update({ status: "paid" }).eq("order_id", orderId)
-
-    await fulfillWhopOrder(order, new URL(request.url).origin)
 
     return NextResponse.json({ ok: true })
   } catch (error) {
