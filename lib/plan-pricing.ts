@@ -4,7 +4,7 @@ export const PLAN_PRICES: Record<string, { amount: number; description: string }
   test:        { amount: 1,    description: "Mentix Trading - Test Plan" },
   "gold-pro":  { amount: 100, description: "Mentix Trading - Gold Pro Monthly Analysis" },
   starter:     { amount: 379,  description: "Mentix Trading - ADVANCED SMC Course" },
-  coaching:    { amount: 999, description: "Mentix Trading - 1-on-1 Coaching Plan" },
+  coaching:    { amount: 1200, description: "Mentix Trading - 1-on-1 Coaching Plan" },
   "extend-1m": { amount: 250,  description: "Mentix Trading - Mentorship Extension 1 Month" },
   "extend-2m": { amount: 449,  description: "Mentix Trading - Mentorship Extension 2 Months" },
   "extend-3m": { amount: 900,  description: "Mentix Trading - Mentorship Extension 3 Months" },
@@ -18,11 +18,13 @@ export const PLAN_PRICES: Record<string, { amount: number; description: string }
   "consultation-5h": { amount: 420, description: "Mentix Trading - 5-Hour Consultation" },
 }
 
-/** Discount an approved mentorship applicant gets on the coaching plan.
- *  Single source of truth: the checkout price, the generated coupon and all
- *  the marketing copy derive from it, so they can't drift apart. Rounded to
- *  whole dollars (in the buyer's favour) rather than showing cents. */
-export const MENTORSHIP_DISCOUNT_PERCENT = 30
-export const MENTORSHIP_DISCOUNTED_PRICE = Math.round(
-  PLAN_PRICES.coaching.amount * (1 - MENTORSHIP_DISCOUNT_PERCENT / 100)
-)
+/** Defaults for the mentorship offer. Both are overridable from the admin
+ *  dashboard (admin_settings: mentorship_price / mentorship_discount_percent)
+ *  — read them through lib/mentorship-pricing's getMentorshipPricing() on the
+ *  server. These statics are only the fallback when nothing is configured. */
+export const DEFAULT_MENTORSHIP_PRICE = PLAN_PRICES.coaching.amount
+export const DEFAULT_MENTORSHIP_DISCOUNT_PERCENT = 50
+
+export function discountedPrice(price: number, discountPercent: number): number {
+  return Math.round(price * (1 - discountPercent / 100))
+}

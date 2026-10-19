@@ -2,6 +2,7 @@
 import { createNowpaymentsInvoice } from "@/lib/nowpayments"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { PLAN_PRICES as PLAN_INFO } from "@/lib/plan-pricing"
+import { getPlanAmount } from "@/lib/mentorship-pricing"
 
 async function applyCouponDiscount(code: string, plan: string, amountDollars: number): Promise<number> {
   try {
@@ -44,9 +45,9 @@ export async function POST(request: Request) {
     }
 
     // Apply coupon discount if provided
-    let finalAmount = planInfo.amount
+    let finalAmount = (await getPlanAmount(plan)) ?? planInfo.amount
     if (couponCode && typeof couponCode === "string") {
-      finalAmount = await applyCouponDiscount(couponCode, plan, planInfo.amount)
+      finalAmount = await applyCouponDiscount(couponCode, plan, finalAmount)
     }
 
     const isSplit = !!splitPayment

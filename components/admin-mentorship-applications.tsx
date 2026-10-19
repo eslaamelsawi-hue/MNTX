@@ -7,8 +7,9 @@ import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StatusPill } from "@/components/status-pill"
-import { Loader2, RefreshCw, CheckCircle2, XCircle, Eye, Link as LinkIcon } from "lucide-react"
-import { MENTORSHIP_DISCOUNTED_PRICE } from "@/lib/plan-pricing"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Loader2, RefreshCw, CheckCircle2, XCircle, Eye, Link as LinkIcon, Tag } from "lucide-react"
 
 type Application = {
   id: string
@@ -70,6 +71,58 @@ export function AdminMentorshipApplications() {
   const [declineReason, setDeclineReason] = useState("")
   const [declineError, setDeclineError] = useState("")
 
+  // Mentorship price + approved-applicant discount, editable here.
+  const [priceInput, setPriceInput] = useState("")
+  const [discountInput, setDiscountInput] = useState("")
+  const [savedPricing, setSavedPricing] = useState<{ price: number; discount: number } | null>(null)
+  const [pricingSaving, setPricingSaving] = useState(false)
+  const [pricingMsg, setPricingMsg] = useState("")
+  const [pricingError, setPricingError] = useState("")
+
+  const loadPricing = async () => {
+    try {
+      const res = await fetch("/api/admin/settings")
+      const data = await res.json()
+      const settings: Record<string, string> = data.settings || {}
+      const price = Number(settings.mentorship_price) || 1200
+      const discount = settings.mentorship_discount_percent !== undefined ? Number(settings.mentorship_discount_percent) : 50
+      setSavedPricing({ price, discount })
+      setPriceInput(String(price))
+      setDiscountInput(String(discount))
+    } catch {
+      /* non-fatal — the fields just stay blank */
+    }
+  }
+
+  const savePricing = async () => {
+    const price = Number(priceInput)
+    const discount = Number(discountInput)
+    setPricingError("")
+    setPricingMsg("")
+    if (!Number.isFinite(price) || price <= 0) { setPricingError("Price must be greater than 0."); return }
+    if (!Number.isFinite(discount) || discount < 0 || discount > 100) { setPricingError("Discount must be between 0 and 100."); return }
+
+    setPricingSaving(true)
+    try {
+      for (const [key, value] of [["mentorship_price", price], ["mentorship_discount_percent", discount]] as const) {
+        const res = await fetch("/api/admin/settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key, value: String(value) }),
+        })
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          setPricingError(data.error || "Failed to save.")
+          return
+        }
+      }
+      setSavedPricing({ price, discount })
+      setPricingMsg("Saved.")
+    } finally {
+      setPricingSaving(false)
+    }
+  }
+
   const load = async () => {
     setLoading(true)
     try {
@@ -80,7 +133,7 @@ export function AdminMentorshipApplications() {
       setLoading(false)
     }
   }
-  useEffect(() => { load() }, [])
+  useEffect(() => { load(); loadPricing() }, [])
 
   const openDetail = (app: Application) => {
     setSelected(app)
@@ -135,7 +188,7 @@ export function AdminMentorshipApplications() {
       const updated = { status: "approved" as const, coupon_code: data.couponCode, checkout_url: data.checkoutUrl }
       setApplications((prev) => prev.map((a) => (a.id === app.id ? { ...a, ...updated } : a)))
       setSelected((prev) => (prev && prev.id === app.id ? { ...prev, ...updated } : prev))
-      setSuccess(`Approved! $${MENTORSHIP_DISCOUNTED_PRICE} checkout link emailed to ${app.email}.`)
+      setSuccess(`Approved! $${data.discountedPrice} checkout link emailed to ${app.email}.`)
     } finally {
       setActionLoading(null)
     }
@@ -169,14 +222,60 @@ export function AdminMentorshipApplications() {
     }
   }
 
+  const savedFinalPrice = savedPricing
+    ? Math.round(savedPricing.price * (1 - savedPricing.discount / 100))
+    : null
+
+  const previewPrice = Number(priceInput)
+  const previewDiscount = Number(discountInput)
+  const previewFinal =
+    Number.isFinite(previewPrice) && Number.isFinite(previewDiscount) && previewPrice > 0
+      ? Math.round(previewPrice * (1 - previewDiscount / 100))
+      : null
+
   return (
     <div className="space-y-4">
+      <Card>
+        <CardContent className="space-y-3 p-4">
+          <div>
+            <h3 className="flex items-center gap-2 font-semibold text-foreground">
+              <Tag className="h-4 w-4 text-primary" /> Mentorship Pricing
+            </h3>
+            <p className="text-xs text-muted-foreground">
+              The 1-on-1 Coaching list price and the discount an approved applicant gets. Changes apply
+              immediately — to new approvals and to the list price everywhere the plan is sold.
+            </p>
+          </div>
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <Label className="text-xs">Price (USD)</Label>
+              <Input type="number" min="1" value={priceInput} onChange={(e) => { setPriceInput(e.target.value); setPricingMsg("") }} className="h-9" />
+            </div>
+            <div>
+              <Label className="text-xs">Discount %</Label>
+              <Input type="number" min="0" max="100" value={discountInput} onChange={(e) => { setDiscountInput(e.target.value); setPricingMsg("") }} className="h-9" />
+            </div>
+            <div>
+              <Label className="text-xs">Applicant pays</Label>
+              <div className="flex h-9 items-center rounded-md border border-border bg-muted/40 px-3 font-mono text-sm font-bold text-primary">
+                {previewFinal !== null ? `$${previewFinal}` : "—"}
+              </div>
+            </div>
+          </div>
+          {pricingError && <p className="text-sm text-destructive">{pricingError}</p>}
+          {pricingMsg && <p className="text-sm text-emerald-400">{pricingMsg}</p>}
+          <Button size="sm" onClick={savePricing} disabled={pricingSaving} className="gap-1.5">
+            {pricingSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : null} Save Pricing
+          </Button>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardContent className="p-0">
           <div className="flex items-center justify-between border-b border-border p-4">
             <div>
               <h3 className="font-semibold text-foreground">Mentorship Applications</h3>
-              <p className="text-xs text-muted-foreground">Submitted through the /apply 1-on-1 Coaching funnel. Approving emails a one-time {`$${MENTORSHIP_DISCOUNTED_PRICE}`} full-payment checkout link.</p>
+              <p className="text-xs text-muted-foreground">Submitted through the /apply 1-on-1 Coaching funnel. Approving emails a one-time full-payment checkout link.</p>
             </div>
             <Button variant="outline" size="sm" onClick={load} disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -331,7 +430,7 @@ export function AdminMentorshipApplications() {
                     disabled={actionLoading === selected.id + "approve"}
                     onClick={() => approve(selected)}
                   >
-                    {actionLoading === selected.id + "approve" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Approve &amp; Send {`$${MENTORSHIP_DISCOUNTED_PRICE}`} Checkout
+                    {actionLoading === selected.id + "approve" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Approve &amp; Send{savedFinalPrice !== null ? ` $${savedFinalPrice}` : ""} Checkout
                   </Button>
                 )}
                 {selected.status === "new" && (

@@ -7,7 +7,6 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { alexandria } from "@/lib/fonts"
-import { MENTORSHIP_DISCOUNT_PERCENT } from "@/lib/plan-pricing"
 
 const TOTAL_STEPS = 5
 const STEP_LABELS = ["الشروط والأحكام", "بياناتك الشخصية", "خبرتك في التداول", "طريقة تفكيرك والتزامك", "الاستثمار"]
@@ -54,10 +53,10 @@ const TERMS: { title: string; lines: string[] }[] = [
   },
 ]
 
-const PROCESS = [
+const processSteps = (discountPercent: number) => [
   { num: "01", title: "املأ النموذج بالأسفل", desc: "دقائق قليلة. أجب بصراحة عن مستواك وتجربتك وأهدافك، فالصراحة هنا في صالحك." },
   { num: "02", title: "مراجعة طلبك", desc: "يراجع فريقنا كل طلب لنتأكد أن المينتورشيب مناسب لك وأنك مناسب لها." },
-  { num: "03", title: "التواصل والبدء", desc: `يتم التواصل مع المقبولين لتأكيد التفاصيل وإرسال كود خصم ${MENTORSHIP_DISCOUNT_PERCENT}% وبدء التجهيز.` },
+  { num: "03", title: "التواصل والبدء", desc: `يتم التواصل مع المقبولين لتأكيد التفاصيل وإرسال كود خصم ${discountPercent}% وبدء التجهيز.` },
 ]
 
 type FormState = {
@@ -147,7 +146,8 @@ const GRID_BG = [
   "linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)",
 ].join(", ")
 
-export function ApplyMentorship({ seatsFull, remaining }: { seatsFull: boolean; remaining: number }) {
+export function ApplyMentorship({ seatsFull, remaining, discountPercent }: { seatsFull: boolean; remaining: number; discountPercent: number }) {
+  const PROCESS = processSteps(discountPercent)
   const [step, setStep] = useState(1)
   const [agreed, setAgreed] = useState(false)
   const [form, setForm] = useState<FormState>(initialForm)
@@ -210,7 +210,7 @@ export function ApplyMentorship({ seatsFull, remaining }: { seatsFull: boolean; 
             <span className="h-2 w-2 rounded-full bg-primary" /> مينتورشيب فردي 1-1
           </span>
           <h1 className="mt-6 text-4xl font-extrabold leading-tight text-balance md:text-5xl">
-            تدرّب تحت إشراف مباشر، <span className="text-primary">بخصم {MENTORSHIP_DISCOUNT_PERCENT}%</span> لدفعة أكتوبر
+            تدرّب تحت إشراف مباشر، <span className="text-primary">بخصم {discountPercent}%</span> لدفعة أكتوبر
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
             8 جلسات أسبوعية مباشرة، متابعة شخصية لصفقاتك وتفكيرك، ومجتمع خاص. قدّم طلبك الآن، ويراجعه فريقنا
@@ -259,7 +259,7 @@ export function ApplyMentorship({ seatsFull, remaining }: { seatsFull: boolean; 
               <h2 className="text-2xl font-bold">تم استلام طلبك!</h2>
               <p className="mx-auto mt-3 max-w-md text-muted-foreground">
                 سيراجع فريقنا طلبك ويتواصل معك عبر واتساب أو تيليجرام خلال أيام قليلة لتأكيد التفاصيل وإرسال
-                كود خصم {MENTORSHIP_DISCOUNT_PERCENT}%.
+                كود خصم {discountPercent}%.
               </p>
             </div>
           ) : (

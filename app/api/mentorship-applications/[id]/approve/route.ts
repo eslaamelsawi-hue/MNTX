@@ -3,14 +3,13 @@ import { cookies } from "next/headers"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { sendEmail } from "@/lib/resend-send"
 import { generateCouponCode } from "@/lib/discount-offers"
-import { PLAN_PRICES, MENTORSHIP_DISCOUNT_PERCENT, MENTORSHIP_DISCOUNTED_PRICE } from "@/lib/plan-pricing"
+import { getMentorshipPricing, MENTORSHIP_PLAN } from "@/lib/mentorship-pricing"
 
 async function isAdmin() {
   const cookieStore = await cookies()
   return !!cookieStore.get("admin_session")?.value
 }
 
-const PLAN = "coaching"
 const COUPON_EXPIRY_DAYS = 14
 
 export async function POST(request: NextRequest, { params }: { params: Promise<{ id: string }> }) {
@@ -25,8 +24,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .single()
   if (fetchError || !application) return NextResponse.json({ error: "Application not found" }, { status: 404 })
 
-  const planInfo = PLAN_PRICES[PLAN]
-  const discountValue = planInfo.amount - MENTORSHIP_DISCOUNTED_PRICE
+  const { price, discountPercent, discountedPrice } = await getMentorshipPricing()
   const expiresAt = new Date(Date.now() + COUPON_EXPIRY_DAYS * 24 * 60 * 60 * 1000)
 
   let couponCode = generateCouponCode()
@@ -38,10 +36,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
       .from("coupons")
       .insert({
         code: couponCode,
-        discount_type: "fixed",
-        discount_value: discountValue,
+        // Percent, not a fixed amount: the admin can change the mentorship
+        // price later and an outstanding coupon still gives exactly the
+        // advertised discount.
+        discount_type: "percent",
+        discount_value: discountPercent,
         max_uses: 1,
-        applicable_plans: [PLAN],
+        applicable_plans: [MENTORSHIP_PLAN],
         expires_at: expiresAt.toISOString(),
         is_active: true,
       })
@@ -68,11 +69,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         <h2 style="color: #f5f5f5;">مرحبًا ${application.full_name}،</h2>
         <p style="color: #ccc; line-height: 1.8;">
           تهانينا! راجعنا طلبك وتم قبولك في مينتورشيب Mentix الفردي 1-1. اضغط على الزر بالأسفل لإتمام
-          التسجيل بدفعة واحدة كاملة بقيمة ${MENTORSHIP_DISCOUNTED_PRICE}$ (خصم ${MENTORSHIP_DISCOUNT_PERCENT}% بدلاً من ${planInfo.amount}$).
+          التسجيل بدفعة واحدة كاملة بقيمة ${discountedPrice}$ (خصم ${discountPercent}% بدلاً من ${price}$).
         </p>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${checkoutUrl}" style="background: linear-gradient(135deg, #d4a017 0%, #e8b923 100%); color: #0a0a0a; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 16px;">
-            إتمام التسجيل — ${MENTORSHIP_DISCOUNTED_PRICE}$
+            إتمام التسجيل — ${discountedPrice}$
           </a>
         </div>
         <p style="color: #888; font-size: 13px; line-height: 1.6;">
@@ -95,5 +96,5 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .eq("id", id)
   if (updateError) console.error("[mentorship-applications/approve] failed to update status (email was still sent):", updateError)
 
-  return NextResponse.json({ success: true, couponCode, checkoutUrl })
+  return NextResponse.json({ success: true, couponCode, checkoutUrl, price, discountPercent, discountedPrice })
 }

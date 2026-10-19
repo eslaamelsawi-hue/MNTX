@@ -14,6 +14,8 @@ const ALLOWED_KEYS = [
   "payment_stripe_enabled",
   "payment_egypt_enabled",
   "payment_whop_enabled",
+  "mentorship_price",
+  "mentorship_discount_percent",
 ]
 
 const BOOLEAN_KEYS = [
@@ -40,6 +42,14 @@ function validate(key: string, value: unknown): string | null {
   }
   if (BOOLEAN_KEYS.includes(key) && !["true", "false"].includes(String(value))) {
     return `${key} must be "true" or "false"`
+  }
+  if (key === "mentorship_price") {
+    const num = Number(value)
+    if (!Number.isFinite(num) || num <= 0) return "Price must be greater than 0"
+  }
+  if (key === "mentorship_discount_percent") {
+    const num = Number(value)
+    if (!Number.isFinite(num) || num < 0 || num > 100) return "Discount must be between 0 and 100"
   }
   return null
 }

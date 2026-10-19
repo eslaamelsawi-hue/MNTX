@@ -4,7 +4,6 @@ import { useEffect, useState } from "react"
 import { Loader2, Check, Lock } from "lucide-react"
 import { OKXPayButton, WhopPayButton } from "@/components/payment-buttons"
 import { alexandria } from "@/lib/fonts"
-import { MENTORSHIP_DISCOUNTED_PRICE } from "@/lib/plan-pricing"
 
 const GRID_BG = [
   "radial-gradient(ellipse 800px 400px at 50% -10%, hsl(var(--primary) / 0.14), transparent 60%)",
@@ -13,12 +12,12 @@ const GRID_BG = [
 ].join(", ")
 
 const PLAN = "coaching"
-const ORIGINAL_PRICE = 999
 
 export function MentorshipCheckout({ code, email }: { code?: string; email?: string }) {
   const [checking, setChecking] = useState(true)
   const [valid, setValid] = useState(false)
   const [price, setPrice] = useState<number | null>(null)
+  const [listPrice, setListPrice] = useState<number | null>(null)
   const [error, setError] = useState("")
 
   useEffect(() => {
@@ -38,7 +37,11 @@ export function MentorshipCheckout({ code, email }: { code?: string; email?: str
           setError(data.error === "This coupon has expired" ? "انتهت صلاحية رابط الدفع هذا." : data.error === "This coupon has reached its maximum uses" ? "تم استخدام رابط الدفع هذا بالفعل." : "رابط الدفع غير صالح.")
           return
         }
-        setPrice(Math.round((ORIGINAL_PRICE * 100 - data.coupon.discountCents) / 100))
+        // The API returns the configured list price, so an admin price change
+        // is reflected here without redeploying.
+        const cents = data.coupon.priceInCents as number
+        setListPrice(Math.round(cents / 100))
+        setPrice(Math.round((cents - data.coupon.discountCents) / 100))
         setValid(true)
       })
       .catch(() => setError("تعذر التحقق من رابط الدفع. حاول مرة أخرى لاحقًا."))
@@ -75,13 +78,13 @@ export function MentorshipCheckout({ code, email }: { code?: string; email?: str
             </div>
 
             <div className="mt-7 flex items-center justify-center gap-3">
-              <span className="text-lg text-muted-foreground line-through">{ORIGINAL_PRICE}$</span>
-              <span className="text-4xl font-extrabold text-primary">{price ?? MENTORSHIP_DISCOUNTED_PRICE}$</span>
+              {listPrice !== null && <span className="text-lg text-muted-foreground line-through">{listPrice}$</span>}
+              <span className="text-4xl font-extrabold text-primary">{price}$</span>
             </div>
             <p className="mt-1 text-center text-xs text-muted-foreground">دفعة واحدة كاملة</p>
 
             <div className="mt-8 space-y-3">
-              <WhopPayButton plan={PLAN} couponCode={code} prefillEmail={email} amount={price ?? MENTORSHIP_DISCOUNTED_PRICE} className="w-full justify-center" />
+              <WhopPayButton plan={PLAN} couponCode={code} prefillEmail={email} amount={price ?? undefined} className="w-full justify-center" />
               <OKXPayButton plan={PLAN} couponCode={code} prefillEmail={email} className="w-full justify-center" />
             </div>
 

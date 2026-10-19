@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { PRODUCTS } from "@/lib/products"
+import { getPlanAmount } from "@/lib/mentorship-pricing"
 
 export async function POST(request: Request) {
   try {
@@ -18,6 +19,10 @@ export async function POST(request: Request) {
     if (!product) {
       return NextResponse.json({ valid: false, error: "Invalid plan" })
     }
+
+    // Honour an admin price override so the discount shown matches the charge.
+    const configuredAmount = await getPlanAmount(plan)
+    const priceInCents = configuredAmount !== undefined ? Math.round(configuredAmount * 100) : product.priceInCents
 
     const supabase = createAdminClient()
 
@@ -50,7 +55,7 @@ export async function POST(request: Request) {
     }
 
     // Check minimum order amount
-    if (coupon.min_order_cents && product.priceInCents < coupon.min_order_cents) {
+    if (coupon.min_order_cents && priceInCents < coupon.min_order_cents) {
       return NextResponse.json({
         valid: false,
         error: `Minimum order amount is $${(coupon.min_order_cents / 100).toFixed(2)}`,
@@ -60,12 +65,12 @@ export async function POST(request: Request) {
     // Calculate discount
     let discountCents: number
     if (coupon.discount_type === "percent") {
-      discountCents = Math.round(product.priceInCents * (coupon.discount_value / 100))
+      discountCents = Math.round(priceInCents * (coupon.discount_value / 100))
     } else {
       discountCents = Math.round(coupon.discount_value * 100)
     }
 
-    discountCents = Math.min(discountCents, product.priceInCents)
+    discountCents = Math.min(discountCents, priceInCents)
 
     return NextResponse.json({
       valid: true,
@@ -74,6 +79,7 @@ export async function POST(request: Request) {
         discount_type: coupon.discount_type,
         discount_value: coupon.discount_value,
         discountCents,
+        priceInCents,
       },
     })
   } catch (error) {

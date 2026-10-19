@@ -2,6 +2,7 @@ import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createWhopCheckout } from "@/lib/whop"
 import { PLAN_PRICES } from "@/lib/plan-pricing"
+import { getPlanAmount } from "@/lib/mentorship-pricing"
 import { withVisaFee } from "@/lib/payment-fees"
 
 async function applyCouponDiscount(code: string, plan: string, amountDollars: number): Promise<number> {
@@ -43,9 +44,9 @@ export async function POST(request: Request) {
       return NextResponse.json({ error: "Valid email is required" }, { status: 400 })
     }
 
-    let finalAmount = planInfo.amount
+    let finalAmount = (await getPlanAmount(plan)) ?? planInfo.amount
     if (couponCode && typeof couponCode === "string") {
-      finalAmount = await applyCouponDiscount(couponCode, plan, planInfo.amount)
+      finalAmount = await applyCouponDiscount(couponCode, plan, finalAmount)
     }
 
     const isSplit = !!splitPayment

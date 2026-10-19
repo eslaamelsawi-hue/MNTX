@@ -3,6 +3,7 @@ import crypto from "crypto"
 import { createOrder } from "@/lib/okx-orders"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { PLAN_PRICES } from "@/lib/plan-pricing"
+import { getPlanAmount } from "@/lib/mentorship-pricing"
 
 const OKX_API_BASE = "https://www.okx.com"
 
@@ -97,9 +98,9 @@ export async function POST(request: Request) {
     const orderId = `MENTIX${Date.now()}${Math.random().toString(36).substring(2, 8).toUpperCase()}`
 
     // Apply coupon discount if provided
-    let finalAmount = planInfo.amount
+    let finalAmount = (await getPlanAmount(plan)) ?? planInfo.amount
     if (couponCode && typeof couponCode === "string") {
-      finalAmount = await applyCouponDiscount(couponCode, plan, planInfo.amount)
+      finalAmount = await applyCouponDiscount(couponCode, plan, finalAmount)
     }
 
     const isSplit = !!splitPayment
