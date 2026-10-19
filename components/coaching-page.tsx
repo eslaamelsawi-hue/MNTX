@@ -7,6 +7,7 @@ import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { ArrowRight, Play, Check, Loader2, Target, Video, Shield, Infinity, ShoppingCart } from "lucide-react"
 import { useTranslations } from "next-intl"
+import { usePaymentSettings } from "@/hooks/use-payment-settings"
 import Link from "next/link"
 import { useLocale } from "next-intl"
 
@@ -69,6 +70,7 @@ const completeFeatures = [
 ]
 
 export function CoachingPage() {
+  const { settings: { coachingPrice } } = usePaymentSettings()
   const videoRef = useRef<HTMLIFrameElement>(null)
   const [videoLoaded, setVideoLoaded] = useState(false)
   const t = useTranslations("coaching")
@@ -209,7 +211,7 @@ export function CoachingPage() {
               <CardTitle className="text-2xl text-foreground">1-on-1 Coaching</CardTitle>
               <div className="mt-4 flex items-baseline justify-center gap-2">
                 <span className="text-lg text-muted-foreground line-through">$1599</span>
-                <span className="text-5xl font-bold text-primary">$999</span>
+                <span className="text-5xl font-bold text-primary">${coachingPrice}</span>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">
                 One-time payment, lifetime access

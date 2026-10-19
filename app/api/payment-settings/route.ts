@@ -1,5 +1,7 @@
 import { createAdminClient } from "@/lib/supabase/admin"
 import { NextResponse } from "next/server"
+import { getMentorshipPricing } from "@/lib/mentorship-pricing"
+import { DEFAULT_MENTORSHIP_PRICE } from "@/lib/plan-pricing"
 
 const KEYS = [
   "subscriptions_open",
@@ -19,6 +21,9 @@ const KEYS = [
 export async function GET() {
   const supabase = createAdminClient()
   const { data, error } = await supabase.from("admin_settings").select("key, value").in("key", KEYS)
+  // Marketing pages read this so the advertised price can't drift from what
+  // checkout actually charges.
+  const { price: coachingPrice } = await getMentorshipPricing()
   if (error) {
     // Fail open — a settings read error shouldn't block legitimate checkouts.
     return NextResponse.json({
@@ -28,6 +33,7 @@ export async function GET() {
       stripe: true,
       egypt: true,
       whop: true,
+      coachingPrice: DEFAULT_MENTORSHIP_PRICE,
     })
   }
 
@@ -42,5 +48,6 @@ export async function GET() {
     stripe: flag("payment_stripe_enabled"),
     egypt: flag("payment_egypt_enabled"),
     whop: flag("payment_whop_enabled"),
+    coachingPrice,
   })
 }

@@ -1,6 +1,7 @@
 "use client"
 
 import { useEffect, useState } from "react"
+import { DEFAULT_MENTORSHIP_PRICE } from "@/lib/plan-pricing"
 
 export type PaymentSettings = {
   subscriptionsOpen: boolean
@@ -9,6 +10,8 @@ export type PaymentSettings = {
   stripe: boolean
   egypt: boolean
   whop: boolean
+  /** Live coaching list price, so marketing copy matches checkout. */
+  coachingPrice: number
 }
 
 const DEFAULTS: PaymentSettings = {
@@ -18,6 +21,7 @@ const DEFAULTS: PaymentSettings = {
   stripe: true,
   egypt: true,
   whop: true,
+  coachingPrice: DEFAULT_MENTORSHIP_PRICE,
 }
 
 /** Fetches the admin-controlled payment kill-switches once per mount.

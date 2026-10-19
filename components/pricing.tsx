@@ -6,6 +6,7 @@ import { Check, ShoppingCart } from "lucide-react"
 import { OKXPayButton, NowPaymentsButton, WhopPayButton } from "@/components/payment-buttons"
 import Link from "next/link"
 import { useLocale } from "next-intl"
+import { usePaymentSettings } from "@/hooks/use-payment-settings"
 
 const essentialFeatures = [
   "Full SMC Course",
@@ -26,6 +27,7 @@ const completeFeatures = [
 ]
 
 export function Pricing() {
+  const { settings: { coachingPrice } } = usePaymentSettings()
   const locale = useLocale()
 
   return (
@@ -118,7 +120,7 @@ export function Pricing() {
               <CardTitle className="text-2xl text-foreground">1-on-1 Coaching</CardTitle>
               <div className="mt-4 flex items-baseline justify-center gap-2">
                 <span className="text-lg text-muted-foreground line-through">$1599</span>
-                <span className="text-5xl font-bold text-primary">$999</span>
+                <span className="text-5xl font-bold text-primary">${coachingPrice}</span>
               </div>
               <p className="mt-2 text-sm text-muted-foreground">One-time payment, lifetime access</p>
             </CardHeader>
