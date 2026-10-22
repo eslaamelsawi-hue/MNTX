@@ -161,12 +161,8 @@ export function CertificateCarousel() {
         </button>
       </div>
 
-      <p className="mt-5 min-h-[2.5rem] px-2 text-center text-sm leading-relaxed text-muted-foreground" dir="ltr">
-        {active.alt}
-      </p>
-
       {/* autoplay progress — restarts on every change via the key */}
-      <div className="mx-auto h-0.5 w-40 overflow-hidden rounded-full bg-muted">
+      <div className="mx-auto mt-6 h-0.5 w-40 overflow-hidden rounded-full bg-muted">
         {playing && !reduceMotion && !lightbox && (
           <div
             key={index}
