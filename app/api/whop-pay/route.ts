@@ -2,7 +2,7 @@ import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { createWhopCheckout } from "@/lib/whop"
 import { PLAN_PRICES } from "@/lib/plan-pricing"
-import { getPlanAmount } from "@/lib/mentorship-pricing"
+import { getPlanAmount, getMentorshipSplitForCoupon } from "@/lib/mentorship-pricing"
 import { withVisaFee } from "@/lib/payment-fees"
 
 async function applyCouponDiscount(code: string, plan: string, amountDollars: number): Promise<number> {
@@ -49,8 +49,17 @@ export async function POST(request: Request) {
       finalAmount = await applyCouponDiscount(couponCode, plan, finalAmount)
     }
 
+    // An approved applicant may have a bespoke two-payment plan; everyone
+    // else splitting falls back to the standard 60/40.
+    const customSplit = couponCode && splitPayment ? await getMentorshipSplitForCoupon(String(couponCode)) : null
+    if (customSplit) finalAmount = customSplit.firstAmount + customSplit.secondAmount
+
     const isSplit = !!splitPayment
-    let chargeAmount = isSplit ? Math.round(finalAmount * 0.6 * 100) / 100 : finalAmount
+    let chargeAmount = isSplit
+      ? customSplit
+        ? customSplit.firstAmount
+        : Math.round(finalAmount * 0.6 * 100) / 100
+      : finalAmount
     // Whop requires a non-zero charge.
     if (chargeAmount <= 0) chargeAmount = 0.5
 

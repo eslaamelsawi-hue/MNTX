@@ -13,7 +13,15 @@ const GRID_BG = [
 
 const PLAN = "coaching"
 
-export function MentorshipCheckout({ code, email }: { code?: string; email?: string }) {
+export function MentorshipCheckout({
+  code,
+  email,
+  split,
+}: {
+  code?: string
+  email?: string
+  split?: { firstAmount: number; secondAmount: number } | null
+}) {
   const [checking, setChecking] = useState(true)
   const [valid, setValid] = useState(false)
   const [price, setPrice] = useState<number | null>(null)
@@ -81,11 +89,22 @@ export function MentorshipCheckout({ code, email }: { code?: string; email?: str
               {listPrice !== null && <span className="text-lg text-muted-foreground line-through">{listPrice}$</span>}
               <span className="text-4xl font-extrabold text-primary">{price}$</span>
             </div>
-            <p className="mt-1 text-center text-xs text-muted-foreground">دفعة واحدة كاملة</p>
+            {split ? (
+              <div className="mx-auto mt-4 max-w-sm rounded-xl border border-primary/30 bg-primary/10 p-4 text-center">
+                <p className="text-sm font-bold text-primary">الدفع على دفعتين</p>
+                <p className="mt-1.5 text-sm text-muted-foreground">
+                  تدفع الآن <span className="font-bold text-foreground">{split.firstAmount}$</span>،
+                  والمتبقي <span className="font-bold text-foreground">{split.secondAmount}$</span> خلال 30 يومًا
+                  من لوحة التحكم.
+                </p>
+              </div>
+            ) : (
+              <p className="mt-1 text-center text-xs text-muted-foreground">دفعة واحدة كاملة</p>
+            )}
 
             <div className="mt-8 space-y-3">
-              <WhopPayButton plan={PLAN} couponCode={code} prefillEmail={email} amount={price ?? undefined} className="w-full justify-center" />
-              <OKXPayButton plan={PLAN} couponCode={code} prefillEmail={email} className="w-full justify-center" />
+              <WhopPayButton plan={PLAN} couponCode={code} prefillEmail={email} splitPayment={!!split} amount={split ? split.firstAmount : price ?? undefined} className="w-full justify-center" />
+              <OKXPayButton plan={PLAN} couponCode={code} prefillEmail={email} splitPayment={!!split} className="w-full justify-center" />
             </div>
 
             <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">

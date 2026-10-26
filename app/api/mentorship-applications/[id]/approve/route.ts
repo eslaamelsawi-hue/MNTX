@@ -37,10 +37,31 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .single()
   if (fetchError || !application) return NextResponse.json({ error: "Application not found" }, { status: 404 })
 
+  // Optional two-payment plan, with amounts the admin sets. Validated
+  // against the discounted total so the instalments can't silently add up to
+  // something else.
+  const rawSplit = body?.split
+  let split: { firstAmount: number; secondAmount: number } | null = null
+
   const pricing = await getMentorshipPricing()
   const price = pricing.price
   const discountPercent = hasCustom ? Number(customPercent) : pricing.discountPercent
   const discountedPrice = computeDiscounted(price, discountPercent)
+
+  if (rawSplit) {
+    const first = Number(rawSplit.firstAmount)
+    const second = Number(rawSplit.secondAmount)
+    if (!Number.isFinite(first) || !Number.isFinite(second) || first <= 0 || second <= 0) {
+      return NextResponse.json({ error: "Both payments must be greater than 0" }, { status: 400 })
+    }
+    if (Math.abs(first + second - discountedPrice) > 0.01) {
+      return NextResponse.json(
+        { error: `The two payments must add up to $${discountedPrice}` },
+        { status: 400 }
+      )
+    }
+    split = { firstAmount: first, secondAmount: second }
+  }
   const expiresAt = new Date(Date.now() + COUPON_EXPIRY_DAYS * 24 * 60 * 60 * 1000)
 
   let couponCode = generateCouponCode()
@@ -85,11 +106,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
         <h2 style="color: #f5f5f5;">مرحبًا ${application.full_name}،</h2>
         <p style="color: #ccc; line-height: 1.8;">
           تهانينا! راجعنا طلبك وتم قبولك في مينتورشيب Mentix الفردي 1-1. اضغط على الزر بالأسفل لإتمام
-          التسجيل بدفعة واحدة كاملة بقيمة ${discountedPrice}$ (خصم ${discountPercent}% بدلاً من ${price}$).
+          التسجيل${split
+            ? ` على دفعتين: ${split.firstAmount}$ الآن، و${split.secondAmount}$ خلال 30 يومًا`
+            : ` بدفعة واحدة كاملة بقيمة ${discountedPrice}$`} (خصم ${discountPercent}% بدلاً من ${price}$).
         </p>
         <div style="text-align: center; margin: 30px 0;">
           <a href="${checkoutUrl}" style="background: linear-gradient(135deg, #d4a017 0%, #e8b923 100%); color: #0a0a0a; padding: 16px 40px; text-decoration: none; border-radius: 8px; font-weight: bold; display: inline-block; font-size: 16px;">
-            إتمام التسجيل — ${discountedPrice}$
+            إتمام التسجيل — ${split ? `${split.firstAmount}$ الآن` : `${discountedPrice}$`}
           </a>
         </div>
         <p style="color: #888; font-size: 13px; line-height: 1.6;">
@@ -108,9 +131,15 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
 
   const { error: updateError } = await supabase
     .from("mentorship_applications")
-    .update({ status: "approved", coupon_code: couponCode, checkout_url: checkoutUrl })
+    .update({
+      status: "approved",
+      coupon_code: couponCode,
+      checkout_url: checkoutUrl,
+      split_first_amount: split?.firstAmount ?? null,
+      split_second_amount: split?.secondAmount ?? null,
+    })
     .eq("id", id)
   if (updateError) console.error("[mentorship-applications/approve] failed to update status (email was still sent):", updateError)
 
-  return NextResponse.json({ success: true, couponCode, checkoutUrl, price, discountPercent, discountedPrice })
+  return NextResponse.json({ success: true, couponCode, checkoutUrl, price, discountPercent, discountedPrice, split })
 }

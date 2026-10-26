@@ -3,7 +3,7 @@ import crypto from "crypto"
 import { createOrder } from "@/lib/okx-orders"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { PLAN_PRICES } from "@/lib/plan-pricing"
-import { getPlanAmount } from "@/lib/mentorship-pricing"
+import { getPlanAmount, getMentorshipSplitForCoupon } from "@/lib/mentorship-pricing"
 
 const OKX_API_BASE = "https://www.okx.com"
 
@@ -103,8 +103,17 @@ export async function POST(request: Request) {
       finalAmount = await applyCouponDiscount(couponCode, plan, finalAmount)
     }
 
+    // An approved applicant may have a bespoke two-payment plan; everyone
+    // else splitting falls back to the standard 60/40.
+    const customSplit = couponCode && splitPayment ? await getMentorshipSplitForCoupon(String(couponCode)) : null
+    if (customSplit) finalAmount = customSplit.firstAmount + customSplit.secondAmount
+
     const isSplit = !!splitPayment
-    const chargeAmount = isSplit ? Math.round(finalAmount * 0.6 * 100) / 100 : finalAmount
+    const chargeAmount = isSplit
+      ? customSplit
+        ? customSplit.firstAmount
+        : Math.round(finalAmount * 0.6 * 100) / 100
+      : finalAmount
     const chargeAmountStr = String(chargeAmount)
 
     // Store the pending order

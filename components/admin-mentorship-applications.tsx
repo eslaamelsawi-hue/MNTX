@@ -72,6 +72,9 @@ export function AdminMentorshipApplications() {
   const [useCustomDiscount, setUseCustomDiscount] = useState(false)
   const [customDiscount, setCustomDiscount] = useState("")
   const [approveError, setApproveError] = useState("")
+  const [useSplit, setUseSplit] = useState(false)
+  const [firstPayment, setFirstPayment] = useState("")
+  const [secondPayment, setSecondPayment] = useState("")
 
   const [declineTarget, setDeclineTarget] = useState<Application | null>(null)
   const [declineReason, setDeclineReason] = useState("")
@@ -187,10 +190,17 @@ export function AdminMentorshipApplications() {
     setApproveTarget(app)
     setUseCustomDiscount(false)
     setCustomDiscount(savedPricing ? String(savedPricing.discount) : "")
+    setUseSplit(false)
+    setFirstPayment("")
+    setSecondPayment("")
     setApproveError("")
   }
 
-  const approve = async (app: Application, discountPercent?: number) => {
+  const approve = async (
+    app: Application,
+    discountPercent?: number,
+    split?: { firstAmount: number; secondAmount: number }
+  ) => {
     setActionLoading(app.id + "approve")
     setError("")
     setSuccess("")
@@ -199,7 +209,10 @@ export function AdminMentorshipApplications() {
       const res = await fetch(`/api/mentorship-applications/${app.id}/approve`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(discountPercent !== undefined ? { discountPercent } : {}),
+        body: JSON.stringify({
+          ...(discountPercent !== undefined ? { discountPercent } : {}),
+          ...(split ? { split } : {}),
+        }),
       })
       const data = await res.json()
       if (!res.ok) { setApproveError(data.error || "Failed to approve and send the checkout link."); return }
@@ -211,7 +224,11 @@ export function AdminMentorshipApplications() {
       }
       setApplications((prev) => prev.map((a) => (a.id === app.id ? { ...a, ...updated } : a)))
       setSelected((prev) => (prev && prev.id === app.id ? { ...prev, ...updated } : prev))
-      setSuccess(`Approved at ${data.discountPercent}% — $${data.discountedPrice} checkout link emailed to ${app.email}.`)
+      setSuccess(
+        data.split
+          ? `Approved at ${data.discountPercent}% — $${data.split.firstAmount} now + $${data.split.secondAmount} later, link emailed to ${app.email}.`
+          : `Approved at ${data.discountPercent}% — $${data.discountedPrice} checkout link emailed to ${app.email}.`
+      )
       setApproveTarget(null)
     } finally {
       setActionLoading(null)
@@ -220,13 +237,30 @@ export function AdminMentorshipApplications() {
 
   const confirmApprove = () => {
     if (!approveTarget) return
-    if (!useCustomDiscount) { approve(approveTarget); return }
-    const value = Number(customDiscount)
-    if (!Number.isFinite(value) || value < 0 || value > 100) {
-      setApproveError("Discount must be between 0 and 100.")
+
+    let percent: number | undefined
+    if (useCustomDiscount) {
+      const value = Number(customDiscount)
+      if (!Number.isFinite(value) || value < 0 || value > 100) {
+        setApproveError("Discount must be between 0 and 100.")
+        return
+      }
+      percent = value
+    }
+
+    if (!useSplit) { approve(approveTarget, percent); return }
+
+    const first = Number(firstPayment)
+    const second = Number(secondPayment)
+    if (!Number.isFinite(first) || !Number.isFinite(second) || first <= 0 || second <= 0) {
+      setApproveError("Both payments must be greater than 0.")
       return
     }
-    approve(approveTarget, value)
+    if (approveFinalPrice !== null && Math.abs(first + second - approveFinalPrice) > 0.01) {
+      setApproveError(`The two payments must add up to $${approveFinalPrice}.`)
+      return
+    }
+    approve(approveTarget, percent, { firstAmount: first, secondAmount: second })
   }
 
   const openDeclineDialog = (app: Application) => {
@@ -260,6 +294,13 @@ export function AdminMentorshipApplications() {
   const savedFinalPrice = savedPricing
     ? Math.round(savedPricing.price * (1 - savedPricing.discount / 100))
     : null
+
+  const approveFinalPrice = (() => {
+    if (!savedPricing) return null
+    const percent = useCustomDiscount ? Number(customDiscount) : savedPricing.discount
+    if (!Number.isFinite(percent) || percent < 0 || percent > 100) return null
+    return Math.round(savedPricing.price * (1 - percent / 100))
+  })()
 
   const customFinalPrice =
     savedPricing && customDiscount !== "" && Number.isFinite(Number(customDiscount)) &&
@@ -560,6 +601,93 @@ export function AdminMentorshipApplications() {
                         {customFinalPrice !== null ? `$${customFinalPrice}` : "—"}
                       </div>
                     </div>
+                  </div>
+                )}
+              </div>
+
+              <div className="space-y-2.5 border-t border-border pt-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Payment plan</p>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <button
+                    type="button"
+                    onClick={() => { setUseSplit(false); setApproveError("") }}
+                    className={`rounded-xl border p-3 text-center text-sm font-semibold transition-colors ${
+                      !useSplit ? "border-primary bg-primary/10 text-primary" : "border-border text-foreground hover:border-primary/40"
+                    }`}
+                  >
+                    Full amount
+                    {approveFinalPrice !== null && (
+                      <span className="mt-0.5 block text-xs font-normal text-muted-foreground">${approveFinalPrice} at once</span>
+                    )}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setUseSplit(true)
+                      setApproveError("")
+                      // Seed a 50/50 starting point they can edit.
+                      if (!firstPayment && !secondPayment && approveFinalPrice !== null) {
+                        const half = Math.round(approveFinalPrice / 2)
+                        setFirstPayment(String(half))
+                        setSecondPayment(String(approveFinalPrice - half))
+                      }
+                    }}
+                    className={`rounded-xl border p-3 text-center text-sm font-semibold transition-colors ${
+                      useSplit ? "border-primary bg-primary/10 text-primary" : "border-border text-foreground hover:border-primary/40"
+                    }`}
+                  >
+                    Split into 2
+                    <span className="mt-0.5 block text-xs font-normal text-muted-foreground">Second due in 30 days</span>
+                  </button>
+                </div>
+
+                {useSplit && (
+                  <div className="space-y-2 rounded-xl border border-border bg-muted/30 p-3">
+                    <div className="grid grid-cols-2 gap-3">
+                      <div>
+                        <Label className="text-xs">First payment</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={firstPayment}
+                          onChange={(e) => {
+                            setFirstPayment(e.target.value)
+                            setApproveError("")
+                            // Keep the pair adding up to the total.
+                            const first = Number(e.target.value)
+                            if (approveFinalPrice !== null && Number.isFinite(first) && first > 0 && first < approveFinalPrice) {
+                              setSecondPayment(String(Math.round((approveFinalPrice - first) * 100) / 100))
+                            }
+                          }}
+                          className="h-9"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs">Second payment</Label>
+                        <Input
+                          type="number"
+                          min="1"
+                          value={secondPayment}
+                          onChange={(e) => { setSecondPayment(e.target.value); setApproveError("") }}
+                          className="h-9"
+                        />
+                      </div>
+                    </div>
+                    <p className="text-xs text-muted-foreground">
+                      Must add up to{" "}
+                      <span className="font-mono font-bold text-foreground">
+                        {approveFinalPrice !== null ? `$${approveFinalPrice}` : "the discounted total"}
+                      </span>
+                      {firstPayment && secondPayment && (
+                        <>
+                          {" "}— currently{" "}
+                          <span className="font-mono font-bold text-foreground">
+                            ${Math.round((Number(firstPayment) + Number(secondPayment)) * 100) / 100}
+                          </span>
+                        </>
+                      )}
+                    </p>
                   </div>
                 )}
               </div>

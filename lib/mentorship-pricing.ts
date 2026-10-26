@@ -60,3 +60,32 @@ export async function getPlanAmount(plan: string): Promise<number | undefined> {
   if (plan === MENTORSHIP_PLAN) return (await getMentorshipPricing()).price
   return PLAN_PRICES[plan]?.amount
 }
+
+export type MentorshipSplitPlan = { firstAmount: number; secondAmount: number }
+
+/**
+ * The custom two-payment plan an admin attached to an approved applicant,
+ * looked up by the single-use coupon in their checkout link.
+ *
+ * Deliberately read from the database rather than the URL: the first charge
+ * is derived from this, so letting the link carry the amounts would let the
+ * holder pay whatever they liked.
+ */
+export async function getMentorshipSplitForCoupon(code: string): Promise<MentorshipSplitPlan | null> {
+  try {
+    const supabase = createAdminClient()
+    const { data } = await supabase
+      .from("mentorship_applications")
+      .select("split_first_amount, split_second_amount")
+      .eq("coupon_code", code.toUpperCase().trim())
+      .maybeSingle()
+
+    const first = Number(data?.split_first_amount)
+    const second = Number(data?.split_second_amount)
+    if (!Number.isFinite(first) || !Number.isFinite(second) || first <= 0 || second <= 0) return null
+    return { firstAmount: first, secondAmount: second }
+  } catch (e) {
+    console.error("[mentorship-pricing] split lookup failed:", e)
+    return null
+  }
+}
