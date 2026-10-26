@@ -176,7 +176,25 @@ export async function GET() {
     .select("*")
     .order("created_at", { ascending: false })
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
-  return NextResponse.json({ applications: data })
+
+  // Attach the discount each approved applicant was actually given, read off
+  // their coupon — so a one-off rate is still visible after a refresh without
+  // storing it twice.
+  const codes = (data ?? []).map((a) => a.coupon_code).filter(Boolean) as string[]
+  const { data: coupons } = codes.length
+    ? await supabase.from("coupons").select("code, discount_type, discount_value").in("code", codes)
+    : { data: [] as { code: string; discount_type: string; discount_value: number }[] }
+  const byCode = new Map((coupons ?? []).map((c) => [c.code, c]))
+
+  const applications = (data ?? []).map((a) => {
+    const coupon = a.coupon_code ? byCode.get(a.coupon_code) : undefined
+    return {
+      ...a,
+      granted_discount_percent: coupon?.discount_type === "percent" ? Number(coupon.discount_value) : null,
+    }
+  })
+
+  return NextResponse.json({ applications })
 }
 
 export async function PATCH(request: NextRequest) {

@@ -44,6 +44,7 @@ type Application = {
   coupon_code: string | null
   checkout_url: string | null
   decline_reason: string | null
+  granted_discount_percent: number | null
   created_at: string
 }
 
@@ -67,6 +68,11 @@ export function AdminMentorshipApplications() {
   const [actionLoading, setActionLoading] = useState<string | null>(null)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState("")
+  const [approveTarget, setApproveTarget] = useState<Application | null>(null)
+  const [useCustomDiscount, setUseCustomDiscount] = useState(false)
+  const [customDiscount, setCustomDiscount] = useState("")
+  const [approveError, setApproveError] = useState("")
+
   const [declineTarget, setDeclineTarget] = useState<Application | null>(null)
   const [declineReason, setDeclineReason] = useState("")
   const [declineError, setDeclineError] = useState("")
@@ -177,21 +183,50 @@ export function AdminMentorshipApplications() {
     }
   }
 
-  const approve = async (app: Application) => {
+  const openApproveDialog = (app: Application) => {
+    setApproveTarget(app)
+    setUseCustomDiscount(false)
+    setCustomDiscount(savedPricing ? String(savedPricing.discount) : "")
+    setApproveError("")
+  }
+
+  const approve = async (app: Application, discountPercent?: number) => {
     setActionLoading(app.id + "approve")
     setError("")
     setSuccess("")
+    setApproveError("")
     try {
-      const res = await fetch(`/api/mentorship-applications/${app.id}/approve`, { method: "POST" })
+      const res = await fetch(`/api/mentorship-applications/${app.id}/approve`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(discountPercent !== undefined ? { discountPercent } : {}),
+      })
       const data = await res.json()
-      if (!res.ok) { setError(data.error || "Failed to approve and send the checkout link."); return }
-      const updated = { status: "approved" as const, coupon_code: data.couponCode, checkout_url: data.checkoutUrl }
+      if (!res.ok) { setApproveError(data.error || "Failed to approve and send the checkout link."); return }
+      const updated = {
+        status: "approved" as const,
+        coupon_code: data.couponCode,
+        checkout_url: data.checkoutUrl,
+        granted_discount_percent: data.discountPercent ?? null,
+      }
       setApplications((prev) => prev.map((a) => (a.id === app.id ? { ...a, ...updated } : a)))
       setSelected((prev) => (prev && prev.id === app.id ? { ...prev, ...updated } : prev))
-      setSuccess(`Approved! $${data.discountedPrice} checkout link emailed to ${app.email}.`)
+      setSuccess(`Approved at ${data.discountPercent}% — $${data.discountedPrice} checkout link emailed to ${app.email}.`)
+      setApproveTarget(null)
     } finally {
       setActionLoading(null)
     }
+  }
+
+  const confirmApprove = () => {
+    if (!approveTarget) return
+    if (!useCustomDiscount) { approve(approveTarget); return }
+    const value = Number(customDiscount)
+    if (!Number.isFinite(value) || value < 0 || value > 100) {
+      setApproveError("Discount must be between 0 and 100.")
+      return
+    }
+    approve(approveTarget, value)
   }
 
   const openDeclineDialog = (app: Application) => {
@@ -225,6 +260,12 @@ export function AdminMentorshipApplications() {
   const savedFinalPrice = savedPricing
     ? Math.round(savedPricing.price * (1 - savedPricing.discount / 100))
     : null
+
+  const customFinalPrice =
+    savedPricing && customDiscount !== "" && Number.isFinite(Number(customDiscount)) &&
+    Number(customDiscount) >= 0 && Number(customDiscount) <= 100
+      ? Math.round(savedPricing.price * (1 - Number(customDiscount) / 100))
+      : null
 
   const previewPrice = Number(priceInput)
   const previewDiscount = Number(discountInput)
@@ -318,7 +359,7 @@ export function AdminMentorshipApplications() {
                             size="sm"
                             className="gap-1 text-emerald-400 hover:text-emerald-300"
                             disabled={actionLoading === a.id + "approve"}
-                            onClick={() => approve(a)}
+                            onClick={() => openApproveDialog(a)}
                           >
                             {actionLoading === a.id + "approve" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />} Approve
                           </Button>
@@ -411,6 +452,7 @@ export function AdminMentorshipApplications() {
                       </a>
                     </div>
                   )}
+                  <Field label="Discount granted" value={selected.granted_discount_percent !== null ? `${selected.granted_discount_percent}%` : null} />
                   <Field label="Decline reason sent" value={selected.decline_reason} />
                 </div>
               )}
@@ -428,7 +470,7 @@ export function AdminMentorshipApplications() {
                   <Button
                     className="gap-1.5"
                     disabled={actionLoading === selected.id + "approve"}
-                    onClick={() => approve(selected)}
+                    onClick={() => openApproveDialog(selected)}
                   >
                     {actionLoading === selected.id + "approve" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Approve &amp; Send{savedFinalPrice !== null ? ` $${savedFinalPrice}` : ""} Checkout
                   </Button>
@@ -447,6 +489,94 @@ export function AdminMentorshipApplications() {
                     <XCircle className="h-4 w-4" /> Decline
                   </Button>
                 )}
+              </div>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      {/* Approve dialog — default rate, or a one-off for this applicant */}
+      <Dialog open={!!approveTarget} onOpenChange={(open) => !open && setApproveTarget(null)}>
+        <DialogContent className="max-w-md">
+          {approveTarget && (
+            <>
+              <DialogHeader>
+                <DialogTitle>Approve {approveTarget.full_name}</DialogTitle>
+                <DialogDescription>
+                  Pick the discount to send with their checkout link. The link is single-use and expires in 14 days.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-2.5">
+                <button
+                  type="button"
+                  onClick={() => { setUseCustomDiscount(false); setApproveError("") }}
+                  className={`flex w-full items-start gap-3 rounded-xl border p-3.5 text-start transition-colors ${
+                    !useCustomDiscount ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"
+                  }`}
+                >
+                  <span className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 ${!useCustomDiscount ? "border-primary bg-primary" : "border-muted-foreground/60"}`} />
+                  <span>
+                    <span className="block text-sm font-semibold text-foreground">Current discount</span>
+                    <span className="block text-xs text-muted-foreground">
+                      {savedPricing
+                        ? `${savedPricing.discount}% off $${savedPricing.price} — they pay $${savedFinalPrice}`
+                        : "The rate configured above"}
+                    </span>
+                  </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => { setUseCustomDiscount(true); setApproveError("") }}
+                  className={`flex w-full items-start gap-3 rounded-xl border p-3.5 text-start transition-colors ${
+                    useCustomDiscount ? "border-primary bg-primary/10" : "border-border hover:border-primary/40"
+                  }`}
+                >
+                  <span className={`mt-0.5 h-4 w-4 shrink-0 rounded-full border-2 ${useCustomDiscount ? "border-primary bg-primary" : "border-muted-foreground/60"}`} />
+                  <span>
+                    <span className="block text-sm font-semibold text-foreground">Custom discount</span>
+                    <span className="block text-xs text-muted-foreground">A one-off rate, just for this applicant</span>
+                  </span>
+                </button>
+
+                {useCustomDiscount && (
+                  <div className="grid grid-cols-2 gap-3 rounded-xl border border-border bg-muted/30 p-3">
+                    <div>
+                      <Label className="text-xs">Discount %</Label>
+                      <Input
+                        type="number"
+                        min="0"
+                        max="100"
+                        autoFocus
+                        value={customDiscount}
+                        onChange={(e) => { setCustomDiscount(e.target.value); setApproveError("") }}
+                        className="h-9"
+                      />
+                    </div>
+                    <div>
+                      <Label className="text-xs">They pay</Label>
+                      <div className="flex h-9 items-center rounded-md border border-border bg-background px-3 font-mono text-sm font-bold text-primary">
+                        {customFinalPrice !== null ? `$${customFinalPrice}` : "—"}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {approveError && <p className="text-sm text-destructive">{approveError}</p>}
+
+              <div className="flex justify-end gap-2 pt-2">
+                <Button variant="outline" onClick={() => setApproveTarget(null)}>Cancel</Button>
+                <Button
+                  className="gap-1.5"
+                  disabled={actionLoading === approveTarget.id + "approve"}
+                  onClick={confirmApprove}
+                >
+                  {actionLoading === approveTarget.id + "approve"
+                    ? <Loader2 className="h-4 w-4 animate-spin" />
+                    : <CheckCircle2 className="h-4 w-4" />} Approve &amp; Send Link
+                </Button>
               </div>
             </>
           )}

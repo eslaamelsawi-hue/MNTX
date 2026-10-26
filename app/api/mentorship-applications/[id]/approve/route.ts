@@ -4,6 +4,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { sendEmail } from "@/lib/resend-send"
 import { generateCouponCode } from "@/lib/discount-offers"
 import { getMentorshipPricing, MENTORSHIP_PLAN } from "@/lib/mentorship-pricing"
+import { discountedPrice as computeDiscounted } from "@/lib/plan-pricing"
 
 async function isAdmin() {
   const cookieStore = await cookies()
@@ -16,6 +17,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   if (!(await isAdmin())) return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   const { id } = await params
 
+  // An optional one-off discount for this applicant; without it they get the
+  // rate configured in the dashboard.
+  const body = await request.json().catch(() => ({}))
+  const customPercent = body?.discountPercent
+  const hasCustom = customPercent !== undefined && customPercent !== null && customPercent !== ""
+  if (hasCustom) {
+    const value = Number(customPercent)
+    if (!Number.isFinite(value) || value < 0 || value > 100) {
+      return NextResponse.json({ error: "Custom discount must be between 0 and 100" }, { status: 400 })
+    }
+  }
+
   const supabase = createAdminClient()
   const { data: application, error: fetchError } = await supabase
     .from("mentorship_applications")
@@ -24,7 +37,10 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .single()
   if (fetchError || !application) return NextResponse.json({ error: "Application not found" }, { status: 404 })
 
-  const { price, discountPercent, discountedPrice } = await getMentorshipPricing()
+  const pricing = await getMentorshipPricing()
+  const price = pricing.price
+  const discountPercent = hasCustom ? Number(customPercent) : pricing.discountPercent
+  const discountedPrice = computeDiscounted(price, discountPercent)
   const expiresAt = new Date(Date.now() + COUPON_EXPIRY_DAYS * 24 * 60 * 60 * 1000)
 
   let couponCode = generateCouponCode()
