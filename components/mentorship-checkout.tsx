@@ -81,7 +81,7 @@ export function MentorshipCheckout({
               </span>
               <h1 className="mt-5 text-2xl font-extrabold text-balance md:text-3xl">إتمام التسجيل في مينتورشيب Mentix الفردي</h1>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                8 جلسات أسبوعية مباشرة، متابعة شخصية لصفقاتك وتفكيرك، ومجتمع خاص.
+                6 جلسات أسبوعية مباشرة، متابعة شخصية لصفقاتك وتفكيرك، ومجتمع خاص.
               </p>
             </div>
 

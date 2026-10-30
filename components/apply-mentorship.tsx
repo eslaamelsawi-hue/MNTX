@@ -213,11 +213,11 @@ export function ApplyMentorship({ seatsFull, remaining, discountPercent }: { sea
             تدرّب تحت إشراف مباشر، <span className="text-primary">بخصم {discountPercent}%</span> لدفعة أكتوبر
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
-            8 جلسات أسبوعية مباشرة، متابعة شخصية لصفقاتك وتفكيرك، ومجتمع خاص. قدّم طلبك الآن، ويراجعه فريقنا
+            6 جلسات أسبوعية مباشرة، متابعة شخصية لصفقاتك وتفكيرك، ومجتمع خاص. قدّم طلبك الآن، ويراجعه فريقنا
             خلال أيام قليلة.
           </p>
           <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5 text-sm text-muted-foreground">
-            <span className="rounded-full border border-border bg-muted px-4 py-1.5">8 جلسات زووم أسبوعية</span>
+            <span className="rounded-full border border-border bg-muted px-4 py-1.5">6 جلسات زووم أسبوعية</span>
             <span className="rounded-full border border-border bg-muted px-4 py-1.5">متابعة شخصية ومراجعة صفقات</span>
             <span className="rounded-full border border-border bg-muted px-4 py-1.5">مجتمع خاص على تيليجرام</span>
           </div>

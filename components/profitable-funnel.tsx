@@ -104,7 +104,7 @@ export function ProfitableFunnel({ daysUntilBatch }: { daysUntilBatch: number })
                 عايز توصل للمستوى ده؟
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
-                تقدر تسجّل في مينتورشيب دفعة أكتوبر — 8 أسابيع، جلسة فردية كل أسبوع، ومتابعة
+                تقدر تسجّل في مينتورشيب دفعة أكتوبر — 6 أسابيع، جلسة فردية كل أسبوع، ومتابعة
                 لصفقاتك خطوة بخطوة.
               </p>
 
