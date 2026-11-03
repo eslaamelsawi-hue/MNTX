@@ -2,6 +2,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { NextResponse } from "next/server"
 import { getMentorshipPricing } from "@/lib/mentorship-pricing"
 import { DEFAULT_MENTORSHIP_PRICE } from "@/lib/plan-pricing"
+import { DEFAULT_USD_TO_EGP, USD_TO_EGP_KEY } from "@/lib/egp"
 
 const KEYS = [
   "subscriptions_open",
@@ -10,6 +11,7 @@ const KEYS = [
   "payment_stripe_enabled",
   "payment_egypt_enabled",
   "payment_whop_enabled",
+  USD_TO_EGP_KEY,
 ]
 
 /**
@@ -34,6 +36,7 @@ export async function GET() {
       egypt: true,
       whop: true,
       coachingPrice: DEFAULT_MENTORSHIP_PRICE,
+      usdToEgp: DEFAULT_USD_TO_EGP,
     })
   }
 
@@ -49,5 +52,6 @@ export async function GET() {
     egypt: flag("payment_egypt_enabled"),
     whop: flag("payment_whop_enabled"),
     coachingPrice,
+    usdToEgp: Number(raw[USD_TO_EGP_KEY]) > 0 ? Number(raw[USD_TO_EGP_KEY]) : DEFAULT_USD_TO_EGP,
   })
 }

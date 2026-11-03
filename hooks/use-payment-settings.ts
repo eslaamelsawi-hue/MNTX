@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { DEFAULT_MENTORSHIP_PRICE } from "@/lib/plan-pricing"
+import { DEFAULT_USD_TO_EGP } from "@/lib/egp"
 
 export type PaymentSettings = {
   subscriptionsOpen: boolean
@@ -12,6 +13,8 @@ export type PaymentSettings = {
   whop: boolean
   /** Live coaching list price, so marketing copy matches checkout. */
   coachingPrice: number
+  /** USD → EGP rate for the manual Egyptian instructions. */
+  usdToEgp: number
 }
 
 const DEFAULTS: PaymentSettings = {
@@ -22,6 +25,7 @@ const DEFAULTS: PaymentSettings = {
   egypt: true,
   whop: true,
   coachingPrice: DEFAULT_MENTORSHIP_PRICE,
+  usdToEgp: DEFAULT_USD_TO_EGP,
 }
 
 /** Fetches the admin-controlled payment kill-switches once per mount.

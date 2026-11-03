@@ -503,7 +503,7 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
               </button>
               {showEgypt && (
                 <div className="rounded-lg border border-border p-4">
-                  <EgyptPayment />
+                  <EgyptPayment plan={selectedPlan ?? undefined} amountUsd={totalUsd} />
                 </div>
               )}
               </div>

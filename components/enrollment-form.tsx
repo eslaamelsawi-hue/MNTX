@@ -263,7 +263,7 @@ export function EnrollmentForm() {
             </Card>
 
             <div className="mt-10">
-              <EgyptPayment />
+              <EgyptPayment plan="starter" />
             </div>
           </div>
         </section>

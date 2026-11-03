@@ -16,6 +16,7 @@ const ALLOWED_KEYS = [
   "payment_whop_enabled",
   "mentorship_price",
   "mentorship_discount_percent",
+  "usd_to_egp_rate",
 ]
 
 const BOOLEAN_KEYS = [
@@ -46,6 +47,10 @@ function validate(key: string, value: unknown): string | null {
   if (key === "mentorship_price") {
     const num = Number(value)
     if (!Number.isFinite(num) || num <= 0) return "Price must be greater than 0"
+  }
+  if (key === "usd_to_egp_rate") {
+    const num = Number(value)
+    if (!Number.isFinite(num) || num <= 0) return "Exchange rate must be greater than 0"
   }
   if (key === "mentorship_discount_percent") {
     const num = Number(value)

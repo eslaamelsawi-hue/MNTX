@@ -3,7 +3,11 @@
 import { useState, useEffect, useCallback } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Switch } from "@/components/ui/switch"
-import { RefreshCw, ShieldAlert, CreditCard } from "lucide-react"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { RefreshCw, ShieldAlert, CreditCard, Banknote } from "lucide-react"
+import { DEFAULT_USD_TO_EGP, usdToEgp, formatEgp } from "@/lib/egp"
 
 type Flags = {
   subscriptions_open: boolean
@@ -35,6 +39,10 @@ export function AdminPaymentSettings() {
   const [flags, setFlags] = useState<Flags>(DEFAULTS)
   const [loading, setLoading] = useState(true)
   const [savingKey, setSavingKey] = useState<string | null>(null)
+  const [egpRate, setEgpRate] = useState(String(DEFAULT_USD_TO_EGP))
+  const [egpSaving, setEgpSaving] = useState(false)
+  const [egpMsg, setEgpMsg] = useState("")
+  const [egpError, setEgpError] = useState("")
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -50,6 +58,7 @@ export function AdminPaymentSettings() {
         payment_egypt_enabled: settings.payment_egypt_enabled !== "false",
         payment_whop_enabled: settings.payment_whop_enabled !== "false",
       })
+      if (settings.usd_to_egp_rate) setEgpRate(settings.usd_to_egp_rate)
     } catch (e) {
       console.error("Failed to load payment settings:", e)
     }
@@ -72,6 +81,29 @@ export function AdminPaymentSettings() {
       setFlags((f) => ({ ...f, [key]: !next })) // revert on failure
     }
     setSavingKey(null)
+  }
+
+  const saveEgpRate = async () => {
+    const value = Number(egpRate)
+    setEgpError("")
+    setEgpMsg("")
+    if (!Number.isFinite(value) || value <= 0) { setEgpError("Rate must be greater than 0."); return }
+    setEgpSaving(true)
+    try {
+      const res = await fetch("/api/admin/settings", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ key: "usd_to_egp_rate", value: String(value) }),
+      })
+      if (!res.ok) {
+        const data = await res.json().catch(() => ({}))
+        setEgpError(data.error || "Failed to save.")
+        return
+      }
+      setEgpMsg("Saved.")
+    } finally {
+      setEgpSaving(false)
+    }
   }
 
   if (loading) {
@@ -140,6 +172,48 @@ export function AdminPaymentSettings() {
               />
             </div>
           ))}
+        </CardContent>
+      </Card>
+
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <Banknote className="h-5 w-5 text-primary" />
+            Egyptian Payment Rate
+          </CardTitle>
+          <CardDescription>
+            USD → EGP used on the Instapay / Vodafone Cash instructions. Every plan&apos;s Egyptian
+            amount is converted from this, so there are no per-plan figures to keep in sync — set
+            it once and include whatever margin you want. Amounts are rounded up to the nearest 50 EGP.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="space-y-3">
+          <div className="grid gap-3 sm:grid-cols-3">
+            <div>
+              <Label className="text-xs">1 USD =</Label>
+              <Input
+                type="number"
+                min="1"
+                step="0.01"
+                value={egpRate}
+                onChange={(e) => { setEgpRate(e.target.value); setEgpMsg("") }}
+                className="h-9"
+              />
+            </div>
+            <div className="sm:col-span-2">
+              <Label className="text-xs">Preview</Label>
+              <div className="flex h-9 items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-muted-foreground">
+                {Number(egpRate) > 0
+                  ? `$100 → ${formatEgp(usdToEgp(100, Number(egpRate)))} EGP · $1200 → ${formatEgp(usdToEgp(1200, Number(egpRate)))} EGP`
+                  : "—"}
+              </div>
+            </div>
+          </div>
+          {egpError && <p className="text-sm text-destructive">{egpError}</p>}
+          {egpMsg && <p className="text-sm text-emerald-400">{egpMsg}</p>}
+          <Button size="sm" onClick={saveEgpRate} disabled={egpSaving}>
+            {egpSaving ? "Saving…" : "Save Rate"}
+          </Button>
         </CardContent>
       </Card>
     </div>

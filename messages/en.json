@@ -465,19 +465,19 @@
     "step1": "Open your",
     "step1Bold": "INSTAPAY",
     "step1End": "app to Send the Payment",
-    "step2": "For",
-    "step2StarterPlan": "STARTER PLAN",
-    "step2Pay": "Pay",
-    "step2Amount": "20,000 EGP",
-    "step2And": "and For",
-    "step2CoachingPlan": "1-on-1 Coaching",
-    "step2ContactUs": "PLAN Pay 49,500 EGP",
     "step3": "Send a payment confirmation screenshot to the team",
     "step3Here": "HERE",
     "instapay": "Instapay",
     "vodafoneCash": "Vodafone Cash",
     "copy": "Copy",
-    "copied": "Copied"
+    "copied": "Copied",
+    "step2Send": "Send",
+    "step2Choose": "Send the amount for your plan:",
+    "egp": "EGP",
+    "plans": {
+      "starter": "Starter Plan",
+      "coaching": "1-on-1 Coaching"
+    }
   },
   "gold": {
     "badge": "Egyptian Gold Prices",

@@ -4,6 +4,8 @@ import { useState } from "react"
 import { Copy, Check, CreditCard } from "lucide-react"
 import { useTranslations } from 'next-intl'
 import { usePaymentSettings } from "@/hooks/use-payment-settings"
+import { PLAN_PRICES } from "@/lib/plan-pricing"
+import { usdToEgp, formatEgp } from "@/lib/egp"
 
 function CopyButton({ text }: { text: string }) {
   const t = useTranslations('egyptPayment')
@@ -35,9 +37,28 @@ function StepNumber({ num }: { num: number }) {
   )
 }
 
-export function EgyptPayment() {
+/** Plans worth listing when the page isn't tied to one specific checkout. */
+const LISTED_PLANS = ["starter", "coaching"] as const
+
+export function EgyptPayment({
+  plan,
+  amountUsd,
+}: {
+  /** Checkout this is embedded in, so the amount can be derived from it. */
+  plan?: string
+  /** Final USD total (after any coupon), when the caller already knows it. */
+  amountUsd?: number
+} = {}) {
   const t = useTranslations('egyptPayment')
   const { settings, loading } = usePaymentSettings()
+
+  // The coaching price is admin-configurable, so it comes from settings
+  // rather than the static table.
+  const priceFor = (id: string) =>
+    id === "coaching" ? settings.coachingPrice : PLAN_PRICES[id]?.amount
+
+  const resolvedUsd = amountUsd ?? (plan ? priceFor(plan) : undefined)
+  const rate = settings.usdToEgp
 
   if (!loading && (!settings.subscriptionsOpen || !settings.egypt)) {
     return (
@@ -81,15 +102,36 @@ export function EgyptPayment() {
             </li>
             <li className="flex items-start gap-4 border-b border-border pb-5">
               <StepNumber num={2} />
-              <p className="text-sm text-muted-foreground md:text-base">
-                {t('step2')}{" "}
-                <span className="font-bold text-foreground">{t('step2StarterPlan')}</span>
-                {" "}{t('step2Pay')}{" "}
-                <span className="font-bold text-primary">{t('step2Amount')}</span>
-                {" "}{t('step2And')}{" "}
-                <span className="font-bold text-foreground">{t('step2CoachingPlan')}</span>
-                {" "}{t('step2ContactUs')}
-              </p>
+              <div className="text-sm text-muted-foreground md:text-base">
+                {resolvedUsd ? (
+                  <p>
+                    {t('step2Send')}{" "}
+                    <span className="font-bold text-primary">
+                      {formatEgp(usdToEgp(resolvedUsd, rate))} {t('egp')}
+                    </span>{" "}
+                    <span className="text-xs text-muted-foreground">(${resolvedUsd})</span>
+                  </p>
+                ) : (
+                  <>
+                    <p className="mb-2">{t('step2Choose')}</p>
+                    <ul className="space-y-1.5">
+                      {LISTED_PLANS.map((id) => {
+                        const usd = priceFor(id)
+                        if (!usd) return null
+                        return (
+                          <li key={id} className="flex items-center justify-between gap-4 rounded-lg bg-secondary/50 px-3 py-2">
+                            <span className="font-medium text-foreground">{t(`plans.${id}`)}</span>
+                            <span className="font-bold text-primary">
+                              {formatEgp(usdToEgp(usd, rate))} {t('egp')}
+                              <span className="ms-1.5 text-xs font-normal text-muted-foreground">(${usd})</span>
+                            </span>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </>
+                )}
+              </div>
             </li>
             <li className="flex items-center gap-4">
               <StepNumber num={3} />
