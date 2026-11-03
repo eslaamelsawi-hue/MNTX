@@ -3,7 +3,7 @@ import { NextResponse } from "next/server"
 import { getMentorshipPricing } from "@/lib/mentorship-pricing"
 import { DEFAULT_MENTORSHIP_PRICE } from "@/lib/plan-pricing"
 import { getUsdToEgpRate } from "@/lib/egp-rate"
-import { DEFAULT_USD_TO_EGP } from "@/lib/egp"
+import { DEFAULT_USD_TO_EGP, EGYPT_INSTAPAY_KEY, EGYPT_VODAFONE_KEY, DEFAULT_INSTAPAY_NUMBER, DEFAULT_VODAFONE_NUMBER } from "@/lib/egp"
 
 const KEYS = [
   "subscriptions_open",
@@ -12,6 +12,8 @@ const KEYS = [
   "payment_stripe_enabled",
   "payment_egypt_enabled",
   "payment_whop_enabled",
+  EGYPT_INSTAPAY_KEY,
+  EGYPT_VODAFONE_KEY,
 ]
 
 /**
@@ -38,6 +40,8 @@ export async function GET() {
       whop: true,
       coachingPrice: DEFAULT_MENTORSHIP_PRICE,
       usdToEgp: DEFAULT_USD_TO_EGP,
+      instapayNumber: DEFAULT_INSTAPAY_NUMBER,
+      vodafoneNumber: DEFAULT_VODAFONE_NUMBER,
     })
   }
 
@@ -57,5 +61,7 @@ export async function GET() {
     usdToEgpLive: egp.liveRate,
     usdToEgpMargin: egp.margin,
     usdToEgpSource: egp.source,
+    instapayNumber: raw[EGYPT_INSTAPAY_KEY] || DEFAULT_INSTAPAY_NUMBER,
+    vodafoneNumber: raw[EGYPT_VODAFONE_KEY] || DEFAULT_VODAFONE_NUMBER,
   })
 }

@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RefreshCw, ShieldAlert, CreditCard, Banknote } from "lucide-react"
-import { usdToEgp, formatEgp } from "@/lib/egp"
+import { usdToEgp, formatEgp, DEFAULT_INSTAPAY_NUMBER, DEFAULT_VODAFONE_NUMBER } from "@/lib/egp"
 
 type Flags = {
   subscriptions_open: boolean
@@ -45,6 +45,8 @@ export function AdminPaymentSettings() {
   const [egpSaving, setEgpSaving] = useState(false)
   const [egpMsg, setEgpMsg] = useState("")
   const [egpError, setEgpError] = useState("")
+  const [instapayNumber, setInstapayNumber] = useState("")
+  const [vodafoneNumber, setVodafoneNumber] = useState("")
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -62,6 +64,8 @@ export function AdminPaymentSettings() {
       })
       if (settings.usd_to_egp_rate && Number(settings.usd_to_egp_rate) > 0) setEgpRate(settings.usd_to_egp_rate)
       if (settings.usd_to_egp_margin) setEgpMargin(settings.usd_to_egp_margin)
+      if (settings.egypt_instapay_number) setInstapayNumber(settings.egypt_instapay_number)
+      if (settings.egypt_vodafone_number) setVodafoneNumber(settings.egypt_vodafone_number)
       try {
         const live = await (await fetch("/api/payment-settings")).json()
         setEgpLive({ live: live.usdToEgpLive, effective: live.usdToEgp, source: live.usdToEgpSource })
@@ -97,14 +101,29 @@ export function AdminPaymentSettings() {
     setEgpMsg("")
     if (!Number.isFinite(override) || override < 0) { setEgpError("Override must be a positive number, or blank for the live rate."); return }
     if (!Number.isFinite(margin) || margin < 0) { setEgpError("Margin cannot be negative."); return }
+    const numbers = [
+      ["egypt_instapay_number", instapayNumber.trim()],
+      ["egypt_vodafone_number", vodafoneNumber.trim()],
+    ] as const
+    for (const [, value] of numbers) {
+      if (value && !/^[0-9+\s-]{6,20}$/.test(value)) {
+        setEgpError("Account numbers may only contain digits, spaces, + and -.")
+        return
+      }
+    }
 
     setEgpSaving(true)
     try {
-      for (const [key, value] of [["usd_to_egp_rate", override], ["usd_to_egp_margin", margin]] as const) {
+      const updates: [string, string][] = [
+        ["usd_to_egp_rate", String(override)],
+        ["usd_to_egp_margin", String(margin)],
+        ...numbers.filter(([, value]) => value !== "").map(([key, value]) => [key, value] as [string, string]),
+      ]
+      for (const [key, value] of updates) {
         const res = await fetch("/api/admin/settings", {
           method: "PATCH",
           headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ key, value: String(value) }),
+          body: JSON.stringify({ key, value }),
         })
         if (!res.ok) {
           const data = await res.json().catch(() => ({}))
@@ -195,7 +214,7 @@ export function AdminPaymentSettings() {
         <CardHeader>
           <CardTitle className="flex items-center gap-2">
             <Banknote className="h-5 w-5 text-primary" />
-            Egyptian Payment Rate
+            Egyptian Payment
           </CardTitle>
           <CardDescription>
             The live USD → EGP market rate plus your margin, refreshed hourly. Every plan&apos;s
@@ -253,10 +272,37 @@ export function AdminPaymentSettings() {
               </div>
             </div>
           </div>
+          <div className="grid gap-3 sm:grid-cols-2">
+            <div>
+              <Label className="text-xs">Instapay number</Label>
+              <Input
+                dir="ltr"
+                inputMode="tel"
+                placeholder={DEFAULT_INSTAPAY_NUMBER}
+                value={instapayNumber}
+                onChange={(e) => { setInstapayNumber(e.target.value); setEgpMsg("") }}
+                className="h-9 font-mono"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Vodafone Cash number</Label>
+              <Input
+                dir="ltr"
+                inputMode="tel"
+                placeholder={DEFAULT_VODAFONE_NUMBER}
+                value={vodafoneNumber}
+                onChange={(e) => { setVodafoneNumber(e.target.value); setEgpMsg("") }}
+                className="h-9 font-mono"
+              />
+            </div>
+          </div>
+          <p className="text-xs text-muted-foreground">
+            These are the numbers customers see — and copy — in the Instapay payment window.
+          </p>
           {egpError && <p className="text-sm text-destructive">{egpError}</p>}
           {egpMsg && <p className="text-sm text-emerald-400">{egpMsg}</p>}
           <Button size="sm" onClick={saveEgpRate} disabled={egpSaving}>
-            {egpSaving ? "Saving…" : "Save Rate"}
+            {egpSaving ? "Saving…" : "Save"}
           </Button>
         </CardContent>
       </Card>

@@ -478,7 +478,13 @@
       "starter": "Starter Plan",
       "coaching": "1-on-1 Coaching"
     },
-    "step2Remaining": "Remaining, due within 30 days:"
+    "step2Remaining": "Remaining, due within 30 days:",
+    "close": "Close",
+    "copiedToast": "Number copied successfully",
+    "payWithInstapay": "Pay with Instapay",
+    "nonRefundable": "All payments are final and non-refundable",
+    "paymentDetails": "Payment details",
+    "screenshotNote": "After transferring, send a screenshot of the receipt so your subscription can be confirmed and activated."
   },
   "gold": {
     "badge": "Egyptian Gold Prices",

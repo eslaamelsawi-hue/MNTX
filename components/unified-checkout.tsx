@@ -8,7 +8,7 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { OKXPayButton, NowPaymentsButton, WhopPayButton } from "@/components/payment-buttons"
-import { EgyptPayment } from "@/components/egypt-payment"
+import { InstapayPayButton } from "@/components/instapay-payment"
 import { usePaymentSettings } from "@/hooks/use-payment-settings"
 import {
   EmbeddedCheckout,
@@ -23,7 +23,6 @@ import {
   X,
   CheckCircle2,
   ShieldCheck,
-  ChevronDown,
 } from "lucide-react"
 import type { Product } from "@/lib/products"
 
@@ -154,7 +153,6 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
   const [couponError, setCouponError] = useState("")
   const [appliedCoupon, setAppliedCoupon] = useState<AppliedCoupon | null>(null)
   const [paymentMethod, setPaymentMethod] = useState<string | null>(null)
-  const [showEgypt, setShowEgypt] = useState(false)
   const [splitPayment, setSplitPayment] = useState(false)
   const { settings, loading: settingsLoading } = usePaymentSettings()
 
@@ -482,34 +480,12 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
                 className="w-full justify-start gap-3 border border-border bg-transparent text-foreground hover:border-primary/50 hover:bg-primary/5 h-auto p-4"
               />
 
-              <button
-                type="button"
-                onClick={() => setShowEgypt(!showEgypt)}
-                className={`flex w-full items-center justify-between rounded-lg border p-4 text-left transition-all ${
-                  showEgypt
-                    ? "border-primary bg-primary/5"
-                    : "border-border hover:border-primary/50"
-                }`}
-              >
-                <div className="flex items-center gap-3">
-                  <span className="text-xl">🇪🇬</span>
-                  <span className="font-medium">{t.egyptPayment}</span>
-                </div>
-                <ChevronDown
-                  className={`h-4 w-4 text-muted-foreground transition-transform ${
-                    showEgypt ? "rotate-180" : ""
-                  }`}
-                />
-              </button>
-              {showEgypt && (
-                <div className="rounded-lg border border-border p-4">
-                  <EgyptPayment
-                    plan={selectedPlan ?? undefined}
-                    amountUsd={splitEligible && splitPayment ? firstPaymentUsd : totalUsd}
-                    secondAmountUsd={splitEligible && splitPayment ? secondPaymentUsd : undefined}
-                  />
-                </div>
-              )}
+              <InstapayPayButton
+                plan={selectedPlan ?? undefined}
+                amountUsd={splitEligible && splitPayment ? firstPaymentUsd : totalUsd}
+                secondAmountUsd={splitEligible && splitPayment ? secondPaymentUsd : undefined}
+                className="flex w-full items-center justify-between rounded-lg border border-border p-4 text-left transition-all hover:border-primary/50"
+              />
               </div>
             </CardContent>
           </Card>

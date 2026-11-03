@@ -8,7 +8,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { ChevronRight, ChevronLeft, AlertTriangle, CheckCircle2, Check } from "lucide-react"
-import { EgyptPayment } from "@/components/egypt-payment"
+import { InstapayPayButton } from "@/components/instapay-payment"
 import { OKXPayButton, NowPaymentsButton, WhopPayButton } from "@/components/payment-buttons"
 import { useTranslations } from 'next-intl'
 
@@ -262,8 +262,11 @@ export function EnrollmentForm() {
               </CardContent>
             </Card>
 
-            <div className="mt-10">
-              <EgyptPayment plan="starter" />
+            <div className="mt-6">
+              <InstapayPayButton
+                plan="starter"
+                className="flex w-full items-center justify-between rounded-lg border border-[hsl(210,60%,50%)]/30 p-4 text-left transition-all hover:border-primary/50"
+              />
             </div>
           </div>
         </section>

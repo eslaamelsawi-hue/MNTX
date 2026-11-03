@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { DEFAULT_MENTORSHIP_PRICE } from "@/lib/plan-pricing"
-import { DEFAULT_USD_TO_EGP } from "@/lib/egp"
+import { DEFAULT_USD_TO_EGP, DEFAULT_INSTAPAY_NUMBER, DEFAULT_VODAFONE_NUMBER } from "@/lib/egp"
 
 export type PaymentSettings = {
   subscriptionsOpen: boolean
@@ -18,6 +18,8 @@ export type PaymentSettings = {
   usdToEgpLive: number | null
   usdToEgpMargin: number
   usdToEgpSource: "live" | "manual" | "last-known" | "default"
+  instapayNumber: string
+  vodafoneNumber: string
 }
 
 const DEFAULTS: PaymentSettings = {
@@ -32,6 +34,8 @@ const DEFAULTS: PaymentSettings = {
   usdToEgpLive: null,
   usdToEgpMargin: 1,
   usdToEgpSource: "default",
+  instapayNumber: DEFAULT_INSTAPAY_NUMBER,
+  vodafoneNumber: DEFAULT_VODAFONE_NUMBER,
 }
 
 /** Fetches the admin-controlled payment kill-switches once per mount.
