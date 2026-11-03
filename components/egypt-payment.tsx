@@ -43,11 +43,14 @@ const LISTED_PLANS = ["starter", "coaching"] as const
 export function EgyptPayment({
   plan,
   amountUsd,
+  secondAmountUsd,
 }: {
   /** Checkout this is embedded in, so the amount can be derived from it. */
   plan?: string
   /** Final USD total (after any coupon), when the caller already knows it. */
   amountUsd?: number
+  /** Set when paying in two instalments: this is the remainder due later. */
+  secondAmountUsd?: number
 } = {}) {
   const t = useTranslations('egyptPayment')
   const { settings, loading } = usePaymentSettings()
@@ -104,13 +107,24 @@ export function EgyptPayment({
               <StepNumber num={2} />
               <div className="text-sm text-muted-foreground md:text-base">
                 {resolvedUsd ? (
-                  <p>
-                    {t('step2Send')}{" "}
-                    <span className="font-bold text-primary">
-                      {formatEgp(usdToEgp(resolvedUsd, rate))} {t('egp')}
-                    </span>{" "}
-                    <span className="text-xs text-muted-foreground">(${resolvedUsd})</span>
-                  </p>
+                  <>
+                    <p>
+                      {t('step2Send')}{" "}
+                      <span className="font-bold text-primary">
+                        {formatEgp(usdToEgp(resolvedUsd, rate))} {t('egp')}
+                      </span>{" "}
+                      <span className="text-xs text-muted-foreground">(${resolvedUsd})</span>
+                    </p>
+                    {secondAmountUsd ? (
+                      <p className="mt-1.5 text-xs text-muted-foreground">
+                        {t('step2Remaining')}{" "}
+                        <span className="font-bold text-foreground">
+                          {formatEgp(usdToEgp(secondAmountUsd, rate))} {t('egp')}
+                        </span>{" "}
+                        <span>(${secondAmountUsd})</span>
+                      </p>
+                    ) : null}
+                  </>
                 ) : (
                   <>
                     <p className="mb-2">{t('step2Choose')}</p>

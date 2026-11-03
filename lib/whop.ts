@@ -55,6 +55,73 @@ export async function createWhopCheckout(opts: {
   return { url: data.purchase_url, checkoutId: data.id }
 }
 
+/**
+ * Creates a Whop checkout that bills in two instalments, 30 days apart, by
+ * charging the card the buyer pays with the first time — Whop's native split
+ * pay, so there's no card data on our side.
+ *
+ * Split pay only exists on a real plan (the inline plan accepted by
+ * /checkout_configurations silently drops the field), so a hidden plan is
+ * created first and the checkout points at it. The plan carries the two
+ * amounts: initial_price now, renewal_price in 30 days.
+ */
+export async function createWhopSplitCheckout(opts: {
+  planLabel: string
+  firstAmount: number
+  secondAmount: number
+  redirectUrl: string
+  metadata: Record<string, string>
+}): Promise<{ url: string; checkoutId: string; planId: string }> {
+  const apiKey = process.env.WHOP_API_KEY
+  if (!apiKey) throw new Error("Whop is not configured — set WHOP_API_KEY.")
+
+  const headers = {
+    Authorization: `Bearer ${apiKey}`,
+    "Content-Type": "application/json",
+  }
+
+  const planRes = await fetch(`${WHOP_API_BASE}/plans`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      product_id: WHOP_PRODUCT_ID,
+      currency: "usd",
+      title: opts.planLabel.slice(0, 30),
+      billing_type: "renewal",
+      billing_period: 30,
+      // Whop stops after this many charges instead of renewing forever.
+      split_pay_required_payments: 2,
+      initial_price: opts.firstAmount,
+      renewal_price: opts.secondAmount,
+      visibility: "hidden",
+    }),
+  })
+  if (!planRes.ok) {
+    const body = await planRes.text().catch(() => "")
+    throw new Error(`Whop split plan creation failed (${planRes.status}): ${body.slice(0, 200) || planRes.statusText}`)
+  }
+  const plan = await planRes.json()
+  if (!plan?.id) throw new Error("Whop did not return a plan id")
+
+  const checkoutRes = await fetch(`${WHOP_API_BASE}/checkout_configurations`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify({
+      plan_id: plan.id,
+      redirect_url: opts.redirectUrl,
+      metadata: opts.metadata,
+    }),
+  })
+  if (!checkoutRes.ok) {
+    const body = await checkoutRes.text().catch(() => "")
+    throw new Error(`Whop split checkout failed (${checkoutRes.status}): ${body.slice(0, 200) || checkoutRes.statusText}`)
+  }
+  const checkout = await checkoutRes.json()
+  if (!checkout?.purchase_url) throw new Error("Whop did not return a purchase_url")
+
+  return { url: checkout.purchase_url, checkoutId: checkout.id, planId: plan.id }
+}
+
 type WhopPayment = {
   id: string
   status?: string

@@ -477,7 +477,8 @@
     "plans": {
       "starter": "Starter Plan",
       "coaching": "1-on-1 Coaching"
-    }
+    },
+    "step2Remaining": "Remaining, due within 30 days:"
   },
   "gold": {
     "badge": "Egyptian Gold Prices",

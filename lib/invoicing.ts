@@ -255,3 +255,44 @@ export async function disableSubscriptionsForLateInvoices(): Promise<{ disabledC
 
   return { disabledClients }
 }
+
+/**
+ * Settles the next outstanding instalment on a client's auto-generated
+ * invoice for a plan — used when a card split-pay subscription charges its
+ * second payment, so the dashboard stops showing a balance they've paid.
+ *
+ * Returns true when something was actually settled.
+ */
+export async function markNextPendingInstallmentPaidFor(
+  clientEmail: string,
+  plan: string
+): Promise<boolean> {
+  const supabase = createAdminClient()
+  const email = clientEmail.toLowerCase().trim()
+
+  const { data: invoices } = await supabase
+    .from("invoices")
+    .select("id")
+    .eq("client_email", email)
+    .eq("plan", plan)
+    .neq("status", "cancelled")
+    .order("created_at", { ascending: false })
+    .limit(5)
+
+  const invoiceIds = (invoices ?? []).map((i) => i.id)
+  if (invoiceIds.length === 0) return false
+
+  const { data: pending } = await supabase
+    .from("invoice_installments")
+    .select("id")
+    .in("invoice_id", invoiceIds)
+    .eq("status", "pending")
+    .order("due_date", { ascending: true })
+    .limit(1)
+
+  const installmentId = pending?.[0]?.id
+  if (!installmentId) return false
+
+  await markInstallmentPaid(installmentId)
+  return true
+}

@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import crypto from "crypto"
-import { settleWhopOrderIfPaid } from "@/lib/whop-fulfillment"
+import { handleWhopPaymentSucceeded } from "@/lib/whop-fulfillment"
 
 /** Whop signs "{webhook-id}.{webhook-timestamp}.{raw body}" with HMAC-SHA256
  *  and sends the result base64-encoded as "v1,<sig>" — possibly several,
@@ -47,22 +47,14 @@ export async function POST(request: Request) {
       return NextResponse.json({ ok: true })
     }
 
-    const orderId: string | undefined = event.data?.metadata?.order_id
-    if (!orderId) {
-      console.warn("[webhooks/whop] payment.succeeded with no order_id in metadata")
-      return NextResponse.json({ ok: true })
-    }
-
-    // Confirm the payment against Whop's API rather than trusting the posted
-    // body, then settle. This keeps a forged (or unverified) request from
-    // granting anything, and shares one idempotent path with the success-page
-    // verify, the admin sync and the scheduled sweep.
-    const result = await settleWhopOrderIfPaid(orderId, new URL(request.url).origin)
-    if (result.status === "not_found") {
-      console.warn("[webhooks/whop] no local order for", orderId)
-    } else if (result.status === "pending") {
-      console.warn("[webhooks/whop] Whop reports no completed payment for", orderId)
-    }
+    // Renewal charges from a split-pay subscription arrive here too, so the
+    // handler decides between first payment, renewal and redelivery.
+    await handleWhopPaymentSucceeded({
+      paymentId: event.data?.id,
+      orderId: event.data?.metadata?.order_id,
+      customerEmail: event.data?.customer_email ?? event.data?.user?.email,
+      baseUrl: new URL(request.url).origin,
+    })
 
     return NextResponse.json({ ok: true })
   } catch (error) {

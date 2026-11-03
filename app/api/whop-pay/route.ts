@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { createWhopCheckout } from "@/lib/whop"
+import { createWhopCheckout, createWhopSplitCheckout } from "@/lib/whop"
 import { PLAN_PRICES } from "@/lib/plan-pricing"
 import { getPlanAmount, getMentorshipSplitForCoupon } from "@/lib/mentorship-pricing"
 import { withVisaFee } from "@/lib/payment-fees"
@@ -84,12 +84,26 @@ export async function POST(request: Request) {
 
     // The customer pays the plan amount plus the card processing fee; the
     // order row keeps the fee-free amount so invoicing/splits stay correct.
-    const checkout = await createWhopCheckout({
-      planLabel: planInfo.description,
-      amount: withVisaFee(chargeAmount),
-      redirectUrl,
-      metadata: { order_id: orderId, plan, email: email.toLowerCase().trim() },
-    })
+    const metadata = { order_id: orderId, plan, email: email.toLowerCase().trim() }
+    const secondAmount = Math.round((finalAmount - chargeAmount) * 100) / 100
+
+    // Splitting on a card becomes a real Whop subscription: it charges the
+    // same card again after 30 days and then stops, so there's no second
+    // payment for the customer to remember.
+    const checkout = isSplit && secondAmount > 0
+      ? await createWhopSplitCheckout({
+          planLabel: planInfo.description,
+          firstAmount: withVisaFee(chargeAmount),
+          secondAmount: withVisaFee(secondAmount),
+          redirectUrl,
+          metadata,
+        })
+      : await createWhopCheckout({
+          planLabel: planInfo.description,
+          amount: withVisaFee(chargeAmount),
+          redirectUrl,
+          metadata,
+        })
 
     await admin.from("whop_orders").update({ checkout_id: checkout.checkoutId }).eq("order_id", orderId)
 

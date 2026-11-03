@@ -6,7 +6,7 @@ import { fulfillConsultation } from "@/lib/consultation"
 import { withVisaFee } from "@/lib/payment-fees"
 import { createAdminClient } from "@/lib/supabase/admin"
 import { findWhopPayment } from "@/lib/whop"
-import { markInstallmentPaid } from "@/lib/invoicing"
+import { markInstallmentPaid, markNextPendingInstallmentPaidFor } from "@/lib/invoicing"
 
 export type WhopOrderRow = {
   order_id: string
@@ -110,4 +110,79 @@ export async function settleWhopOrderIfPaid(
 
   await fulfillWhopOrder(order, baseUrl)
   return { status: "paid" }
+}
+
+/**
+ * Handles one payment.succeeded from Whop, telling three cases apart:
+ *
+ *  - a payment we've already acted on (Whop redelivers; at-least-once)
+ *  - the first payment for an order → full fulfilment
+ *  - the second charge of a card split-pay subscription, ~30 days later →
+ *    settle the outstanding invoice instalment, don't re-grant anything
+ *
+ * Claiming the payment id first is what separates a genuine renewal from a
+ * redelivery of the first charge; both otherwise look identical.
+ */
+export async function handleWhopPaymentSucceeded(opts: {
+  paymentId: string
+  orderId?: string
+  customerEmail?: string
+  baseUrl: string
+}): Promise<{ handled: "duplicate" | "initial" | "renewal" | "unknown" }> {
+  const { paymentId, orderId, customerEmail, baseUrl } = opts
+  const admin = createAdminClient()
+
+  if (!paymentId) {
+    // Nothing to deduplicate against; fall back to the order-level guard.
+    if (orderId) await settleWhopOrderIfPaid(orderId, baseUrl)
+    return { handled: "unknown" }
+  }
+
+  // Renewals may not carry the checkout's metadata, so fall back to the most
+  // recent paid split order for this customer.
+  let order: { order_id: string; status: string; plan: string; email: string; split_payment: boolean | null } | null = null
+  if (orderId) {
+    const { data } = await admin
+      .from("whop_orders")
+      .select("order_id, status, plan, email, split_payment")
+      .eq("order_id", orderId)
+      .maybeSingle()
+    order = data
+  } else if (customerEmail) {
+    const { data } = await admin
+      .from("whop_orders")
+      .select("order_id, status, plan, email, split_payment")
+      .eq("email", customerEmail.toLowerCase().trim())
+      .eq("split_payment", true)
+      .eq("status", "paid")
+      .order("created_at", { ascending: false })
+      .limit(1)
+      .maybeSingle()
+    order = data
+  }
+
+  const isRenewal = !!order && order.status === "paid"
+
+  // Atomic claim: a duplicate delivery loses the insert and stops here.
+  const { error: claimError } = await admin
+    .from("whop_processed_payments")
+    .insert({ payment_id: paymentId, order_id: order?.order_id ?? orderId ?? null, kind: isRenewal ? "renewal" : "initial" })
+  if (claimError) {
+    console.log(`[whop] payment ${paymentId} already processed — ignoring duplicate`)
+    return { handled: "duplicate" }
+  }
+
+  if (!order) {
+    console.warn("[whop] payment.succeeded with no matching order:", orderId ?? customerEmail)
+    return { handled: "unknown" }
+  }
+
+  if (isRenewal) {
+    const settled = await markNextPendingInstallmentPaidFor(order.email, order.plan)
+    console.log(`[whop] split renewal for ${order.order_id} — instalment ${settled ? "settled" : "not found"}`)
+    return { handled: "renewal" }
+  }
+
+  await settleWhopOrderIfPaid(order.order_id, baseUrl)
+  return { handled: "initial" }
 }
