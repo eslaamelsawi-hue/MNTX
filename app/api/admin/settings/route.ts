@@ -17,6 +17,7 @@ const ALLOWED_KEYS = [
   "mentorship_price",
   "mentorship_discount_percent",
   "usd_to_egp_rate",
+  "usd_to_egp_margin",
 ]
 
 const BOOLEAN_KEYS = [
@@ -50,7 +51,12 @@ function validate(key: string, value: unknown): string | null {
   }
   if (key === "usd_to_egp_rate") {
     const num = Number(value)
-    if (!Number.isFinite(num) || num <= 0) return "Exchange rate must be greater than 0"
+    // 0 is meaningful here: it clears the override and returns to the live rate.
+    if (!Number.isFinite(num) || num < 0) return "Exchange rate cannot be negative"
+  }
+  if (key === "usd_to_egp_margin") {
+    const num = Number(value)
+    if (!Number.isFinite(num) || num < 0) return "Margin cannot be negative"
   }
   if (key === "mentorship_discount_percent") {
     const num = Number(value)

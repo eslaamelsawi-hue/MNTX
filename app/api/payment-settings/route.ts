@@ -2,7 +2,8 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { NextResponse } from "next/server"
 import { getMentorshipPricing } from "@/lib/mentorship-pricing"
 import { DEFAULT_MENTORSHIP_PRICE } from "@/lib/plan-pricing"
-import { DEFAULT_USD_TO_EGP, USD_TO_EGP_KEY } from "@/lib/egp"
+import { getUsdToEgpRate } from "@/lib/egp-rate"
+import { DEFAULT_USD_TO_EGP } from "@/lib/egp"
 
 const KEYS = [
   "subscriptions_open",
@@ -11,7 +12,6 @@ const KEYS = [
   "payment_stripe_enabled",
   "payment_egypt_enabled",
   "payment_whop_enabled",
-  USD_TO_EGP_KEY,
 ]
 
 /**
@@ -26,6 +26,7 @@ export async function GET() {
   // Marketing pages read this so the advertised price can't drift from what
   // checkout actually charges.
   const { price: coachingPrice } = await getMentorshipPricing()
+  const egp = await getUsdToEgpRate()
   if (error) {
     // Fail open — a settings read error shouldn't block legitimate checkouts.
     return NextResponse.json({
@@ -52,6 +53,9 @@ export async function GET() {
     egypt: flag("payment_egypt_enabled"),
     whop: flag("payment_whop_enabled"),
     coachingPrice,
-    usdToEgp: Number(raw[USD_TO_EGP_KEY]) > 0 ? Number(raw[USD_TO_EGP_KEY]) : DEFAULT_USD_TO_EGP,
+    usdToEgp: egp.rate,
+    usdToEgpLive: egp.liveRate,
+    usdToEgpMargin: egp.margin,
+    usdToEgpSource: egp.source,
   })
 }

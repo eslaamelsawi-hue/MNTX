@@ -5,7 +5,13 @@
  *  and the business wants to set its own with a margin. Plan prices are then
  *  converted from it, so there are no per-plan EGP figures to maintain. */
 export const DEFAULT_USD_TO_EGP = 50
+/** Manual override; blank or 0 means "use the live rate". */
 export const USD_TO_EGP_KEY = "usd_to_egp_rate"
+/** Added on top of the live rate, per dollar. */
+export const USD_TO_EGP_MARGIN_KEY = "usd_to_egp_margin"
+/** Last live rate we successfully fetched, kept as a fallback. */
+export const USD_TO_EGP_LIVE_KEY = "usd_to_egp_live"
+export const DEFAULT_MARGIN = 1
 
 /** Rounds up to the nearest 50 EGP — a clean figure to transfer, and
  *  rounding up means conversion drift never under-collects. */

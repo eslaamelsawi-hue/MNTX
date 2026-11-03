@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RefreshCw, ShieldAlert, CreditCard, Banknote } from "lucide-react"
-import { DEFAULT_USD_TO_EGP, usdToEgp, formatEgp } from "@/lib/egp"
+import { usdToEgp, formatEgp } from "@/lib/egp"
 
 type Flags = {
   subscriptions_open: boolean
@@ -39,7 +39,9 @@ export function AdminPaymentSettings() {
   const [flags, setFlags] = useState<Flags>(DEFAULTS)
   const [loading, setLoading] = useState(true)
   const [savingKey, setSavingKey] = useState<string | null>(null)
-  const [egpRate, setEgpRate] = useState(String(DEFAULT_USD_TO_EGP))
+  const [egpRate, setEgpRate] = useState("")
+  const [egpMargin, setEgpMargin] = useState("1")
+  const [egpLive, setEgpLive] = useState<{ live: number | null; effective: number; source: string } | null>(null)
   const [egpSaving, setEgpSaving] = useState(false)
   const [egpMsg, setEgpMsg] = useState("")
   const [egpError, setEgpError] = useState("")
@@ -58,7 +60,12 @@ export function AdminPaymentSettings() {
         payment_egypt_enabled: settings.payment_egypt_enabled !== "false",
         payment_whop_enabled: settings.payment_whop_enabled !== "false",
       })
-      if (settings.usd_to_egp_rate) setEgpRate(settings.usd_to_egp_rate)
+      if (settings.usd_to_egp_rate && Number(settings.usd_to_egp_rate) > 0) setEgpRate(settings.usd_to_egp_rate)
+      if (settings.usd_to_egp_margin) setEgpMargin(settings.usd_to_egp_margin)
+      try {
+        const live = await (await fetch("/api/payment-settings")).json()
+        setEgpLive({ live: live.usdToEgpLive, effective: live.usdToEgp, source: live.usdToEgpSource })
+      } catch { /* preview only */ }
     } catch (e) {
       console.error("Failed to load payment settings:", e)
     }
@@ -84,23 +91,32 @@ export function AdminPaymentSettings() {
   }
 
   const saveEgpRate = async () => {
-    const value = Number(egpRate)
+    const override = egpRate.trim() === "" ? 0 : Number(egpRate)
+    const margin = Number(egpMargin)
     setEgpError("")
     setEgpMsg("")
-    if (!Number.isFinite(value) || value <= 0) { setEgpError("Rate must be greater than 0."); return }
+    if (!Number.isFinite(override) || override < 0) { setEgpError("Override must be a positive number, or blank for the live rate."); return }
+    if (!Number.isFinite(margin) || margin < 0) { setEgpError("Margin cannot be negative."); return }
+
     setEgpSaving(true)
     try {
-      const res = await fetch("/api/admin/settings", {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ key: "usd_to_egp_rate", value: String(value) }),
-      })
-      if (!res.ok) {
-        const data = await res.json().catch(() => ({}))
-        setEgpError(data.error || "Failed to save.")
-        return
+      for (const [key, value] of [["usd_to_egp_rate", override], ["usd_to_egp_margin", margin]] as const) {
+        const res = await fetch("/api/admin/settings", {
+          method: "PATCH",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ key, value: String(value) }),
+        })
+        if (!res.ok) {
+          const data = await res.json().catch(() => ({}))
+          setEgpError(data.error || "Failed to save.")
+          return
+        }
       }
       setEgpMsg("Saved.")
+      try {
+        const live = await (await fetch("/api/payment-settings")).json()
+        setEgpLive({ live: live.usdToEgpLive, effective: live.usdToEgp, source: live.usdToEgpSource })
+      } catch { /* preview only */ }
     } finally {
       setEgpSaving(false)
     }
@@ -182,30 +198,58 @@ export function AdminPaymentSettings() {
             Egyptian Payment Rate
           </CardTitle>
           <CardDescription>
-            USD → EGP used on the Instapay / Vodafone Cash instructions. Every plan&apos;s Egyptian
-            amount is converted from this, so there are no per-plan figures to keep in sync — set
-            it once and include whatever margin you want. Amounts are rounded up to the nearest 50 EGP.
+            The live USD → EGP market rate plus your margin, refreshed hourly. Every plan&apos;s
+            Egyptian amount converts from it, rounded up to the nearest 50 EGP — so there are no
+            per-plan figures to maintain.
           </CardDescription>
         </CardHeader>
         <CardContent className="space-y-3">
+          <div className="rounded-lg border border-border bg-muted/40 p-3 text-sm">
+            {egpLive ? (
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1">
+                <span className="text-muted-foreground">Live market rate:</span>
+                <span className="font-mono font-bold text-foreground">
+                  {egpLive.live !== null ? egpLive.live.toFixed(2) : "unavailable"}
+                </span>
+                <span className="text-muted-foreground">+ {egpMargin || 0} margin =</span>
+                <span className="font-mono font-bold text-primary">{egpLive.effective.toFixed(2)} EGP</span>
+                <span className="rounded-full bg-muted px-2 py-0.5 text-[11px] text-muted-foreground">
+                  {egpLive.source === "live" ? "live" : egpLive.source === "manual" ? "manual override" : egpLive.source === "last-known" ? "last known (feed down)" : "default"}
+                </span>
+              </div>
+            ) : (
+              <span className="text-muted-foreground">Loading current rate…</span>
+            )}
+          </div>
+
           <div className="grid gap-3 sm:grid-cols-3">
             <div>
-              <Label className="text-xs">1 USD =</Label>
+              <Label className="text-xs">Margin (EGP per $)</Label>
               <Input
                 type="number"
-                min="1"
+                min="0"
+                step="0.25"
+                value={egpMargin}
+                onChange={(e) => { setEgpMargin(e.target.value); setEgpMsg("") }}
+                className="h-9"
+              />
+            </div>
+            <div>
+              <Label className="text-xs">Manual override <span className="text-muted-foreground">(blank = live)</span></Label>
+              <Input
+                type="number"
+                min="0"
                 step="0.01"
+                placeholder="Auto"
                 value={egpRate}
                 onChange={(e) => { setEgpRate(e.target.value); setEgpMsg("") }}
                 className="h-9"
               />
             </div>
-            <div className="sm:col-span-2">
+            <div>
               <Label className="text-xs">Preview</Label>
               <div className="flex h-9 items-center rounded-md border border-border bg-muted/40 px-3 text-sm text-muted-foreground">
-                {Number(egpRate) > 0
-                  ? `$100 → ${formatEgp(usdToEgp(100, Number(egpRate)))} EGP · $1200 → ${formatEgp(usdToEgp(1200, Number(egpRate)))} EGP`
-                  : "—"}
+                {egpLive ? `$1200 → ${formatEgp(usdToEgp(1200, egpLive.effective))} EGP` : "—"}
               </div>
             </div>
           </div>

@@ -13,8 +13,11 @@ export type PaymentSettings = {
   whop: boolean
   /** Live coaching list price, so marketing copy matches checkout. */
   coachingPrice: number
-  /** USD → EGP rate for the manual Egyptian instructions. */
+  /** Effective USD → EGP (live market rate + margin, or a manual override). */
   usdToEgp: number
+  usdToEgpLive: number | null
+  usdToEgpMargin: number
+  usdToEgpSource: "live" | "manual" | "last-known" | "default"
 }
 
 const DEFAULTS: PaymentSettings = {
@@ -26,6 +29,9 @@ const DEFAULTS: PaymentSettings = {
   whop: true,
   coachingPrice: DEFAULT_MENTORSHIP_PRICE,
   usdToEgp: DEFAULT_USD_TO_EGP,
+  usdToEgpLive: null,
+  usdToEgpMargin: 1,
+  usdToEgpSource: "default",
 }
 
 /** Fetches the admin-controlled payment kill-switches once per mount.
