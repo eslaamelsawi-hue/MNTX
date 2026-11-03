@@ -484,7 +484,20 @@
     "payWithInstapay": "Pay with Instapay",
     "nonRefundable": "All payments are final and non-refundable",
     "paymentDetails": "Payment details",
-    "screenshotNote": "After transferring, send a screenshot of the receipt so your subscription can be confirmed and activated."
+    "screenshotNote": "After transferring, send a screenshot of the receipt so your subscription can be confirmed and activated.",
+    "proofTitle": "Already transferred?",
+    "proofSubtitle": "Upload your receipt and we'll activate your access once it's checked.",
+    "proofEmail": "Email address",
+    "proofSenderName": "Name the transfer was sent from (optional)",
+    "proofFile": "Transfer receipt",
+    "proofChoose": "Choose an image or PDF",
+    "proofSubmit": "Send receipt",
+    "proofSubmitting": "Sending…",
+    "proofDone": "Receipt received",
+    "proofDoneBody": "Our team verifies transfers manually. You'll get an email the moment your access is activated.",
+    "proofNeedEmail": "Enter a valid email address.",
+    "proofNeedFile": "Choose your receipt first.",
+    "proofFailed": "We couldn't send your receipt. Please try again."
   },
   "gold": {
     "badge": "Egyptian Gold Prices",

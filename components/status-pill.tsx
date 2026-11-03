@@ -14,6 +14,8 @@ const STATUS_COLOR: Record<string, string> = {
   approved: "text-emerald-400",
   reviewed: "text-amber-400",
   pending: "text-amber-400",
+  pending_verification: "text-amber-400",
+  awaiting_payment: "text-muted-foreground",
   partially_paid: "text-amber-400",
   booked: "text-amber-400",
   rescheduled: "text-amber-400",

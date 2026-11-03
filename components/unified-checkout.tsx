@@ -484,6 +484,10 @@ export default function UnifiedCheckout({ products, initialPlan }: { products: P
                 plan={selectedPlan ?? undefined}
                 amountUsd={splitEligible && splitPayment ? firstPaymentUsd : totalUsd}
                 secondAmountUsd={splitEligible && splitPayment ? secondPaymentUsd : undefined}
+                email={email || undefined}
+                telegram={telegram || undefined}
+                couponCode={appliedCoupon?.code}
+                splitPayment={splitEligible && splitPayment}
                 className="flex w-full items-center justify-between rounded-lg border border-border p-4 text-left transition-all hover:border-primary/50"
               />
               </div>

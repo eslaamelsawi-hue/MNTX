@@ -101,7 +101,7 @@ type Booking = {
 }
 
 type OKXOrder = {
-  provider: "okx" | "whop"
+  provider: "okx" | "whop" | "instapay"
   orderId: string
   plan: string
   amount: string
@@ -111,12 +111,18 @@ type OKXOrder = {
   /** OKX only — card orders have no deposit address or chain. */
   address?: string
   chain?: string
-  status: "pending" | "paid" | "expired"
+  /** OKX/card: pending | paid | expired. Instapay adds its own review
+   *  states: awaiting_payment | pending_verification | rejected. */
+  status: "pending" | "paid" | "expired" | "awaiting_payment" | "pending_verification" | "rejected"
   createdAt: string
   paidAt?: string
   txId?: string
   tgToken?: string
   preferredDate?: string
+  /** Instapay only — a short-lived link to the uploaded transfer receipt. */
+  proofUrl?: string | null
+  senderName?: string
+  adminNote?: string
 }
 
 type GoldArticle = {
@@ -158,7 +164,7 @@ export function AdminDashboard() {
   const [orders, setOrders] = useState<OKXOrder[]>([])
   const [remainingTokens, setRemainingTokens] = useState<number | null>(null)
   const [loadingOrders, setLoadingOrders] = useState(true)
-  const [orderStatusFilter, setOrderStatusFilter] = useState<"all" | "pending" | "paid" | "expired">("all")
+  const [orderStatusFilter, setOrderStatusFilter] = useState<"all" | "pending" | "pending_verification" | "paid" | "expired">("all")
   const [orderActionLoading, setOrderActionLoading] = useState<string | null>(null)
   const [copiedId, setCopiedId] = useState<string | null>(null)
   const [rescheduleBookingId, setRescheduleBookingId] = useState<string | null>(null)
@@ -404,13 +410,18 @@ export function AdminDashboard() {
     setLoadingOrders(false)
   }, [])
 
-  const handleOrderAction = async (orderId: string, action: string, provider: "okx" | "whop" = "okx") => {
+  const handleOrderAction = async (
+    orderId: string,
+    action: string,
+    provider: "okx" | "whop" | "instapay" = "okx",
+    reason?: string
+  ) => {
     setOrderActionLoading(`${orderId}-${action}`)
     try {
       const res = await fetch("/api/admin/orders", {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId, action, provider }),
+        body: JSON.stringify({ orderId, action, provider, reason }),
       })
       const data = await res.json()
       if (data.success) {
@@ -2163,13 +2174,13 @@ export function AdminDashboard() {
               </div>
               <div className="flex items-center gap-2">
                 <div className="flex rounded-lg border border-border overflow-hidden text-sm">
-                  {(["all", "pending", "paid", "expired"] as const).map(f => (
+                  {(["all", "pending", "pending_verification", "paid", "expired"] as const).map(f => (
                     <button
                       key={f}
                       onClick={() => setOrderStatusFilter(f)}
                       className={`px-3 py-1.5 capitalize transition-colors ${orderStatusFilter === f ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-muted"}`}
                     >
-                      {f}
+                      {f === "pending_verification" ? "To verify" : f}
                     </button>
                   ))}
                 </div>
@@ -2264,8 +2275,16 @@ export function AdminDashboard() {
                       .map(order => (
                         <TableRow key={order.orderId}>
                           <TableCell>
-                            <span className={`rounded-full px-2 py-0.5 text-xs font-medium ${order.provider === "whop" ? "bg-blue-500/15 text-blue-400" : "bg-muted text-muted-foreground"}`}>
-                              {order.provider === "whop" ? "Visa" : "OKX"}
+                            <span
+                              className={`rounded-full px-2 py-0.5 text-xs font-medium ${
+                                order.provider === "whop"
+                                  ? "bg-blue-500/15 text-blue-400"
+                                  : order.provider === "instapay"
+                                    ? "bg-violet-500/15 text-violet-400"
+                                    : "bg-muted text-muted-foreground"
+                              }`}
+                            >
+                              {order.provider === "whop" ? "Visa" : order.provider === "instapay" ? "Instapay" : "OKX"}
                             </span>
                           </TableCell>
                           <TableCell>
@@ -2307,9 +2326,14 @@ export function AdminDashboard() {
                             </span>
                           </TableCell>
                           <TableCell className="font-mono font-semibold tabular-nums text-yellow-400">{order.amount} {order.currency}</TableCell>
-                          <TableCell className="text-xs text-muted-foreground">{order.chain || "—"}</TableCell>
+                          <TableCell className="text-xs text-muted-foreground">
+                            {order.chain || order.senderName || "—"}
+                          </TableCell>
                           <TableCell>
                             <StatusPill status={order.status} />
+                            {order.adminNote && (
+                              <div className="mt-1 max-w-[140px] text-xs text-muted-foreground">{order.adminNote}</div>
+                            )}
                             {order.paidAt && (
                               <div className="mt-1 font-mono text-xs text-muted-foreground">{new Date(order.paidAt).toLocaleDateString()}</div>
                             )}
@@ -2353,6 +2377,53 @@ export function AdminDashboard() {
                                   <CheckCircle2 className="mr-1 h-3 w-3" />
                                   {orderActionLoading === `${order.orderId}-mark_paid` ? "…" : "Mark Paid"}
                                 </Button>
+                              )}
+                              {order.provider === "instapay" && order.status !== "paid" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 border-green-500/30 text-xs text-green-400 hover:bg-green-500/10"
+                                  disabled={orderActionLoading === `${order.orderId}-approve`}
+                                  onClick={() => {
+                                    if (
+                                      confirm(
+                                        `Confirm you have checked the receipt and the transfer for ${order.amount} EGP arrived. This grants access to ${order.email}.`
+                                      )
+                                    ) {
+                                      handleOrderAction(order.orderId, "approve", order.provider)
+                                    }
+                                  }}
+                                >
+                                  <CheckCircle2 className="mr-1 h-3 w-3" />
+                                  {orderActionLoading === `${order.orderId}-approve` ? "…" : "Approve"}
+                                </Button>
+                              )}
+                              {order.provider === "instapay" && order.status !== "paid" && order.status !== "rejected" && (
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  className="h-7 border-red-500/30 text-xs text-red-400 hover:bg-red-500/10"
+                                  disabled={orderActionLoading === `${order.orderId}-reject`}
+                                  onClick={() => {
+                                    const reason = prompt("Why are you rejecting this payment? (sent to the customer)")
+                                    if (reason === null) return
+                                    handleOrderAction(order.orderId, "reject", order.provider, reason)
+                                  }}
+                                >
+                                  <XCircle className="mr-1 h-3 w-3" />
+                                  {orderActionLoading === `${order.orderId}-reject` ? "…" : "Reject"}
+                                </Button>
+                              )}
+                              {order.proofUrl && (
+                                <a
+                                  href={order.proofUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="inline-flex h-7 items-center justify-center rounded-md border border-violet-500/30 px-2 text-xs text-violet-400 hover:bg-violet-500/10"
+                                >
+                                  <Eye className="mr-1 h-3 w-3" />
+                                  View Proof
+                                </a>
                               )}
                               {order.status === "paid" && (
                                 <Button

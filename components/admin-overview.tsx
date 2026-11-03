@@ -15,7 +15,7 @@ type Booking = {
   zoom_start_url: string | null
   availability_slots: Slot | null
 }
-type Order = { orderId: string; amount: string; status: "pending" | "paid" | "expired"; paidAt?: string }
+type Order = { orderId: string; amount: string; status: string; paidAt?: string }
 type Sub = { client_email: string; client_name: string; plan: string; status: string; remaining_hours: number }
 type Invoice = {
   id: string; client_email: string; client_name: string; title: string

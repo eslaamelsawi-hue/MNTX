@@ -9,6 +9,9 @@ import { sendConsultationEmails } from "@/lib/consultation-email"
 import { createStarterInviteLink } from "@/lib/tg-invite"
 import { markInstallmentPaid } from "@/lib/invoicing"
 import { fulfillWhopOrder, settleWhopOrderIfPaid } from "@/lib/whop-fulfillment"
+import { fulfillInstapayOrder, sendInstapayRejectionEmail } from "@/lib/instapay-orders"
+import { getPrivateFileSignedUrl } from "@/lib/storage"
+import { formatEgp } from "@/lib/egp"
 import { withVisaFee } from "@/lib/payment-fees"
 
 async function getAllOrders() {
@@ -65,7 +68,41 @@ async function getAllOrders() {
     }
   })()
 
-  return [...okx, ...whop].sort(
+  const instapay = await (async () => {
+    try {
+      const { data, error } = await supabase
+        .from("instapay_orders")
+        .select("*")
+        .order("created_at", { ascending: false })
+      if (error || !data) return []
+      return await Promise.all(
+        data.map(async (d: Record<string, unknown>) => ({
+          provider: "instapay" as const,
+          orderId: d.order_id,
+          plan: d.plan,
+          // What we asked them to transfer, in the currency they sent it in.
+          amount: formatEgp(Number(d.amount_egp)),
+          currency: "EGP",
+          email: d.email,
+          telegramUsername: d.telegram_username || undefined,
+          status: d.status,
+          createdAt: d.created_at,
+          paidAt: d.reviewed_at || undefined,
+          preferredDate: d.preferred_date || undefined,
+          senderName: d.sender_name || undefined,
+          adminNote: d.admin_note || undefined,
+          // Short-lived link to the uploaded receipt; the bucket is private.
+          proofUrl: d.proof_key && d.status !== "awaiting_payment"
+            ? await getPrivateFileSignedUrl(String(d.proof_key), 60 * 30)
+            : null,
+        }))
+      )
+    } catch {
+      return []
+    }
+  })()
+
+  return [...okx, ...whop, ...instapay].sort(
     (a, b) => new Date(b.createdAt as string).getTime() - new Date(a.createdAt as string).getTime()
   )
 }
@@ -100,7 +137,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ error: "Unauthorized" }, { status: 401 })
   }
 
-  const { orderId, action, provider } = await request.json()
+  const { orderId, action, provider, reason } = await request.json()
 
   // Reconcile every pending card order against Whop — catches payments whose
   // webhook never arrived.
@@ -127,6 +164,10 @@ export async function PATCH(request: Request) {
 
   if (provider === "whop") {
     return handleWhopAction(request, orderId, action)
+  }
+
+  if (provider === "instapay") {
+    return handleInstapayAction(request, orderId, action, reason)
   }
 
   // Handle bulk action: expire all pending orders
@@ -359,4 +400,77 @@ async function handleWhopAction(request: Request, orderId: string, action: strin
   }
 
   return NextResponse.json({ error: "Unsupported action for card orders" }, { status: 400 })
+}
+
+/** Manual Egyptian transfers: no provider can confirm them, so an admin
+ *  approves or rejects each one after looking at the uploaded receipt.
+ *  Approving is what grants access and emails the buyer. */
+async function handleInstapayAction(
+  request: Request,
+  orderId: string,
+  action: string,
+  reason?: string | null
+) {
+  const supabase = createAdminClient()
+  const { data: order } = await supabase
+    .from("instapay_orders")
+    .select("*")
+    .eq("order_id", orderId)
+    .maybeSingle()
+  if (!order) return NextResponse.json({ error: "Order not found" }, { status: 404 })
+
+  if (action === "delete") {
+    const { error } = await supabase.from("instapay_orders").delete().eq("order_id", orderId)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+    return NextResponse.json({ success: true })
+  }
+
+  if (action === "mark_paid" || action === "approve") {
+    if (order.status === "paid") {
+      return NextResponse.json({ error: "This order is already paid" }, { status: 400 })
+    }
+    // Claim the order first and only fulfill if this call is the one that
+    // flipped it, so a double-click can't grant access twice.
+    const { data: claimed } = await supabase
+      .from("instapay_orders")
+      .update({ status: "paid", reviewed_at: new Date().toISOString() })
+      .eq("order_id", orderId)
+      .neq("status", "paid")
+      .select("order_id")
+      .maybeSingle()
+    if (!claimed) return NextResponse.json({ error: "This order is already paid" }, { status: 400 })
+
+    await fulfillInstapayOrder(order, new URL(request.url).origin)
+    return NextResponse.json({ success: true })
+  }
+
+  if (action === "reject") {
+    if (order.status === "paid") {
+      return NextResponse.json({ error: "This order is already paid — refund it instead" }, { status: 400 })
+    }
+    const { error } = await supabase
+      .from("instapay_orders")
+      .update({
+        status: "rejected",
+        admin_note: typeof reason === "string" && reason.trim() ? reason.trim().slice(0, 500) : null,
+        reviewed_at: new Date().toISOString(),
+      })
+      .eq("order_id", orderId)
+    if (error) return NextResponse.json({ error: error.message }, { status: 500 })
+
+    await sendInstapayRejectionEmail({ email: order.email, orderId, reason }).catch((e) =>
+      console.error("[admin/orders] instapay rejection email failed:", e)
+    )
+    return NextResponse.json({ success: true })
+  }
+
+  if (action === "resend_email") {
+    if (order.status !== "paid") {
+      return NextResponse.json({ error: "Can only resend email for paid orders" }, { status: 400 })
+    }
+    await fulfillInstapayOrder(order, new URL(request.url).origin)
+    return NextResponse.json({ success: true })
+  }
+
+  return NextResponse.json({ error: "Unsupported action for Instapay orders" }, { status: 400 })
 }

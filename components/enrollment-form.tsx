@@ -265,6 +265,7 @@ export function EnrollmentForm() {
             <div className="mt-6">
               <InstapayPayButton
                 plan="starter"
+                email={formData.email || undefined}
                 className="flex w-full items-center justify-between rounded-lg border border-[hsl(210,60%,50%)]/30 p-4 text-left transition-all hover:border-primary/50"
               />
             </div>

@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useTranslations } from "next-intl"
-import { AlertTriangle, Check, Copy, Info, Send, Smartphone, X } from "lucide-react"
+import { AlertTriangle, Check, Copy, Info, Send, Smartphone, Upload, X } from "lucide-react"
 import { usePaymentSettings } from "@/hooks/use-payment-settings"
 import { PLAN_PRICES } from "@/lib/plan-pricing"
 import { usdToEgp, formatEgp } from "@/lib/egp"
@@ -87,25 +87,47 @@ function Step({
   )
 }
 
-export function InstapayModal({
-  plan,
-  amountUsd,
-  secondAmountUsd,
-  onClose,
-}: {
+type CheckoutContext = {
   /** Checkout this was opened from, so the amount can be derived from it. */
   plan?: string
   /** Final USD total (after any coupon), when the caller already knows it. */
   amountUsd?: number
   /** Set when paying in two instalments: the remainder due later. */
   secondAmountUsd?: number
-  onClose: () => void
-}) {
+  /** Prefilled from the checkout form, so the buyer doesn't retype it. */
+  email?: string
+  telegram?: string
+  /** Passed to the server, which re-derives the price from them itself. */
+  couponCode?: string
+  splitPayment?: boolean
+  preferredDate?: string
+  preferredSlotId?: string
+}
+
+export function InstapayModal({
+  plan,
+  amountUsd,
+  secondAmountUsd,
+  email: prefillEmail,
+  telegram,
+  couponCode,
+  splitPayment,
+  preferredDate,
+  preferredSlotId,
+  onClose,
+}: CheckoutContext & { onClose: () => void }) {
   const t = useTranslations("egyptPayment")
   const { settings } = usePaymentSettings()
   const [copiedKey, setCopiedKey] = useState<string | null>(null)
   const [toast, setToast] = useState(false)
   const closeRef = useRef<HTMLButtonElement>(null)
+  const fileRef = useRef<HTMLInputElement>(null)
+  const [email, setEmail] = useState(prefillEmail ?? "")
+  const [senderName, setSenderName] = useState("")
+  const [file, setFile] = useState<File | null>(null)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [proofError, setProofError] = useState("")
 
   // Escape to close, and no scrolling the page behind the modal.
   useEffect(() => {
@@ -129,6 +151,57 @@ export function InstapayModal({
       setTimeout(() => setToast(false), 2200)
     } catch {
       /* clipboard blocked — the number is visible and selectable anyway */
+    }
+  }
+
+  /**
+   * Records the order server-side (which recomputes what's owed), uploads the
+   * receipt straight to storage with the signed URL it hands back, then puts
+   * the order in the admin's verification queue. Nothing here grants access —
+   * an admin still has to look at the receipt.
+   */
+  const submitProof = async () => {
+    setProofError("")
+    if (!email.includes("@")) { setProofError(t("proofNeedEmail")); return }
+    if (!file) { setProofError(t("proofNeedFile")); return }
+
+    setSubmitting(true)
+    try {
+      const res = await fetch("/api/instapay", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          plan,
+          email,
+          telegram,
+          couponCode,
+          splitPayment,
+          preferredDate,
+          preferredSlotId,
+          filename: file.name,
+        }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setProofError(data.error || t("proofFailed")); return }
+
+      const put = await fetch(data.signedUrl, {
+        method: "PUT",
+        body: file,
+        headers: { "Content-Type": data.contentType || file.type || "application/octet-stream" },
+      })
+      if (!put.ok) { setProofError(t("proofFailed")); return }
+
+      const confirm = await fetch("/api/instapay", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ orderId: data.orderId, senderName }),
+      })
+      if (!confirm.ok) { setProofError(t("proofFailed")); return }
+      setSubmitted(true)
+    } catch {
+      setProofError(t("proofFailed"))
+    } finally {
+      setSubmitting(false)
     }
   }
 
@@ -280,6 +353,67 @@ export function InstapayModal({
             <Info className="mt-0.5 h-4 w-4 shrink-0 text-white/40" />
             <p className="text-xs leading-relaxed text-white/60">{t("screenshotNote")}</p>
           </div>
+
+          {/* proof of transfer — only for a checkout tied to a specific plan */}
+          {plan && (
+            submitted ? (
+              <div className="mt-5 rounded-2xl border border-emerald-500/40 bg-emerald-500/10 px-4 py-4 text-center">
+                <Check className="mx-auto h-6 w-6 text-emerald-400" />
+                <p className="mt-2 text-sm font-bold text-emerald-300">{t("proofDone")}</p>
+                <p className="mt-1 text-xs leading-relaxed text-white/60">{t("proofDoneBody")}</p>
+              </div>
+            ) : (
+              <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.03] p-4">
+                <p className="text-sm font-bold text-white">{t("proofTitle")}</p>
+                <p className="mt-1 text-xs leading-relaxed text-white/55">{t("proofSubtitle")}</p>
+
+                <div className="mt-3 space-y-2.5">
+                  <input
+                    type="email"
+                    dir="ltr"
+                    value={email}
+                    onChange={(e) => { setEmail(e.target.value); setProofError("") }}
+                    placeholder={t("proofEmail")}
+                    className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white placeholder:text-white/35 focus:border-white/30 focus:outline-none"
+                  />
+                  <input
+                    type="text"
+                    value={senderName}
+                    onChange={(e) => setSenderName(e.target.value)}
+                    placeholder={t("proofSenderName")}
+                    className="h-11 w-full rounded-xl border border-white/10 bg-black/40 px-4 text-sm text-white placeholder:text-white/35 focus:border-white/30 focus:outline-none"
+                  />
+                  <input
+                    ref={fileRef}
+                    type="file"
+                    accept="image/png,image/jpeg,image/webp,image/heic,application/pdf"
+                    className="hidden"
+                    onChange={(e) => { setFile(e.target.files?.[0] ?? null); setProofError("") }}
+                  />
+                  <button
+                    type="button"
+                    onClick={() => fileRef.current?.click()}
+                    className="flex h-11 w-full items-center gap-2 rounded-xl border border-dashed border-white/20 px-4 text-sm text-white/60 transition-colors hover:border-white/40 hover:text-white"
+                  >
+                    <Upload className="h-4 w-4 shrink-0" />
+                    <span className="truncate">{file ? file.name : t("proofChoose")}</span>
+                  </button>
+                </div>
+
+                {proofError && <p className="mt-2 text-xs font-semibold text-red-400">{proofError}</p>}
+
+                <button
+                  type="button"
+                  onClick={submitProof}
+                  disabled={submitting}
+                  className="mt-3 h-11 w-full rounded-xl text-sm font-bold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
+                  style={{ background: `linear-gradient(90deg, ${PURPLE}, ${ORANGE})` }}
+                >
+                  {submitting ? t("proofSubmitting") : t("proofSubmit")}
+                </button>
+              </div>
+            )
+          )}
         </div>
 
         {toast && (
@@ -295,17 +429,7 @@ export function InstapayModal({
 }
 
 /** Checkout entry point: the button plus the modal it opens. */
-export function InstapayPayButton({
-  plan,
-  amountUsd,
-  secondAmountUsd,
-  className,
-}: {
-  plan?: string
-  amountUsd?: number
-  secondAmountUsd?: number
-  className?: string
-}) {
+export function InstapayPayButton({ className, ...context }: CheckoutContext & { className?: string }) {
   const t = useTranslations("egyptPayment")
   const [open, setOpen] = useState(false)
   const { settings, loading } = usePaymentSettings()
@@ -329,9 +453,7 @@ export function InstapayPayButton({
         <span className="text-xs text-muted-foreground">🇪🇬</span>
       </button>
 
-      {open && (
-        <InstapayModal plan={plan} amountUsd={amountUsd} secondAmountUsd={secondAmountUsd} onClose={() => setOpen(false)} />
-      )}
+      {open && <InstapayModal {...context} onClose={() => setOpen(false)} />}
     </>
   )
 }
