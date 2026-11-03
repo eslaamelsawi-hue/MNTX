@@ -335,6 +335,9 @@ export function InstapayModal({
               onCopy={() => copy("instapay", settings.instapayNumber)}
               logo={<img src="/payment-logos/instapay.png" alt="" className="h-9 w-9 shrink-0 object-contain" />}
             />
+            {/* Both wallets often sit on the same number — showing it twice
+                just reads as a mistake. */}
+            {settings.vodafoneNumber.trim() !== settings.instapayNumber.trim() && (
             <AccountCard
               label={t("vodafoneCash")}
               number={settings.vodafoneNumber}
@@ -346,6 +349,7 @@ export function InstapayModal({
                 </span>
               }
             />
+            )}
           </div>
 
           {/* footer note */}
