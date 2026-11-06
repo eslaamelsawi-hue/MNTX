@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react"
 import { Loader2, Check, Lock } from "lucide-react"
 import { OKXPayButton, WhopPayButton } from "@/components/payment-buttons"
+import { InstapayPayButton } from "@/components/instapay-payment"
 import { alexandria } from "@/lib/fonts"
 
 const GRID_BG = [
@@ -105,6 +106,15 @@ export function MentorshipCheckout({
             <div className="mt-8 space-y-3">
               <WhopPayButton plan={PLAN} couponCode={code} prefillEmail={email} splitPayment={!!split} amount={split ? split.firstAmount : price ?? undefined} className="w-full justify-center" />
               <OKXPayButton plan={PLAN} couponCode={code} prefillEmail={email} splitPayment={!!split} className="w-full justify-center" />
+              <InstapayPayButton
+                plan={PLAN}
+                couponCode={code}
+                email={email}
+                splitPayment={!!split}
+                amountUsd={split ? split.firstAmount : price ?? undefined}
+                secondAmountUsd={split ? split.secondAmount : undefined}
+                className="flex w-full items-center justify-center gap-3 rounded-lg border border-border p-4 transition-all hover:border-primary/50"
+              />
             </div>
 
             <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
