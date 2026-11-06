@@ -146,7 +146,7 @@ const GRID_BG = [
   "linear-gradient(90deg, rgba(255,255,255,0.035) 1px, transparent 1px)",
 ].join(", ")
 
-export function ApplyMentorship({ seatsFull, remaining, discountPercent }: { seatsFull: boolean; remaining: number; discountPercent: number }) {
+export function ApplyMentorship({ seatsFull, remaining, discountPercent, batchMonth }: { seatsFull: boolean; remaining: number; discountPercent: number; batchMonth: string }) {
   const PROCESS = processSteps(discountPercent)
   const [step, setStep] = useState(1)
   const [agreed, setAgreed] = useState(false)
@@ -210,7 +210,7 @@ export function ApplyMentorship({ seatsFull, remaining, discountPercent }: { sea
             <span className="h-2 w-2 rounded-full bg-primary" /> مينتورشيب فردي 1-1
           </span>
           <h1 className="mt-6 text-4xl font-extrabold leading-tight text-balance md:text-5xl">
-            تدرّب تحت إشراف مباشر، <span className="text-primary">بخصم {discountPercent}%</span> لدفعة أكتوبر
+            تدرّب تحت إشراف مباشر، <span className="text-primary">بخصم {discountPercent}%</span> لدفعة {batchMonth}
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
             6 جلسات أسبوعية مباشرة، متابعة شخصية لصفقاتك وتفكيرك، ومجتمع خاص. قدّم طلبك الآن، ويراجعه فريقنا
@@ -230,7 +230,7 @@ export function ApplyMentorship({ seatsFull, remaining, discountPercent }: { sea
             </span>
             <h2 className="mt-5 text-2xl font-extrabold text-balance md:text-3xl">التقديم مغلق حاليًا</h2>
             <p className="mx-auto mt-3 max-w-md leading-relaxed text-muted-foreground">
-              وصلنا للعدد المطلوب من المقبولين في دفعة أكتوبر. تابعنا لمعرفة موعد فتح التقديم للدفعة القادمة.
+              وصلنا للعدد المطلوب من المقبولين في دفعة {batchMonth}. تابعنا لمعرفة موعد فتح التقديم للدفعة القادمة.
             </p>
           </section>
         ) : (
@@ -266,7 +266,7 @@ export function ApplyMentorship({ seatsFull, remaining, discountPercent }: { sea
             <>
               <div className="flex flex-wrap items-center justify-between gap-3">
                 <div className="flex gap-2">
-                  <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">دفعة أكتوبر</span>
+                  <span className="rounded-full border border-primary/30 bg-primary/10 px-3 py-1 text-xs font-medium text-primary">دفعة {batchMonth}</span>
                   <span className="rounded-full border border-border bg-muted px-3 py-1 text-xs font-medium text-muted-foreground">{remaining} مقاعد متبقية فقط</span>
                 </div>
                 <h2 className="text-xl font-extrabold md:text-2xl">نموذج التقديم</h2>

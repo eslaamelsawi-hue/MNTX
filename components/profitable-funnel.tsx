@@ -27,7 +27,7 @@ const LEAD_IN: Record<Answer, { eyebrow: string; line: string }> = {
   },
 }
 
-export function ProfitableFunnel({ daysUntilBatch }: { daysUntilBatch: number }) {
+export function ProfitableFunnel({ batchMonth }: { batchMonth: string }) {
   const [answer, setAnswer] = useState<Answer | null>(null)
   const resultsRef = useRef<HTMLDivElement>(null)
 
@@ -36,12 +36,6 @@ export function ProfitableFunnel({ daysUntilBatch }: { daysUntilBatch: number })
     requestAnimationFrame(() => resultsRef.current?.scrollIntoView({ behavior: "smooth", block: "start" }))
   }
 
-  const daysLabel =
-    daysUntilBatch <= 0 ? "بدأت بالفعل"
-      : daysUntilBatch === 1 ? "يوم واحد"
-      : daysUntilBatch === 2 ? "يومين"
-      : daysUntilBatch <= 10 ? `${daysUntilBatch} أيام`
-      : `${daysUntilBatch} يومًا`
 
   return (
     <div
@@ -104,12 +98,12 @@ export function ProfitableFunnel({ daysUntilBatch }: { daysUntilBatch: number })
                 عايز توصل للمستوى ده؟
               </h2>
               <p className="mx-auto mt-4 max-w-xl text-base leading-relaxed text-muted-foreground md:text-lg">
-                تقدر تسجّل في مينتورشيب دفعة أكتوبر — 6 أسابيع، جلسة فردية كل أسبوع، ومتابعة
+                تقدر تسجّل في مينتورشيب دفعة {batchMonth} — 6 أسابيع، جلسة فردية كل أسبوع، ومتابعة
                 لصفقاتك خطوة بخطوة.
               </p>
 
               <div className="mt-6 inline-flex items-center gap-2 rounded-full border border-primary/40 bg-background px-5 py-2 text-sm font-bold text-primary">
-                {daysUntilBatch > 0 ? <>تبدأ خلال {daysLabel}</> : <>الدفعة {daysLabel}</>}
+                التقديم مفتوح الآن — المقاعد محدودة
               </div>
 
               <div className="mt-8 flex flex-wrap items-center justify-center gap-3">

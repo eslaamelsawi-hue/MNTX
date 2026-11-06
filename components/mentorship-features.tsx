@@ -1,5 +1,6 @@
 import { Check } from "lucide-react"
 import { alexandria } from "@/lib/fonts"
+import { currentBatchMonth } from "@/lib/batch"
 
 const GRID_BG = [
   "radial-gradient(ellipse 800px 400px at 50% -10%, hsl(var(--primary) / 0.14), transparent 60%)",
@@ -144,7 +145,7 @@ export function MentorshipFeatures() {
               قدّم على المينتورشيب
               <span aria-hidden="true">←</span>
             </a>
-            <p className="mt-3 text-xs text-muted-foreground">مقاعد دفعة أكتوبر محدودة، والتقديم يُغلق عند اكتمال العدد.</p>
+            <p className="mt-3 text-xs text-muted-foreground">مقاعد دفعة {currentBatchMonth()} محدودة، والتقديم يُغلق عند اكتمال العدد.</p>
           </div>
         </section>
       </div>
