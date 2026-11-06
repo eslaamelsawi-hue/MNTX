@@ -468,9 +468,6 @@
     "step3": "Send a payment confirmation screenshot to the team",
     "step3Here": "HERE",
     "instapay": "Instapay",
-    "vodafoneCash": "Vodafone Cash",
-    "copy": "Copy",
-    "copied": "Copied",
     "step2Send": "Send",
     "step2Choose": "Send the amount for your plan:",
     "egp": "EGP",
@@ -480,7 +477,6 @@
     },
     "step2Remaining": "Remaining, due within 30 days:",
     "close": "Close",
-    "copiedToast": "Number copied successfully",
     "payWithInstapay": "Pay with Instapay",
     "nonRefundable": "All payments are final and non-refundable",
     "paymentDetails": "Payment details",
@@ -497,7 +493,9 @@
     "proofDoneBody": "Our team verifies transfers manually. You'll get an email the moment your access is activated.",
     "proofNeedEmail": "Enter a valid email address.",
     "proofNeedFile": "Choose your receipt first.",
-    "proofFailed": "We couldn't send your receipt. Please try again."
+    "proofFailed": "We couldn't send your receipt. Please try again.",
+    "transferNow": "Transfer now",
+    "transferNowNote": "Tap to transfer directly"
   },
   "gold": {
     "badge": "Egyptian Gold Prices",

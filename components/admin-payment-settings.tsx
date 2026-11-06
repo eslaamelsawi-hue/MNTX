@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { RefreshCw, ShieldAlert, CreditCard, Banknote } from "lucide-react"
-import { usdToEgp, formatEgp, DEFAULT_INSTAPAY_NUMBER, DEFAULT_VODAFONE_NUMBER } from "@/lib/egp"
+import { usdToEgp, formatEgp, DEFAULT_INSTAPAY_LINK } from "@/lib/egp"
 
 type Flags = {
   subscriptions_open: boolean
@@ -31,7 +31,7 @@ const METHODS: { key: keyof Flags; label: string; desc: string }[] = [
   { key: "payment_okx_enabled", label: "OKX (Crypto)", desc: "The \"Pay with OKX\" button across checkout pages." },
   { key: "payment_nowpayments_enabled", label: "NOWPayments (Crypto)", desc: "The \"Pay with Crypto\" button across checkout pages." },
   { key: "payment_stripe_enabled", label: "Card (Stripe)", desc: "Embedded card checkout at /checkout/[plan] and unified checkout." },
-  { key: "payment_egypt_enabled", label: "Egypt (Instapay / Vodafone Cash)", desc: "The manual Egyptian payment instructions page." },
+  { key: "payment_egypt_enabled", label: "Egypt (Instapay)", desc: "The \"Pay with Instapay\" button and its payment window." },
   { key: "payment_whop_enabled", label: "Visa / Card (Whop)", desc: "The \"Pay with Visa\" button across checkout pages." },
 ]
 
@@ -45,8 +45,7 @@ export function AdminPaymentSettings() {
   const [egpSaving, setEgpSaving] = useState(false)
   const [egpMsg, setEgpMsg] = useState("")
   const [egpError, setEgpError] = useState("")
-  const [instapayNumber, setInstapayNumber] = useState("")
-  const [vodafoneNumber, setVodafoneNumber] = useState("")
+  const [instapayLink, setInstapayLink] = useState("")
 
   const load = useCallback(async () => {
     setLoading(true)
@@ -64,8 +63,7 @@ export function AdminPaymentSettings() {
       })
       if (settings.usd_to_egp_rate && Number(settings.usd_to_egp_rate) > 0) setEgpRate(settings.usd_to_egp_rate)
       if (settings.usd_to_egp_margin) setEgpMargin(settings.usd_to_egp_margin)
-      if (settings.egypt_instapay_number) setInstapayNumber(settings.egypt_instapay_number)
-      if (settings.egypt_vodafone_number) setVodafoneNumber(settings.egypt_vodafone_number)
+      if (settings.egypt_instapay_link) setInstapayLink(settings.egypt_instapay_link)
       try {
         const live = await (await fetch("/api/payment-settings")).json()
         setEgpLive({ live: live.usdToEgpLive, effective: live.usdToEgp, source: live.usdToEgpSource })
@@ -101,15 +99,10 @@ export function AdminPaymentSettings() {
     setEgpMsg("")
     if (!Number.isFinite(override) || override < 0) { setEgpError("Override must be a positive number, or blank for the live rate."); return }
     if (!Number.isFinite(margin) || margin < 0) { setEgpError("Margin cannot be negative."); return }
-    const numbers = [
-      ["egypt_instapay_number", instapayNumber.trim()],
-      ["egypt_vodafone_number", vodafoneNumber.trim()],
-    ] as const
-    for (const [, value] of numbers) {
-      if (value && !/^[0-9+\s-]{6,20}$/.test(value)) {
-        setEgpError("Account numbers may only contain digits, spaces, + and -.")
-        return
-      }
+    const link = instapayLink.trim()
+    if (link && !/^https:\/\/\S+$/.test(link)) {
+      setEgpError("The Instapay link must be a full https:// URL.")
+      return
     }
 
     setEgpSaving(true)
@@ -117,7 +110,7 @@ export function AdminPaymentSettings() {
       const updates: [string, string][] = [
         ["usd_to_egp_rate", String(override)],
         ["usd_to_egp_margin", String(margin)],
-        ...numbers.filter(([, value]) => value !== "").map(([key, value]) => [key, value] as [string, string]),
+        ...(link ? ([["egypt_instapay_link", link]] as [string, string][]) : []),
       ]
       for (const [key, value] of updates) {
         const res = await fetch("/api/admin/settings", {
@@ -272,32 +265,19 @@ export function AdminPaymentSettings() {
               </div>
             </div>
           </div>
-          <div className="grid gap-3 sm:grid-cols-2">
-            <div>
-              <Label className="text-xs">Instapay number</Label>
-              <Input
-                dir="ltr"
-                inputMode="tel"
-                placeholder={DEFAULT_INSTAPAY_NUMBER}
-                value={instapayNumber}
-                onChange={(e) => { setInstapayNumber(e.target.value); setEgpMsg("") }}
-                className="h-9 font-mono"
-              />
-            </div>
-            <div>
-              <Label className="text-xs">Vodafone Cash number</Label>
-              <Input
-                dir="ltr"
-                inputMode="tel"
-                placeholder={DEFAULT_VODAFONE_NUMBER}
-                value={vodafoneNumber}
-                onChange={(e) => { setVodafoneNumber(e.target.value); setEgpMsg("") }}
-                className="h-9 font-mono"
-              />
-            </div>
+          <div>
+            <Label className="text-xs">Instapay payment link</Label>
+            <Input
+              dir="ltr"
+              type="url"
+              placeholder={DEFAULT_INSTAPAY_LINK}
+              value={instapayLink}
+              onChange={(e) => { setInstapayLink(e.target.value); setEgpMsg("") }}
+              className="h-9 font-mono"
+            />
           </div>
           <p className="text-xs text-muted-foreground">
-            These are the numbers customers see — and copy — in the Instapay payment window.
+            Where the &quot;transfer now&quot; button in the Instapay payment window sends customers.
           </p>
           {egpError && <p className="text-sm text-destructive">{egpError}</p>}
           {egpMsg && <p className="text-sm text-emerald-400">{egpMsg}</p>}

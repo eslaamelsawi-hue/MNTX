@@ -24,8 +24,7 @@ export function formatEgp(amount: number): string {
   return amount.toLocaleString("en-US")
 }
 
-/** Account numbers shown on the Instapay instructions, editable in admin. */
-export const EGYPT_INSTAPAY_KEY = "egypt_instapay_number"
-export const EGYPT_VODAFONE_KEY = "egypt_vodafone_number"
-export const DEFAULT_INSTAPAY_NUMBER = "01062791235"
-export const DEFAULT_VODAFONE_NUMBER = "01062791235"
+/** The Instapay payment link the "transfer now" button opens. Editable in
+ *  admin, so a new link never needs a deploy. */
+export const EGYPT_INSTAPAY_LINK_KEY = "egypt_instapay_link"
+export const DEFAULT_INSTAPAY_LINK = "https://ipn.eg/S/eeslamfx/instapay/2V1nNO"

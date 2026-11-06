@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react"
 import { DEFAULT_MENTORSHIP_PRICE } from "@/lib/plan-pricing"
-import { DEFAULT_USD_TO_EGP, DEFAULT_INSTAPAY_NUMBER, DEFAULT_VODAFONE_NUMBER } from "@/lib/egp"
+import { DEFAULT_USD_TO_EGP, DEFAULT_INSTAPAY_LINK } from "@/lib/egp"
 
 export type PaymentSettings = {
   subscriptionsOpen: boolean
@@ -18,8 +18,8 @@ export type PaymentSettings = {
   usdToEgpLive: number | null
   usdToEgpMargin: number
   usdToEgpSource: "live" | "manual" | "last-known" | "default"
-  instapayNumber: string
-  vodafoneNumber: string
+  /** Where the modal's "transfer now" button sends the buyer. */
+  instapayLink: string
 }
 
 const DEFAULTS: PaymentSettings = {
@@ -34,8 +34,7 @@ const DEFAULTS: PaymentSettings = {
   usdToEgpLive: null,
   usdToEgpMargin: 1,
   usdToEgpSource: "default",
-  instapayNumber: DEFAULT_INSTAPAY_NUMBER,
-  vodafoneNumber: DEFAULT_VODAFONE_NUMBER,
+  instapayLink: DEFAULT_INSTAPAY_LINK,
 }
 
 /** Fetches the admin-controlled payment kill-switches once per mount.

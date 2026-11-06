@@ -18,8 +18,7 @@ const ALLOWED_KEYS = [
   "mentorship_discount_percent",
   "usd_to_egp_rate",
   "usd_to_egp_margin",
-  "egypt_instapay_number",
-  "egypt_vodafone_number",
+  "egypt_instapay_link",
 ]
 
 const BOOLEAN_KEYS = [
@@ -56,8 +55,9 @@ function validate(key: string, value: unknown): string | null {
     // 0 is meaningful here: it clears the override and returns to the live rate.
     if (!Number.isFinite(num) || num < 0) return "Exchange rate cannot be negative"
   }
-  if (key === "egypt_instapay_number" || key === "egypt_vodafone_number") {
-    if (!/^[0-9+\s-]{6,20}$/.test(String(value))) return "Enter a valid phone/account number"
+  if (key === "egypt_instapay_link") {
+    const link = String(value).trim()
+    if (!/^https:\/\/\S{4,300}$/.test(link)) return "Enter a full https:// payment link"
   }
   if (key === "usd_to_egp_margin") {
     const num = Number(value)

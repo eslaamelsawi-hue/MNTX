@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useTranslations } from "next-intl"
-import { AlertTriangle, Check, Copy, Info, Send, Smartphone, Upload, X } from "lucide-react"
+import { AlertTriangle, ArrowUpRight, Check, Info, Send, Smartphone, Upload, X } from "lucide-react"
 import { usePaymentSettings } from "@/hooks/use-payment-settings"
 import { PLAN_PRICES } from "@/lib/plan-pricing"
 import { usdToEgp, formatEgp } from "@/lib/egp"
@@ -11,49 +11,6 @@ import { usdToEgp, formatEgp } from "@/lib/egp"
  *  belongs to their brand, while the rest of the site stays amber. */
 const PURPLE = "#7C3AED"
 const ORANGE = "#F59E0B"
-
-function AccountCard({
-  logo,
-  label,
-  number,
-  onCopy,
-  copied,
-}: {
-  logo: React.ReactNode
-  label: string
-  number: string
-  onCopy: () => void
-  copied: boolean
-}) {
-  const t = useTranslations("egyptPayment")
-  return (
-    <div className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3.5">
-      <div className="flex min-w-0 items-center gap-3">
-        {logo}
-        <div className="min-w-0">
-          <p className="text-xs text-white/50">{label}</p>
-          <p dir="ltr" className="truncate font-mono text-base font-bold tracking-wide text-white">
-            {number}
-          </p>
-        </div>
-      </div>
-      <button
-        type="button"
-        onClick={onCopy}
-        aria-label={`${t("copy")} ${number}`}
-        className="flex shrink-0 items-center gap-1.5 rounded-xl border px-3 py-2 text-xs font-semibold transition-colors"
-        style={{
-          borderColor: copied ? "rgba(16,185,129,.5)" : "rgba(124,58,237,.5)",
-          background: copied ? "rgba(16,185,129,.12)" : "rgba(124,58,237,.12)",
-          color: copied ? "#34D399" : "#C4B5FD",
-        }}
-      >
-        {copied ? <Check className="h-3.5 w-3.5" /> : <Copy className="h-3.5 w-3.5" />}
-        {copied ? t("copied") : t("copy")}
-      </button>
-    </div>
-  )
-}
 
 function Step({
   num,
@@ -118,8 +75,6 @@ export function InstapayModal({
 }: CheckoutContext & { onClose: () => void }) {
   const t = useTranslations("egyptPayment")
   const { settings } = usePaymentSettings()
-  const [copiedKey, setCopiedKey] = useState<string | null>(null)
-  const [toast, setToast] = useState(false)
   const closeRef = useRef<HTMLButtonElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const [email, setEmail] = useState(prefillEmail ?? "")
@@ -141,18 +96,6 @@ export function InstapayModal({
       document.body.style.overflow = previous
     }
   }, [onClose])
-
-  const copy = async (key: string, value: string) => {
-    try {
-      await navigator.clipboard.writeText(value.trim())
-      setCopiedKey(key)
-      setToast(true)
-      setTimeout(() => setCopiedKey(null), 2000)
-      setTimeout(() => setToast(false), 2200)
-    } catch {
-      /* clipboard blocked — the number is visible and selectable anyway */
-    }
-  }
 
   /**
    * Records the order server-side (which recomputes what's owed), uploads the
@@ -325,32 +268,29 @@ export function InstapayModal({
             </Step>
           </div>
 
-          {/* accounts */}
+          {/* transfer */}
           <h3 className="mb-3 mt-6 text-sm font-bold text-white">{t("paymentDetails")}</h3>
-          <div className="space-y-2.5">
-            <AccountCard
-              label={t("instapay")}
-              number={settings.instapayNumber}
-              copied={copiedKey === "instapay"}
-              onCopy={() => copy("instapay", settings.instapayNumber)}
-              logo={<img src="/payment-logos/instapay.png" alt="" className="h-9 w-9 shrink-0 object-contain" />}
-            />
-            {/* Both wallets often sit on the same number — showing it twice
-                just reads as a mistake. */}
-            {settings.vodafoneNumber.trim() !== settings.instapayNumber.trim() && (
-            <AccountCard
-              label={t("vodafoneCash")}
-              number={settings.vodafoneNumber}
-              copied={copiedKey === "vodafone"}
-              onCopy={() => copy("vodafone", settings.vodafoneNumber)}
-              logo={
-                <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-red-600 text-[10px] font-black leading-none text-white">
-                  VF
-                </span>
-              }
-            />
-            )}
-          </div>
+          <a
+            href={settings.instapayLink}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="flex items-center justify-between gap-3 rounded-2xl border border-white/10 bg-white/[0.03] p-3.5 transition-colors hover:border-white/25"
+          >
+            <span className="flex min-w-0 items-center gap-3">
+              <img src="/payment-logos/instapay.png" alt="" className="h-9 w-9 shrink-0 object-contain" />
+              <span className="min-w-0">
+                <span className="block text-xs text-white/50">{t("instapay")}</span>
+                <span className="block truncate text-sm font-bold text-white">{t("transferNowNote")}</span>
+              </span>
+            </span>
+            <span
+              className="flex shrink-0 items-center gap-1.5 rounded-xl px-4 py-2.5 text-xs font-bold text-white"
+              style={{ background: `linear-gradient(90deg, ${PURPLE}, ${ORANGE})` }}
+            >
+              {t("transferNow")}
+              <ArrowUpRight className="h-3.5 w-3.5" />
+            </span>
+          </a>
 
           {/* footer note */}
           <div className="mt-5 flex items-start gap-2.5 rounded-2xl border border-white/10 bg-white/[0.03] px-4 py-3">
@@ -420,13 +360,6 @@ export function InstapayModal({
           )}
         </div>
 
-        {toast && (
-          <div className="pointer-events-none absolute inset-x-0 bottom-4 flex justify-center">
-            <span className="rounded-full bg-emerald-500 px-4 py-2 text-xs font-bold text-white shadow-lg">
-              {t("copiedToast")}
-            </span>
-          </div>
-        )}
       </div>
     </div>
   )
