@@ -74,7 +74,7 @@ export function InstapayModal({
   onClose,
 }: CheckoutContext & { onClose: () => void }) {
   const t = useTranslations("egyptPayment")
-  const { settings } = usePaymentSettings()
+  const { settings, loading } = usePaymentSettings()
   const closeRef = useRef<HTMLButtonElement>(null)
   const fileRef = useRef<HTMLInputElement>(null)
   const [email, setEmail] = useState(prefillEmail ?? "")
@@ -216,7 +216,14 @@ export function InstapayModal({
             </Step>
 
             <Step num={2} icon={<Send className="h-4 w-4" />}>
-              {egpFirst ? (
+              {/* The rate is admin-configurable and fetched, so showing a
+                  figure before it arrives means showing the wrong one. */}
+              {loading ? (
+                <span className="flex items-center gap-2">
+                  {t("step2Send")}
+                  <span className="inline-block h-4 w-28 animate-pulse rounded bg-white/15" />
+                </span>
+              ) : egpFirst ? (
                 <>
                   <p>
                     {t("step2Send")}{" "}

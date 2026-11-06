@@ -37,19 +37,32 @@ const DEFAULTS: PaymentSettings = {
   instapayLink: DEFAULT_INSTAPAY_LINK,
 }
 
-/** Fetches the admin-controlled payment kill-switches once per mount.
+// Shared across every component on the page: the first mount fetches, the
+// rest reuse the answer. Without this, a component mounted later (a modal, a
+// second checkout section) starts from DEFAULTS again and visibly corrects
+// itself once its own fetch lands.
+let cached: PaymentSettings | null = null
+let inflight: Promise<PaymentSettings> | null = null
+
+/** Fetches the admin-controlled payment settings once per page session.
  *  Defaults to "everything open" so a slow/failed fetch never blocks a
- *  legitimate checkout — components should still re-check after loading
- *  finishes if they want to react to a closed method. */
+ *  legitimate checkout — but anything derived from a live number (prices,
+ *  the EGP rate) should wait for `loading` to clear before being shown,
+ *  or it will render the placeholder value first. */
 export function usePaymentSettings() {
-  const [settings, setSettings] = useState<PaymentSettings>(DEFAULTS)
-  const [loading, setLoading] = useState(true)
+  const [settings, setSettings] = useState<PaymentSettings>(cached ?? DEFAULTS)
+  const [loading, setLoading] = useState(!cached)
 
   useEffect(() => {
+    if (cached) return
     let cancelled = false
-    fetch("/api/payment-settings")
+    inflight ??= fetch("/api/payment-settings")
       .then((r) => r.json())
-      .then((d) => { if (!cancelled) setSettings({ ...DEFAULTS, ...d }) })
+      .then((d) => (cached = { ...DEFAULTS, ...d }))
+      .catch((e) => { inflight = null; throw e })
+
+    inflight
+      .then((s) => { if (!cancelled) setSettings(s) })
       .catch(() => {})
       .finally(() => { if (!cancelled) setLoading(false) })
     return () => { cancelled = true }
