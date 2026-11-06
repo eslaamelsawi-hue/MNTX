@@ -5,6 +5,7 @@ import { createStarterInviteLink } from "@/lib/tg-invite"
 import { COURSE_GRANT_PLAN } from "@/lib/course"
 import { createInvoiceForPlan } from "@/lib/invoicing"
 import { grantVipRoleForEmail } from "@/lib/discord"
+import { CUSTOM_MENTORSHIP_MAX_SESSIONS } from "@/lib/plan-pricing"
 
 /** Mentorship hours granted by the 1-on-1 Coaching Plan (10 sessions = 10 hours). */
 export const COACHING_HOURS = 10
@@ -15,6 +16,12 @@ export const EXTEND_PLAN_HOURS: Record<string, number> = {
   "extend-2m": 4,
   "extend-3m": 10,
   "extend-6m": 20,
+}
+
+// A custom mentorship grants one hour per session it was built with, so the
+// same extend-plan path fulfils it across card, crypto and Instapay.
+for (let n = 1; n <= CUSTOM_MENTORSHIP_MAX_SESSIONS; n++) {
+  EXTEND_PLAN_HOURS[`mentorship-custom-${n}`] = n
 }
 
 /**
