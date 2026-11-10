@@ -38,6 +38,12 @@ export async function POST(req: NextRequest) {
   if (discount_type === "percent" && (discount_value < 1 || discount_value > 100)) {
     return NextResponse.json({ error: "Percentage must be between 1 and 100" }, { status: 400 })
   }
+  // The table permits a zero discount because an approved custom-mentorship
+  // request mints a coupon purely as its checkout token. One created by hand
+  // is meant to be worth something.
+  if (discount_value <= 0) {
+    return NextResponse.json({ error: "Discount must be greater than 0" }, { status: 400 })
+  }
 
   const supabase = createAdminClient()
   const { data, error } = await supabase.from("coupons").insert({

@@ -71,6 +71,9 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     split = { firstAmount: first, secondAmount: second }
   }
 
+  // Zero when the admin approves at the quoted price. The coupon is created
+  // either way: it's what the checkout link is keyed on, and what makes that
+  // link single-use and expiring.
   const discount = Math.round((listPrice - finalPrice) * 100) / 100
   const expiresAt = new Date(Date.now() + COUPON_EXPIRY_DAYS * 24 * 60 * 60 * 1000)
 
