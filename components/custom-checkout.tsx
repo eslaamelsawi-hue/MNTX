@@ -108,6 +108,8 @@ export function CustomCheckout({
             prefillTelegram={telegram}
             splitPayment={!!split}
             amount={payNow}
+            splitFirstAmount={split?.firstAmount}
+            splitSecondAmount={split?.secondAmount}
             className="w-full justify-center"
           />
         )}

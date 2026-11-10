@@ -62,8 +62,13 @@ export async function createWhopCheckout(opts: {
  *
  * Split pay only exists on a real plan (the inline plan accepted by
  * /checkout_configurations silently drops the field), so a hidden plan is
- * created first and the checkout points at it. The plan carries the two
- * amounts: initial_price now, renewal_price in 30 days.
+ * created first and the checkout points at it.
+ *
+ * Whop bills `initial_price` *in addition to* the first renewal at checkout,
+ * not instead of it — sending the two instalments as initial/renewal charged
+ * their sum on day one. So the up-front fee is the difference between them,
+ * which makes day one `firstAmount` and day 30 `secondAmount`. That requires
+ * the first instalment to be the larger one; callers handle the rest.
  */
 export async function createWhopSplitCheckout(opts: {
   planLabel: string
@@ -74,6 +79,11 @@ export async function createWhopSplitCheckout(opts: {
 }): Promise<{ url: string; checkoutId: string; planId: string }> {
   const apiKey = process.env.WHOP_API_KEY
   if (!apiKey) throw new Error("Whop is not configured — set WHOP_API_KEY.")
+
+  const upfront = Math.round((opts.firstAmount - opts.secondAmount) * 100) / 100
+  if (upfront < 0) {
+    throw new Error("Whop split pay needs the first instalment to be at least the second")
+  }
 
   const headers = {
     Authorization: `Bearer ${apiKey}`,
@@ -91,7 +101,7 @@ export async function createWhopSplitCheckout(opts: {
       billing_period: 30,
       // Whop stops after this many charges instead of renewing forever.
       split_pay_required_payments: 2,
-      initial_price: opts.firstAmount,
+      initial_price: upfront,
       renewal_price: opts.secondAmount,
       visibility: "hidden",
     }),

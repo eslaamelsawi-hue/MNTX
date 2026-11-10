@@ -104,7 +104,16 @@ export function MentorshipCheckout({
             )}
 
             <div className="mt-8 space-y-3">
-              <WhopPayButton plan={PLAN} couponCode={code} prefillEmail={email} splitPayment={!!split} amount={split ? split.firstAmount : price ?? undefined} className="w-full justify-center" />
+              <WhopPayButton
+                plan={PLAN}
+                couponCode={code}
+                prefillEmail={email}
+                splitPayment={!!split}
+                amount={split ? split.firstAmount : price ?? undefined}
+                splitFirstAmount={split?.firstAmount}
+                splitSecondAmount={split?.secondAmount}
+                className="w-full justify-center"
+              />
               <OKXPayButton plan={PLAN} couponCode={code} prefillEmail={email} splitPayment={!!split} className="w-full justify-center" />
               <InstapayPayButton
                 plan={PLAN}

@@ -38,6 +38,8 @@ const t = (locale: string, key: string) => {
     methodUnavailable: "طريقة الدفع هذه غير متاحة حالياً",
     subscriptionsClosed: "لا نقبل اشتراكات جديدة حالياً. يرجى المحاولة لاحقاً.",
     splitPaymentBadge: "الدفعة 1 من 2 (60%)",
+    splitPaymentBadgePlain: "الدفعة 1 من 2",
+    splitRemainingLabel: "المتبقي",
     splitPaymentNote: "المتبقي مستحق خلال 30 يومًا، ويمكنك دفعه في أي وقت من لوحة التحكم.",
     payWithVisa: "الدفع بالفيزا",
     redirecting: "جاري التحويل إلى صفحة الدفع…",
@@ -72,6 +74,8 @@ const t = (locale: string, key: string) => {
     methodUnavailable: "This payment method is currently unavailable",
     subscriptionsClosed: "We're not accepting new subscriptions right now. Please check back later.",
     splitPaymentBadge: "Payment 1 of 2 (60%)",
+    splitPaymentBadgePlain: "Payment 1 of 2",
+    splitRemainingLabel: "Remaining",
     splitPaymentNote: "The remaining balance is due within 30 days — payable anytime from your dashboard.",
     payWithVisa: "Pay with Visa",
     redirecting: "Redirecting to checkout…",
@@ -562,6 +566,8 @@ export function WhopPayButton({
   preferredDate,
   preferredSlotId,
   amount,
+  splitFirstAmount,
+  splitSecondAmount,
 }: {
   plan: string
   className?: string
@@ -571,6 +577,12 @@ export function WhopPayButton({
   splitPayment?: boolean
   preferredDate?: string
   preferredSlotId?: string
+  /** Set when the two instalments aren't the standard 60/40 — an approved
+   *  applicant or custom mentorship with amounts an admin chose. Without
+   *  these the modal would re-apply 60% to an amount that is already the
+   *  first instalment. */
+  splitFirstAmount?: number
+  splitSecondAmount?: number
   /** Final price being charged, so the modal can show the fee-inclusive
    *  total. Falls back to the plan's list price; omitted when a coupon is in
    *  play and no amount was passed, since the total would be wrong. */
@@ -586,7 +598,12 @@ export function WhopPayButton({
   const disabled = !settingsLoading && (!paySettings.subscriptionsOpen || !paySettings.whop)
 
   const baseAmount = amount ?? (couponCode ? undefined : PLAN_PRICES[plan]?.amount)
-  const totalDue = baseAmount !== undefined ? withVisaFee(splitPayment ? Math.round(baseAmount * 0.6 * 100) / 100 : baseAmount) : null
+  const totalDue =
+    splitFirstAmount !== undefined
+      ? withVisaFee(splitFirstAmount)
+      : baseAmount !== undefined
+        ? withVisaFee(splitPayment ? Math.round(baseAmount * 0.6 * 100) / 100 : baseAmount)
+        : null
 
   const handlePay = async () => {
     const useEmail = prefillEmail || email
@@ -645,8 +662,16 @@ export function WhopPayButton({
 
           {splitPayment && (
             <div className="rounded-xl border border-primary/30 bg-primary/10 p-3 text-center">
-              <p className="text-xs font-semibold text-primary">{t(locale, "splitPaymentBadge")}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{t(locale, "splitPaymentNote")}</p>
+              <p className="text-xs font-semibold text-primary">
+                {splitFirstAmount !== undefined
+                  ? t(locale, "splitPaymentBadgePlain")
+                  : t(locale, "splitPaymentBadge")}
+              </p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                {splitSecondAmount !== undefined
+                  ? `${t(locale, "splitRemainingLabel")} $${splitSecondAmount} — ${t(locale, "splitPaymentNote")}`
+                  : t(locale, "splitPaymentNote")}
+              </p>
             </div>
           )}
 
