@@ -1,9 +1,7 @@
 "use client"
 
 import { useMemo, useState } from "react"
-import { Check, Minus, Plus, Sparkles, Lock } from "lucide-react"
-import { OKXPayButton, WhopPayButton } from "@/components/payment-buttons"
-import { InstapayPayButton } from "@/components/instapay-payment"
+import { Check, Loader2, Minus, Plus, Sparkles } from "lucide-react"
 import {
   CUSTOM_MENTORSHIP_BASE,
   CUSTOM_MENTORSHIP_MAX_SESSIONS,
@@ -44,29 +42,73 @@ export function CustomizeMentorship() {
   const [focus, setFocus] = useState<string[]>([])
   const [level, setLevel] = useState(LEVELS[1])
   const [goals, setGoals] = useState("")
+  const [fullName, setFullName] = useState("")
   const [email, setEmail] = useState("")
   const [telegram, setTelegram] = useState("")
-  const [saved, setSaved] = useState(false)
+  const [submitting, setSubmitting] = useState(false)
+  const [submitted, setSubmitted] = useState(false)
+  const [error, setError] = useState("")
 
   const sessionsPrice = customMentorshipSessionsPrice(sessions)
   const total = customMentorshipPrice(sessions)
   const perSession = useMemo(() => Math.round(sessionsPrice / sessions), [sessionsPrice, sessions])
-  const plan = `mentorship-custom-${sessions}`
-  const ready = email.includes("@")
+  const ready = fullName.trim().length >= 2 && email.includes("@")
 
   const toggleFocus = (item: string) =>
     setFocus((f) => (f.includes(item) ? f.filter((x) => x !== item) : [...f, item]))
 
-  /** Sends the brief with the order so the mentor knows what was bought
-   *  before the first session. Never blocks the payment itself. */
-  const saveBrief = () => {
-    if (!ready || saved) return
-    setSaved(true)
-    fetch("/api/mentorship-customization", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ email, telegram, sessions, total, focus, level, goals }),
-    }).catch(() => setSaved(false))
+  /** Submits the plan for review. Nothing is charged here — an admin sets
+   *  the final price and sends a checkout link if the request is approved. */
+  const submit = async () => {
+    if (!ready || submitting) return
+    setSubmitting(true)
+    setError("")
+    try {
+      const res = await fetch("/api/mentorship-customization", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fullName, email, telegram, sessions, focus, level, goals }),
+      })
+      const data = await res.json().catch(() => ({}))
+      if (!res.ok) { setError(data.error || "تعذر إرسال الطلب، حاول مرة أخرى."); return }
+      setSubmitted(true)
+      window.scrollTo({ top: 0, behavior: "smooth" })
+    } catch {
+      setError("تعذر إرسال الطلب، حاول مرة أخرى.")
+    } finally {
+      setSubmitting(false)
+    }
+  }
+
+  if (submitted) {
+    return (
+      <div
+        dir="rtl"
+        lang="ar"
+        className={`${alexandria.className} flex min-h-screen items-center justify-center bg-background text-foreground`}
+        style={{ backgroundImage: GRID_BG, backgroundSize: "100% 100%, 32px 32px, 32px 32px" }}
+      >
+        <div className="mx-auto w-full max-w-lg px-4 text-center">
+          <div className="rounded-3xl border border-primary/30 bg-card p-8 md:p-10">
+            <span className="mx-auto flex h-14 w-14 items-center justify-center rounded-full bg-primary/15">
+              <Check className="h-7 w-7 text-primary" />
+            </span>
+            <h1 className="mt-5 text-2xl font-extrabold md:text-3xl">وصلنا طلبك</h1>
+            <p className="mt-4 text-sm leading-relaxed text-muted-foreground">
+              هنراجع المنتورشيب اللي صمّمته ({sessions} {sessions === 1 ? "جلسة" : "جلسات"}) ونرجع لك على
+              <span className="mx-1 font-bold text-foreground" dir="ltr">{email}</span>
+              برابط الدفع والسعر النهائي لو تمت الموافقة.
+            </p>
+            <a
+              href="/ar"
+              className="mt-7 inline-flex h-11 items-center rounded-xl border border-border px-6 text-sm font-medium transition-colors hover:border-primary/50"
+            >
+              العودة للرئيسية
+            </a>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -83,7 +125,7 @@ export function CustomizeMentorship() {
           </span>
           <h1 className="mt-5 text-3xl font-extrabold text-balance md:text-4xl">صمّم المنتورشيب الخاص بك</h1>
           <p className="mx-auto mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground md:text-base">
-            اختر عدد الجلسات التي تحتاجها فعلًا، وحدّد ما تريد التركيز عليه. تدفع مقابل ما تختاره فقط.
+            اختر عدد الجلسات التي تحتاجها فعلًا، وحدّد ما تريد التركيز عليه، وأرسل طلبك للمراجعة.
           </p>
         </div>
 
@@ -138,11 +180,6 @@ export function CustomizeMentorship() {
             ))}
           </div>
 
-          {sessions >= 4 && (
-            <p className="mt-5 rounded-xl border border-primary/30 bg-primary/10 p-3 text-center text-xs font-medium text-primary">
-              من 4 جلسات فأكثر: 70$ للجلسة الواحدة — أوفر سعر للساعة
-            </p>
-          )}
         </section>
 
         {/* focus */}
@@ -215,6 +252,7 @@ export function CustomizeMentorship() {
         {/* price + checkout */}
         <section className="mt-6 rounded-3xl border border-primary/30 bg-card p-6 shadow-[0_0_80px_-20px_hsl(var(--primary)/0.25)] md:p-8">
           <h2 className="text-lg font-bold">ملخص خطتك</h2>
+          <p className="mt-1 text-xs text-muted-foreground">السعر التقديري — يتم تأكيده بعد المراجعة.</p>
 
           <dl className="mt-5 space-y-2.5 text-sm">
             <div className="flex items-center justify-between">
@@ -236,6 +274,13 @@ export function CustomizeMentorship() {
 
           <div className="mt-6 space-y-3">
             <input
+              type="text"
+              value={fullName}
+              onChange={(e) => setFullName(e.target.value)}
+              placeholder="الاسم بالكامل"
+              className="h-12 w-full rounded-xl border border-border bg-background px-4 text-sm outline-none transition-colors focus:border-primary/50"
+            />
+            <input
               type="email"
               dir="ltr"
               value={email}
@@ -253,38 +298,22 @@ export function CustomizeMentorship() {
             />
           </div>
 
-          {!ready ? (
-            <p className="mt-5 rounded-xl border border-border bg-background p-4 text-center text-sm text-muted-foreground">
-              أدخل بريدك الإلكتروني لعرض طرق الدفع
-            </p>
-          ) : (
-            <div className="mt-5 space-y-3" onClick={saveBrief}>
-              <WhopPayButton
-                plan={plan}
-                prefillEmail={email}
-                prefillTelegram={telegram || undefined}
-                amount={total}
-                className="w-full justify-center"
-              />
-              <OKXPayButton
-                plan={plan}
-                prefillEmail={email}
-                prefillTelegram={telegram || undefined}
-                className="w-full justify-center"
-              />
-              <InstapayPayButton
-                plan={plan}
-                email={email}
-                telegram={telegram || undefined}
-                amountUsd={total}
-                className="flex w-full items-center justify-center gap-3 rounded-lg border border-border p-4 transition-all hover:border-primary/50"
-              />
-            </div>
-          )}
+          {error && <p className="mt-4 text-center text-sm font-medium text-destructive">{error}</p>}
 
-          <p className="mt-6 flex items-center justify-center gap-1.5 text-xs text-muted-foreground">
-            <Lock className="h-3.5 w-3.5" /> دفع آمن ومشفّر — جميع المدفوعات نهائية وغير قابلة للاسترداد
+          <button
+            type="button"
+            onClick={submit}
+            disabled={!ready || submitting}
+            className="mt-5 flex h-13 w-full items-center justify-center gap-2 rounded-xl bg-primary py-4 text-base font-bold text-primary-foreground transition-colors hover:bg-primary/90 disabled:opacity-50"
+          >
+            {submitting ? <><Loader2 className="h-4 w-4 animate-spin" /> جاري الإرسال…</> : "إرسال الطلب للمراجعة"}
+          </button>
+
+          <p className="mt-4 text-center text-xs leading-relaxed text-muted-foreground">
+            لا يتم الدفع الآن. نراجع طلبك أولًا، ولو تمت الموافقة نرسل لك رابط الدفع على بريدك
+            الإلكتروني بالسعر النهائي وطرق الدفع المتاحة.
           </p>
+
         </section>
       </div>
     </div>

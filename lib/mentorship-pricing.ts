@@ -74,11 +74,22 @@ export type MentorshipSplitPlan = { firstAmount: number; secondAmount: number }
 export async function getMentorshipSplitForCoupon(code: string): Promise<MentorshipSplitPlan | null> {
   try {
     const supabase = createAdminClient()
-    const { data } = await supabase
+    const normalized = code.toUpperCase().trim()
+    let { data } = await supabase
       .from("mentorship_applications")
       .select("split_first_amount, split_second_amount")
-      .eq("coupon_code", code.toUpperCase().trim())
+      .eq("coupon_code", normalized)
       .maybeSingle()
+
+    // Approved custom-mentorship requests carry their own two-payment plan.
+    if (!data) {
+      const custom = await supabase
+        .from("custom_mentorship_requests")
+        .select("split_first_amount, split_second_amount")
+        .eq("coupon_code", normalized)
+        .maybeSingle()
+      data = custom.data
+    }
 
     const first = Number(data?.split_first_amount)
     const second = Number(data?.split_second_amount)
