@@ -67,8 +67,14 @@ export async function createWhopCheckout(opts: {
  * Whop bills `initial_price` *in addition to* the first renewal at checkout,
  * not instead of it — sending the two instalments as initial/renewal charged
  * their sum on day one. So the up-front fee is the difference between them,
- * which makes day one `firstAmount` and day 30 `secondAmount`. That requires
- * the first instalment to be the larger one; callers handle the rest.
+ * which makes day one `firstAmount` and day 30 `secondAmount`.
+ *
+ * That only works when the first instalment is the larger one: a smaller
+ * deposit followed by a bigger balance would need a negative up-front fee,
+ * which Whop's split pay can't express. Rather than refuse the payment, that
+ * case falls back to a one-time charge for the deposit — the balance is still
+ * recorded as an instalment on the invoice, the buyer just pays it by hand
+ * from their dashboard instead of it being taken automatically.
  */
 export async function createWhopSplitCheckout(opts: {
   planLabel: string
@@ -76,13 +82,19 @@ export async function createWhopSplitCheckout(opts: {
   secondAmount: number
   redirectUrl: string
   metadata: Record<string, string>
-}): Promise<{ url: string; checkoutId: string; planId: string }> {
+}): Promise<{ url: string; checkoutId: string; planId: string | null; autoCharges: boolean }> {
   const apiKey = process.env.WHOP_API_KEY
   if (!apiKey) throw new Error("Whop is not configured — set WHOP_API_KEY.")
 
   const upfront = Math.round((opts.firstAmount - opts.secondAmount) * 100) / 100
   if (upfront < 0) {
-    throw new Error("Whop split pay needs the first instalment to be at least the second")
+    const checkout = await createWhopCheckout({
+      planLabel: opts.planLabel,
+      amount: opts.firstAmount,
+      redirectUrl: opts.redirectUrl,
+      metadata: opts.metadata,
+    })
+    return { ...checkout, planId: null, autoCharges: false }
   }
 
   const headers = {
@@ -129,7 +141,7 @@ export async function createWhopSplitCheckout(opts: {
   const checkout = await checkoutRes.json()
   if (!checkout?.purchase_url) throw new Error("Whop did not return a purchase_url")
 
-  return { url: checkout.purchase_url, checkoutId: checkout.id, planId: plan.id }
+  return { url: checkout.purchase_url, checkoutId: checkout.id, planId: plan.id, autoCharges: true }
 }
 
 type WhopPayment = {
