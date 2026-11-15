@@ -8,17 +8,29 @@ export async function POST(request: NextRequest) {
 
   // Admin login with password
   if (password) {
-    const { data, error } = await supabase
-      .from("admin_settings")
-      .select("value")
-      .eq("key", "admin_password")
-      .single();
+    // The password is checked inside the database: the hash lives in a table
+    // no API key can read, and this only ever answers yes or no. The old
+    // admin_settings row is still honoured as a fallback so an environment
+    // that hasn't run scripts/122 yet can't lock its admin out.
+    let ok: boolean | null = null;
+    const { data: verified, error: rpcError } = await supabase.rpc("verify_admin_password", {
+      p_password: password,
+    });
+    if (!rpcError) ok = verified === true;
 
-    if (error || !data) {
-      return NextResponse.json({ error: "Server error" }, { status: 500 });
+    if (ok === null) {
+      const { data, error } = await supabase
+        .from("admin_settings")
+        .select("value")
+        .eq("key", "admin_password")
+        .single();
+      if (error || !data) {
+        return NextResponse.json({ error: "Server error" }, { status: 500 });
+      }
+      ok = password === data.value;
     }
 
-    if (password !== data.value) {
+    if (!ok) {
       return NextResponse.json({ error: "Invalid password" }, { status: 401 });
     }
 
