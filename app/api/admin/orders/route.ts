@@ -87,6 +87,7 @@ async function getAllOrders() {
           currency: "EGP",
           // The same payment in dollars, so revenue totals can mix currencies.
           amountUsd: Number(d.charge_amount),
+          amountEgp: Number(d.amount_egp),
           email: d.email,
           telegramUsername: d.telegram_username || undefined,
           status: d.status,

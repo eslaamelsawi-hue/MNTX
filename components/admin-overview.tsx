@@ -15,7 +15,10 @@ type Booking = {
   zoom_start_url: string | null
   availability_slots: Slot | null
 }
-type Order = { orderId: string; amount: string; status: string; paidAt?: string; currency?: string; amountUsd?: number }
+type Order = {
+  orderId: string; amount: string; status: string; paidAt?: string
+  currency?: string; amountUsd?: number; amountEgp?: number; provider?: string
+}
 type Sub = { client_email: string; client_name: string; plan: string; status: string; remaining_hours: number }
 type Invoice = {
   id: string; client_email: string; client_name: string; title: string
@@ -83,6 +86,18 @@ export function AdminOverview({ bookings, slots, orders }: { bookings: Booking[]
       .reduce((sum, o) => sum + (orderValue(o) || 0), 0)
   }, [orders, today])
 
+  // Instapay is collected in pounds, so it gets its own total in pounds —
+  // converting it to dollars for display would hide what actually landed.
+  const instapayRevenue = useMemo(() => {
+    const ym = today.slice(0, 7)
+    const paid = orders.filter((o) => o.provider === "instapay" && o.status === "paid")
+    return {
+      month: paid.filter((o) => o.paidAt?.slice(0, 7) === ym).reduce((sum, o) => sum + (o.amountEgp ?? 0), 0),
+      allTime: paid.reduce((sum, o) => sum + (o.amountEgp ?? 0), 0),
+      count: paid.length,
+    }
+  }, [orders, today])
+
   const revenueAllTime = useMemo(
     () => orders.filter((o) => o.status === "paid").reduce((sum, o) => sum + (orderValue(o) || 0), 0),
     [orders]
@@ -127,7 +142,7 @@ export function AdminOverview({ bookings, slots, orders }: { bookings: Booking[]
 
   return (
     <div className="space-y-6">
-      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
         <Card className="border-border bg-card">
           <CardContent className="p-5">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Active Mentees</p>
@@ -152,6 +167,19 @@ export function AdminOverview({ bookings, slots, orders }: { bookings: Booking[]
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
               ${revenueAllTime.toLocaleString(undefined, { maximumFractionDigits: 2 })} all time · all currencies
+            </p>
+          </CardContent>
+        </Card>
+        <Card className="border-border bg-card">
+          <CardContent className="p-5">
+            <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Instapay This Month</p>
+            <p className="mt-2 text-3xl font-bold tabular-nums text-foreground">
+              {instapayRevenue.month.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+              <span className="ml-1 text-sm font-medium text-muted-foreground">EGP</span>
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              {instapayRevenue.allTime.toLocaleString(undefined, { maximumFractionDigits: 0 })} EGP all time ·{" "}
+              {instapayRevenue.count} verified
             </p>
           </CardContent>
         </Card>
