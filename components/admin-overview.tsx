@@ -15,7 +15,7 @@ type Booking = {
   zoom_start_url: string | null
   availability_slots: Slot | null
 }
-type Order = { orderId: string; amount: string; status: string; paidAt?: string }
+type Order = { orderId: string; amount: string; status: string; paidAt?: string; currency?: string; amountUsd?: number }
 type Sub = { client_email: string; client_name: string; plan: string; status: string; remaining_hours: number }
 type Invoice = {
   id: string; client_email: string; client_name: string; title: string
@@ -71,12 +71,22 @@ export function AdminOverview({ bookings, slots, orders }: { bookings: Booking[]
     [slots, weekBounds]
   )
 
+  // Every paid order counts, whatever it was paid in: Instapay orders are
+  // priced in pounds, so their dollar value rides along on the row rather
+  // than being guessed from a rate here.
+  const orderValue = (o: Order) => o.amountUsd ?? parseFloat(o.amount.replace(/,/g, "")) ?? 0
+
   const revenueThisMonth = useMemo(() => {
     const ym = today.slice(0, 7)
     return orders
       .filter((o) => o.status === "paid" && o.paidAt?.slice(0, 7) === ym)
-      .reduce((sum, o) => sum + (parseFloat(o.amount) || 0), 0)
+      .reduce((sum, o) => sum + (orderValue(o) || 0), 0)
   }, [orders, today])
+
+  const revenueAllTime = useMemo(
+    () => orders.filter((o) => o.status === "paid").reduce((sum, o) => sum + (orderValue(o) || 0), 0),
+    [orders]
+  )
 
   const invoicesPending = useMemo(() => {
     const pending = invoices.filter((i) => ["pending", "partially_paid", "overdue"].includes(i.status))
@@ -137,7 +147,12 @@ export function AdminOverview({ bookings, slots, orders }: { bookings: Booking[]
         <Card className="border-border bg-card">
           <CardContent className="p-5">
             <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Revenue This Month</p>
-            <p className="mt-2 text-3xl font-bold tabular-nums text-foreground">${revenueThisMonth.toLocaleString()}</p>
+            <p className="mt-2 text-3xl font-bold tabular-nums text-foreground">
+              ${revenueThisMonth.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+            </p>
+            <p className="mt-1 text-xs text-muted-foreground">
+              ${revenueAllTime.toLocaleString(undefined, { maximumFractionDigits: 2 })} all time · all currencies
+            </p>
           </CardContent>
         </Card>
         <Card className="border-border bg-card">

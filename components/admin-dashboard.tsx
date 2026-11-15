@@ -24,6 +24,7 @@ import { AdminCertification } from "@/components/admin-certification"
 import { AdminDiscountOffers } from "@/components/admin-discount-offers"
 import { AdminMentorshipApplications } from "@/components/admin-mentorship-applications"
 import { AdminCustomMentorship } from "@/components/admin-custom-mentorship"
+import { AdminUsers } from "@/components/admin-users"
 import { AdminPaymentSettings } from "@/components/admin-payment-settings"
 import { StatusPill } from "@/components/status-pill"
 import { AdminCourses } from "@/components/admin-courses"
@@ -431,6 +432,27 @@ export function AdminDashboard() {
       } else {
         alert(data.error || "Action failed")
       }
+    } catch {
+      alert("Something went wrong")
+    }
+    setOrderActionLoading(null)
+  }
+
+  /** Clears abandoned checkouts — anything that was never paid. */
+  const handleDeleteAllUnpaid = async () => {
+    const unpaid = orders.filter((o) => !["paid", "pending_verification"].includes(o.status)).length
+    if (unpaid === 0) { alert("No unpaid orders to remove"); return }
+    if (!confirm(`Permanently delete ${unpaid} unpaid order(s)? Paid orders and anything awaiting verification are kept.`)) return
+    setOrderActionLoading("delete_all_unpaid")
+    try {
+      const res = await fetch("/api/admin/orders", {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ action: "delete_all_unpaid" }),
+      })
+      const data = await res.json()
+      if (data.success) fetchOrders()
+      else alert(data.error || "Action failed")
     } catch {
       alert("Something went wrong")
     }
@@ -1066,6 +1088,9 @@ export function AdminDashboard() {
       { value: "subscriptions", label: "Subscriptions", icon: DollarSign },
       { value: "invoices", label: "Invoices", icon: FileText },
       { value: "certification", label: "Certification Test", icon: Award },
+    ] },
+    { label: "People", items: [
+      { value: "users", label: "Users", icon: UserCheck },
     ] },
     { label: "Commerce", items: [
       { value: "orders", label: "Orders", icon: ShoppingCart },
@@ -2200,6 +2225,20 @@ export function AdminDashboard() {
                   <RefreshCw className={`mr-2 h-4 w-4 ${orderActionLoading === "sync_whop" ? "animate-spin" : ""}`} />
                   {orderActionLoading === "sync_whop" ? "Syncing…" : "Sync Visa Orders"}
                 </Button>
+                {orders.filter(o => !["paid", "pending_verification"].includes(o.status)).length > 0 && (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="border-red-500/30 text-red-400 hover:bg-red-500/10"
+                    onClick={handleDeleteAllUnpaid}
+                    disabled={orderActionLoading === "delete_all_unpaid"}
+                  >
+                    <Trash2 className="mr-2 h-4 w-4" />
+                    {orderActionLoading === "delete_all_unpaid"
+                      ? "Removing…"
+                      : `Remove Unpaid (${orders.filter(o => !["paid", "pending_verification"].includes(o.status)).length})`}
+                  </Button>
+                )}
                 {orders.filter(o => o.status === "pending" && o.provider === "okx").length > 0 && (
                   <Button
                     variant="outline"
@@ -2710,6 +2749,11 @@ export function AdminDashboard() {
           {/* Mentorship Applications Tab */}
           <TabsContent value="mentorship-applications" className="space-y-4">
             <AdminMentorshipApplications />
+          </TabsContent>
+
+          {/* Users Tab */}
+          <TabsContent value="users" className="space-y-4">
+            <AdminUsers />
           </TabsContent>
 
           {/* Custom Mentorship Requests Tab */}

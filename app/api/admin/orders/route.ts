@@ -31,6 +31,7 @@ async function getAllOrders() {
         plan: d.plan,
         amount: d.amount,
         currency: "USDT",
+        amountUsd: Number(d.amount),
         email: d.email,
         telegramUsername: d.telegram_username || undefined,
         address: d.address,
@@ -57,6 +58,7 @@ async function getAllOrders() {
         // What the customer was actually charged, card fee included.
         amount: String(withVisaFee(Number(d.charge_amount))),
         currency: "USD",
+        amountUsd: withVisaFee(Number(d.charge_amount)),
         email: d.email,
         telegramUsername: d.telegram_username || undefined,
         status: d.status,
@@ -83,6 +85,8 @@ async function getAllOrders() {
           // What we asked them to transfer, in the currency they sent it in.
           amount: formatEgp(Number(d.amount_egp)),
           currency: "EGP",
+          // The same payment in dollars, so revenue totals can mix currencies.
+          amountUsd: Number(d.charge_amount),
           email: d.email,
           telegramUsername: d.telegram_username || undefined,
           status: d.status,
@@ -181,6 +185,32 @@ export async function PATCH(request: Request) {
     } catch (e) {
       console.error("Failed to expire all pending:", e)
       return NextResponse.json({ error: "Failed to expire pending orders" }, { status: 500 })
+    }
+  }
+
+  // Clears out the clutter of abandoned checkouts: anything that never got
+  // paid, whatever provider it came from. Paid and awaiting-verification
+  // orders are left alone.
+  if (action === "delete_all_unpaid") {
+    try {
+      const supabase = createAdminClient()
+      const [okx, whop, instapay] = await Promise.all([
+        supabase.from("okx_orders").delete().in("status", ["pending", "expired", "cancelled"]).select("order_id"),
+        supabase.from("whop_orders").delete().in("status", ["pending", "expired", "cancelled"]).select("order_id"),
+        supabase
+          .from("instapay_orders")
+          .delete()
+          .in("status", ["awaiting_payment", "rejected"])
+          .select("order_id"),
+      ])
+      const failed = [okx.error, whop.error, instapay.error].find(Boolean)
+      if (failed) throw failed
+      const deleted =
+        (okx.data?.length ?? 0) + (whop.data?.length ?? 0) + (instapay.data?.length ?? 0)
+      return NextResponse.json({ success: true, deleted })
+    } catch (e) {
+      console.error("Failed to delete unpaid orders:", e)
+      return NextResponse.json({ error: "Failed to delete unpaid orders" }, { status: 500 })
     }
   }
 

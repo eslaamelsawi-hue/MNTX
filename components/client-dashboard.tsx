@@ -370,6 +370,7 @@ export function ClientDashboard() {
   const isRtl = locale === "ar"
 
   const [email, setEmail] = useState("")
+  const [impersonating, setImpersonating] = useState("")
   const [name, setName] = useState("")
   const [avatarUrl, setAvatarUrl] = useState<string | null>(null)
   const [activeTab, setActiveTab] = useState("academy")
@@ -442,6 +443,17 @@ export function ClientDashboard() {
   useEffect(() => {
     const savedRegs = localStorage.getItem("mentix_registered_sessions")
     if (savedRegs) setRegisteredSessionIds(new Set(JSON.parse(savedRegs)))
+
+    // An admin opening someone's dashboard from the Users page. Deliberately
+    // not saved to localStorage, so the next visit here is their own again.
+    const viewAs = new URLSearchParams(window.location.search).get("as")
+    if (viewAs) {
+      setImpersonating(viewAs)
+      setEmail(viewAs)
+      runLookup(viewAs)
+      return
+    }
+
     const supabase = createClient()
     supabase.auth.getUser().then(({ data }) => {
       setAvatarUrl((data.user?.user_metadata?.avatar_url as string) || null)
@@ -626,6 +638,11 @@ export function ClientDashboard() {
       className="min-h-screen bg-background"
       dir={isRtl ? "rtl" : "ltr"}
     >
+      {impersonating && (
+        <div className="sticky top-0 z-50 bg-amber-500 px-4 py-2 text-center text-sm font-semibold text-black" dir="ltr">
+          Admin view — you are looking at {impersonating}&apos;s dashboard. Actions here act as them.
+        </div>
+      )}
       <div className="flex flex-col lg:flex-row">
         {/* Sidebar (desktop) */}
         <aside className="hidden shrink-0 lg:flex lg:min-h-screen lg:w-64 lg:flex-col lg:border-e lg:border-border lg:p-4">
