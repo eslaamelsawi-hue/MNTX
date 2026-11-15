@@ -53,10 +53,23 @@ export async function joinGuildIfNeeded(discordUserId: string, accessToken: stri
   }
 }
 
-/** True if this client currently has a non-cancelled coaching-plan
- *  subscription on file — the entitlement gate for the VIP MAX role. */
+/** True if this client may hold the VIP MAX role: a non-cancelled
+ *  coaching-plan subscription on file, and not on the block list. */
 async function qualifiesForVip(email: string): Promise<boolean> {
   const supabase = createAdminClient()
+
+  // An admin can bar someone from the role regardless of what they hold.
+  // A failed check is treated as "blocked": if we can't confirm they're
+  // allowed, granting the role is the wrong way to be wrong.
+  const { data: blocked, error: blockError } = await supabase.rpc("is_vip_blocked", {
+    p_email: email.toLowerCase().trim(),
+  })
+  if (blockError) {
+    console.error("[discord] VIP block check failed — withholding the role:", blockError)
+    return false
+  }
+  if (blocked === true) return false
+
   const { data } = await supabase
     .from("user_subscriptions")
     .select("id")
