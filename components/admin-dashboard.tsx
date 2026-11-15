@@ -122,6 +122,10 @@ type OKXOrder = {
   txId?: string
   tgToken?: string
   preferredDate?: string
+  /** Machine-readable amounts: `amount` is for display and may be formatted
+   *  with separators, so totals must never parse it. */
+  amountUsd?: number
+  amountEgp?: number
   /** Instapay only — a short-lived link to the uploaded transfer receipt. */
   proofUrl?: string | null
   senderName?: string
@@ -2267,12 +2271,29 @@ export function AdminDashboard() {
             </div>
 
             {/* Summary stats */}
-            <div className="grid gap-3 sm:grid-cols-4">
+            <div className="grid gap-3 sm:grid-cols-5">
               {[
                 { label: "Total", value: orders.length, color: "text-foreground" },
                 { label: "Pending", value: orders.filter(o => o.status === "pending").length, color: "text-yellow-400" },
                 { label: "Paid", value: orders.filter(o => o.status === "paid").length, color: "text-green-400" },
-                { label: "Revenue", value: orders.filter(o => o.status === "paid").reduce((s, o) => s + parseFloat(o.amount), 0).toFixed(2), color: "text-primary" },
+                {
+                  label: "Revenue (USD)",
+                  // Card and crypto only. Instapay is collected in pounds and
+                  // totalled separately, so the two never double-count.
+                  value: orders
+                    .filter(o => o.status === "paid" && o.provider !== "instapay")
+                    .reduce((sum, o) => sum + (o.amountUsd ?? 0), 0)
+                    .toFixed(2),
+                  color: "text-primary",
+                },
+                {
+                  label: "Instapay (EGP)",
+                  value: orders
+                    .filter(o => o.status === "paid" && o.provider === "instapay")
+                    .reduce((sum, o) => sum + (o.amountEgp ?? 0), 0)
+                    .toLocaleString(undefined, { maximumFractionDigits: 0 }),
+                  color: "text-violet-400",
+                },
               ].map(stat => (
                 <Card key={stat.label} className="border-border bg-card">
                   <CardContent className="p-4">

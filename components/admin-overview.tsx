@@ -77,7 +77,7 @@ export function AdminOverview({ bookings, slots, orders }: { bookings: Booking[]
   // Every paid order counts, whatever it was paid in: Instapay orders are
   // priced in pounds, so their dollar value rides along on the row rather
   // than being guessed from a rate here.
-  const orderValue = (o: Order) => o.amountUsd ?? parseFloat(o.amount.replace(/,/g, "")) ?? 0
+  const orderValue = (o: Order) => (o.provider === "instapay" ? 0 : o.amountUsd ?? 0)
 
   const revenueThisMonth = useMemo(() => {
     const ym = today.slice(0, 7)
@@ -166,7 +166,7 @@ export function AdminOverview({ bookings, slots, orders }: { bookings: Booking[]
               ${revenueThisMonth.toLocaleString(undefined, { maximumFractionDigits: 2 })}
             </p>
             <p className="mt-1 text-xs text-muted-foreground">
-              ${revenueAllTime.toLocaleString(undefined, { maximumFractionDigits: 2 })} all time · all currencies
+              ${revenueAllTime.toLocaleString(undefined, { maximumFractionDigits: 2 })} all time · card &amp; crypto
             </p>
           </CardContent>
         </Card>
