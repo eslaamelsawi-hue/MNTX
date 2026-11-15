@@ -93,6 +93,12 @@ export function AdminCustomMentorship() {
       setFormError(`The two payments must add up to $${price}.`)
       return
     }
+    if (useSplit && methods.includes("visa") && Number(firstAmount) < Number(secondAmount)) {
+      setFormError(
+        `With Visa, the first payment must be the larger one so the second can be charged automatically. Use $${secondAmount} then $${firstAmount}.`
+      )
+      return
+    }
 
     setBusy(target.id)
     try {

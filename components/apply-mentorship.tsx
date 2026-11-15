@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { alexandria } from "@/lib/fonts"
+import { MENTORSHIP_SESSIONS } from "@/lib/mentorship-sessions"
 
 const TOTAL_STEPS = 5
 const STEP_LABELS = ["الشروط والأحكام", "بياناتك الشخصية", "خبرتك في التداول", "طريقة تفكيرك والتزامك", "الاستثمار"]
@@ -213,11 +214,11 @@ export function ApplyMentorship({ seatsFull, remaining, discountPercent, batchMo
             تدرّب تحت إشراف مباشر، <span className="text-primary">بخصم {discountPercent}%</span> لدفعة {batchMonth}
           </h1>
           <p className="mx-auto mt-5 max-w-2xl text-base leading-relaxed text-muted-foreground md:text-lg">
-            6 جلسات أسبوعية مباشرة، متابعة شخصية لصفقاتك وتفكيرك، ومجتمع خاص. قدّم طلبك الآن، ويراجعه فريقنا
+            {MENTORSHIP_SESSIONS} جلسات أسبوعية مباشرة، متابعة شخصية لصفقاتك وتفكيرك، ومجتمع خاص. قدّم طلبك الآن، ويراجعه فريقنا
             خلال أيام قليلة.
           </p>
           <div className="mt-7 flex flex-wrap items-center justify-center gap-2.5 text-sm text-muted-foreground">
-            <span className="rounded-full border border-border bg-muted px-4 py-1.5">6 جلسات زووم أسبوعية</span>
+            <span className="rounded-full border border-border bg-muted px-4 py-1.5">{MENTORSHIP_SESSIONS} جلسات زووم أسبوعية</span>
             <span className="rounded-full border border-border bg-muted px-4 py-1.5">متابعة شخصية ومراجعة صفقات</span>
             <span className="rounded-full border border-border bg-muted px-4 py-1.5">مجتمع خاص على تيليجرام</span>
           </div>

@@ -7,6 +7,7 @@ import { Textarea } from "@/components/ui/textarea"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { StatusPill } from "@/components/status-pill"
+import { MENTORSHIP_SESSIONS, MENTORSHIP_SESSIONS_MAX } from "@/lib/mentorship-sessions"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Loader2, RefreshCw, CheckCircle2, XCircle, Eye, Link as LinkIcon, Tag } from "lucide-react"
@@ -45,7 +46,27 @@ type Application = {
   checkout_url: string | null
   decline_reason: string | null
   granted_discount_percent: number | null
+  enrollment: {
+    status: "awaiting_payment" | "paid" | "cancelled"
+    sessions: number
+    total_amount: number
+    split_first_amount: number | null
+    split_second_amount: number | null
+    paid_at: string | null
+    register_email_sent_at: string | null
+  } | null
   created_at: string
+}
+
+/** Whether an approved applicant has paid, read from the order approval created. */
+function PaymentPill({ app }: { app: Application }) {
+  if (app.status !== "approved" || !app.enrollment) return null
+  const e = app.enrollment
+  if (e.status === "paid") {
+    const label = e.split_first_amount ? `Paid 1 of 2 · ${e.sessions} sessions` : `Paid · ${e.sessions} sessions`
+    return <StatusPill status="paid" label={label} className="normal-case" />
+  }
+  return <StatusPill status={e.status} label={e.status === "awaiting_payment" ? "Awaiting payment" : "Cancelled"} className="normal-case" />
 }
 
 const yn = (v: boolean | null) => (v === true ? "Yes" : v === false ? "No" : "—")
@@ -72,6 +93,7 @@ export function AdminMentorshipApplications() {
   const [useCustomDiscount, setUseCustomDiscount] = useState(false)
   const [customDiscount, setCustomDiscount] = useState("")
   const [approveError, setApproveError] = useState("")
+  const [sessions, setSessions] = useState(String(MENTORSHIP_SESSIONS))
   const [useSplit, setUseSplit] = useState(false)
   const [firstPayment, setFirstPayment] = useState("")
   const [secondPayment, setSecondPayment] = useState("")
@@ -137,7 +159,9 @@ export function AdminMentorshipApplications() {
     try {
       const res = await fetch("/api/mentorship-applications")
       const data = await res.json()
-      setApplications(data.applications ?? [])
+      const list: Application[] = data.applications ?? []
+      setApplications(list)
+      setSelected((prev) => (prev ? list.find((a) => a.id === prev.id) ?? prev : prev))
     } finally {
       setLoading(false)
     }
@@ -190,6 +214,7 @@ export function AdminMentorshipApplications() {
     setApproveTarget(app)
     setUseCustomDiscount(false)
     setCustomDiscount(savedPricing ? String(savedPricing.discount) : "")
+    setSessions(String(MENTORSHIP_SESSIONS))
     setUseSplit(false)
     setFirstPayment("")
     setSecondPayment("")
@@ -199,7 +224,8 @@ export function AdminMentorshipApplications() {
   const approve = async (
     app: Application,
     discountPercent?: number,
-    split?: { firstAmount: number; secondAmount: number }
+    split?: { firstAmount: number; secondAmount: number },
+    sessionCount?: number
   ) => {
     setActionLoading(app.id + "approve")
     setError("")
@@ -212,9 +238,18 @@ export function AdminMentorshipApplications() {
         body: JSON.stringify({
           ...(discountPercent !== undefined ? { discountPercent } : {}),
           ...(split ? { split } : {}),
+          ...(sessionCount !== undefined ? { sessions: sessionCount } : {}),
         }),
       })
       const data = await res.json()
+      // A failed email still leaves the application approved with its link,
+      // so reload rather than leave the row looking unapproved.
+      if (!res.ok && data.checkoutUrl) {
+        setApproveTarget(null)
+        setError(data.error)
+        await load()
+        return
+      }
       if (!res.ok) { setApproveError(data.error || "Failed to approve and send the checkout link."); return }
       const updated = {
         status: "approved" as const,
@@ -230,6 +265,7 @@ export function AdminMentorshipApplications() {
           : `Approved at ${data.discountPercent}% — $${data.discountedPrice} checkout link emailed to ${app.email}.`
       )
       setApproveTarget(null)
+      await load()
     } finally {
       setActionLoading(null)
     }
@@ -248,7 +284,13 @@ export function AdminMentorshipApplications() {
       percent = value
     }
 
-    if (!useSplit) { approve(approveTarget, percent); return }
+    const sessionCount = Number(sessions)
+    if (!Number.isInteger(sessionCount) || sessionCount < 1 || sessionCount > MENTORSHIP_SESSIONS_MAX) {
+      setApproveError(`Sessions must be a whole number between 1 and ${MENTORSHIP_SESSIONS_MAX}.`)
+      return
+    }
+
+    if (!useSplit) { approve(approveTarget, percent, undefined, sessionCount); return }
 
     const first = Number(firstPayment)
     const second = Number(secondPayment)
@@ -260,7 +302,14 @@ export function AdminMentorshipApplications() {
       setApproveError(`The two payments must add up to $${approveFinalPrice}.`)
       return
     }
-    approve(approveTarget, percent, { firstAmount: first, secondAmount: second })
+    // Only a larger-first split can be collected automatically on a card.
+    if (first < second) {
+      setApproveError(
+        `The first payment must be the larger one, otherwise the second can't be charged automatically. Use $${second} then $${first}.`
+      )
+      return
+    }
+    approve(approveTarget, percent, { firstAmount: first, secondAmount: second }, sessionCount)
   }
 
   const openDeclineDialog = (app: Application) => {
@@ -357,7 +406,7 @@ export function AdminMentorshipApplications() {
           <div className="flex items-center justify-between border-b border-border p-4">
             <div>
               <h3 className="font-semibold text-foreground">Mentorship Applications</h3>
-              <p className="text-xs text-muted-foreground">Submitted through the /apply 1-on-1 Coaching funnel. Approving emails a one-time full-payment checkout link.</p>
+              <p className="text-xs text-muted-foreground">Submitted through the /apply 1-on-1 Coaching funnel. Approving creates the order and emails a one-time checkout link. Paying it grants the sessions and invites the client to register.</p>
             </div>
             <Button variant="outline" size="sm" onClick={load} disabled={loading}>
               <RefreshCw className={`h-4 w-4 ${loading ? "animate-spin" : ""}`} />
@@ -388,7 +437,12 @@ export function AdminMentorshipApplications() {
                     <TableCell className="text-sm text-muted-foreground">{a.country}</TableCell>
                     <TableCell className="text-sm text-muted-foreground">{a.investment_range || "—"}</TableCell>
                     <TableCell className="text-xs text-muted-foreground">{new Date(a.created_at).toLocaleDateString()}</TableCell>
-                    <TableCell><StatusPill status={a.status} /></TableCell>
+                    <TableCell>
+                      <div className="flex flex-col items-start gap-1">
+                        <StatusPill status={a.status} />
+                        <PaymentPill app={a} />
+                      </div>
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-1">
                         <Button variant="ghost" size="sm" className="gap-1" onClick={() => openDetail(a)}>
@@ -405,7 +459,7 @@ export function AdminMentorshipApplications() {
                             {actionLoading === a.id + "approve" ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <CheckCircle2 className="h-3.5 w-3.5" />} Approve
                           </Button>
                         )}
-                        {a.status !== "rejected" && (
+                        {a.status !== "rejected" && a.status !== "approved" && (
                           <Button
                             variant="ghost"
                             size="sm"
@@ -521,7 +575,7 @@ export function AdminMentorshipApplications() {
                     {actionLoading === selected.id + "reviewed" ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle2 className="h-4 w-4" />} Mark Reviewed
                   </Button>
                 )}
-                {selected.status !== "rejected" && (
+                {selected.status !== "rejected" && selected.status !== "approved" && (
                   <Button
                     variant="outline"
                     className="gap-1.5 text-red-400 hover:text-red-300"
@@ -603,6 +657,23 @@ export function AdminMentorshipApplications() {
                     </div>
                   </div>
                 )}
+              </div>
+
+              <div className="space-y-2.5 border-t border-border pt-4">
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sessions</p>
+                <div className="flex items-center gap-3">
+                  <Input
+                    type="number"
+                    min={1}
+                    max={MENTORSHIP_SESSIONS_MAX}
+                    value={sessions}
+                    onChange={(e) => { setSessions(e.target.value); setApproveError("") }}
+                    className="h-10 w-28"
+                  />
+                  <p className="text-xs text-muted-foreground">
+                    Live 1-on-1 sessions granted when they pay. Standard is {MENTORSHIP_SESSIONS}.
+                  </p>
+                </div>
               </div>
 
               <div className="space-y-2.5 border-t border-border pt-4">

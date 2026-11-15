@@ -3,6 +3,7 @@ import { createAdminClient } from "@/lib/supabase/admin"
 import { PLAN_PRICES } from "@/lib/plan-pricing"
 import { getPlanAmount, getMentorshipSplitForCoupon } from "@/lib/mentorship-pricing"
 import { applyCouponDiscount } from "@/lib/coupon-pricing"
+import { findEnrollmentByCoupon } from "@/lib/mentorship-enrollments"
 import { createPrivateUploadTicket } from "@/lib/storage"
 import { getUsdToEgpRate } from "@/lib/egp-rate"
 import { usdToEgp } from "@/lib/egp"
@@ -32,8 +33,12 @@ const PROOF_TYPES: Record<string, string> = {
  */
 export async function POST(request: Request) {
   try {
-    const { plan, email, telegram, couponCode, splitPayment, preferredDate, preferredSlotId, filename } =
+    const { plan, email: typedEmail, telegram, couponCode, splitPayment, preferredDate, preferredSlotId, filename } =
       await request.json()
+    // An approved applicant's code always pays for that applicant, so the order
+    // can be matched back to their application whatever email was typed.
+    const enrollment = plan === "coaching" ? await findEnrollmentByCoupon(couponCode).catch(() => null) : null
+    const email = enrollment?.email ?? typedEmail
 
     const planInfo = PLAN_PRICES[plan]
     if (!planInfo) return NextResponse.json({ error: "Invalid plan selected" }, { status: 400 })

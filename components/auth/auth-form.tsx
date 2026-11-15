@@ -20,7 +20,7 @@ export function AuthForm({ mode }: { mode: "login" | "register" }) {
 
   const [name, setName] = useState("")
   const [phone, setPhone] = useState("")
-  const [email, setEmail] = useState("")
+  const [email, setEmail] = useState(() => params.get("email") ?? "")
   const [password, setPassword] = useState("")
   const [confirmPassword, setConfirmPassword] = useState("")
   const [agreed, setAgreed] = useState(false)

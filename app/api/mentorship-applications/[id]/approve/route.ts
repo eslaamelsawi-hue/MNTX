@@ -5,6 +5,7 @@ import { sendEmail } from "@/lib/resend-send"
 import { generateCouponCode } from "@/lib/discount-offers"
 import { getMentorshipPricing, MENTORSHIP_PLAN } from "@/lib/mentorship-pricing"
 import { discountedPrice as computeDiscounted } from "@/lib/plan-pricing"
+import { MENTORSHIP_SESSIONS, MENTORSHIP_SESSIONS_MAX } from "@/lib/mentorship-sessions"
 
 async function isAdmin() {
   const cookieStore = await cookies()
@@ -29,6 +30,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     }
   }
 
+  // How many live sessions this applicant gets — the standard package unless
+  // the admin set a different number when approving.
+  const rawSessions = body?.sessions
+  const sessions =
+    rawSessions === undefined || rawSessions === null || rawSessions === "" ? MENTORSHIP_SESSIONS : Number(rawSessions)
+  if (!Number.isInteger(sessions) || sessions < 1 || sessions > MENTORSHIP_SESSIONS_MAX) {
+    return NextResponse.json(
+      { error: `Sessions must be a whole number between 1 and ${MENTORSHIP_SESSIONS_MAX}` },
+      { status: 400 }
+    )
+  }
+
   const supabase = createAdminClient()
   const { data: application, error: fetchError } = await supabase
     .from("mentorship_applications")
@@ -36,6 +49,11 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .eq("id", id)
     .single()
   if (fetchError || !application) return NextResponse.json({ error: "Application not found" }, { status: 404 })
+  // Approval is final: a second approval would mint a second link for the
+  // same seat.
+  if (application.status === "approved") {
+    return NextResponse.json({ error: "This application is already approved." }, { status: 409 })
+  }
 
   // Optional two-payment plan, with amounts the admin sets. Validated
   // against the discounted total so the instalments can't silently add up to
@@ -57,6 +75,18 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (Math.abs(first + second - discountedPrice) > 0.01) {
       return NextResponse.json(
         { error: `The two payments must add up to $${discountedPrice}` },
+        { status: 400 }
+      )
+    }
+    // Whop bills the up-front fee on top of the first renewal, so it can only
+    // take the second payment automatically when the first is the larger one.
+    // Mentorship checkout always offers Visa, so refuse the reverse rather
+    // than send a link whose balance would have to be chased by hand.
+    if (first < second) {
+      return NextResponse.json(
+        {
+          error: `For the second payment to be charged automatically, the first payment must be the larger one. Try $${second} now and $${first} in 30 days.`,
+        },
         { status: 400 }
       )
     }
@@ -93,6 +123,57 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || "https://mentixtrading.com"
   const checkoutUrl = `${baseUrl}/en/mentorship-checkout?code=${couponCode}&email=${encodeURIComponent(application.email)}`
 
+  // Everything is saved before the email goes out. The checkout page reads
+  // the split from this row, so a link sent after a failed save would charge
+  // the wrong amount — that is how a split approval once went out as full.
+  const undoCoupon = () => supabase.from("coupons").update({ is_active: false }).eq("code", couponCode)
+
+  const { data: enrollment, error: enrollmentError } = await supabase
+    .from("mentorship_enrollments")
+    .insert({
+      application_id: application.id,
+      email: application.email.toLowerCase().trim(),
+      full_name: application.full_name,
+      coupon_code: couponCode,
+      checkout_url: checkoutUrl,
+      sessions,
+      total_amount: discountedPrice,
+      split_first_amount: split?.firstAmount ?? null,
+      split_second_amount: split?.secondAmount ?? null,
+    })
+    .select("id")
+    .single()
+  if (enrollmentError || !enrollment) {
+    await undoCoupon()
+    console.error("[mentorship-applications/approve] order not created:", enrollmentError)
+    return NextResponse.json(
+      { error: `Nothing was sent: the order couldn't be created (${enrollmentError?.message ?? "unknown error"}). Run scripts/120_mentorship_enrollments.sql in Supabase.` },
+      { status: 500 }
+    )
+  }
+
+  const { error: updateError } = await supabase
+    .from("mentorship_applications")
+    .update({
+      status: "approved",
+      approved_at: new Date().toISOString(),
+      coupon_code: couponCode,
+      checkout_url: checkoutUrl,
+      split_first_amount: split?.firstAmount ?? null,
+      split_second_amount: split?.secondAmount ?? null,
+    })
+    .eq("id", id)
+    .neq("status", "approved")
+  if (updateError) {
+    await supabase.from("mentorship_enrollments").delete().eq("id", enrollment.id)
+    await undoCoupon()
+    console.error("[mentorship-applications/approve] approval not saved:", updateError)
+    return NextResponse.json(
+      { error: `Nothing was sent: the approval couldn't be saved (${updateError.message}). Run scripts/120_mentorship_enrollments.sql in Supabase.` },
+      { status: 500 }
+    )
+  }
+
   const emailResult = await sendEmail({
     to: application.email,
     subject: "تم قبولك في مينتورشيب Mentix الفردي 🎉",
@@ -126,20 +207,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     </div>`,
   })
   if (!emailResult.success) {
-    return NextResponse.json({ error: `Coupon created, but the email failed to send: ${emailResult.error}`, couponCode, checkoutUrl }, { status: 502 })
+    // The approval and order stand; only the email is missing, so the admin
+    // can copy the link and send it directly.
+    return NextResponse.json(
+      { error: `Approved, but the email failed to send: ${emailResult.error}. Copy the checkout link and send it yourself.`, couponCode, checkoutUrl },
+      { status: 502 }
+    )
   }
-
-  const { error: updateError } = await supabase
-    .from("mentorship_applications")
-    .update({
-      status: "approved",
-      coupon_code: couponCode,
-      checkout_url: checkoutUrl,
-      split_first_amount: split?.firstAmount ?? null,
-      split_second_amount: split?.secondAmount ?? null,
-    })
-    .eq("id", id)
-  if (updateError) console.error("[mentorship-applications/approve] failed to update status (email was still sent):", updateError)
 
   return NextResponse.json({ success: true, couponCode, checkoutUrl, price, discountPercent, discountedPrice, split })
 }

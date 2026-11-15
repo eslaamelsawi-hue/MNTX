@@ -4,6 +4,7 @@ import { createOrder } from "@/lib/okx-orders"
 import { PLAN_PRICES } from "@/lib/plan-pricing"
 import { getPlanAmount, getMentorshipSplitForCoupon } from "@/lib/mentorship-pricing"
 import { applyCouponDiscount } from "@/lib/coupon-pricing"
+import { findEnrollmentByCoupon } from "@/lib/mentorship-enrollments"
 
 const OKX_API_BASE = "https://www.okx.com"
 
@@ -20,7 +21,11 @@ function generateSignature(
 
 export async function POST(request: Request) {
   try {
-    const { plan, email, telegram, couponCode, splitPayment, preferredDate, preferredSlotId } = await request.json()
+    const { plan, email: typedEmail, telegram, couponCode, splitPayment, preferredDate, preferredSlotId } = await request.json()
+    // An approved applicant's code always pays for that applicant, so the order
+    // can be matched back to their application whatever email was typed.
+    const enrollment = plan === "coaching" ? await findEnrollmentByCoupon(couponCode).catch(() => null) : null
+    const email = enrollment?.email ?? typedEmail
 
     const accessKey = process.env.OKX_ACCESS_KEY
     const secretKey = process.env.OKX_SECRET_KEY

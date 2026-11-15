@@ -5,6 +5,7 @@ import { Loader2, Check, Lock } from "lucide-react"
 import { OKXPayButton, WhopPayButton } from "@/components/payment-buttons"
 import { InstapayPayButton } from "@/components/instapay-payment"
 import { alexandria } from "@/lib/fonts"
+import { MENTORSHIP_SESSIONS } from "@/lib/mentorship-sessions"
 
 const GRID_BG = [
   "radial-gradient(ellipse 800px 400px at 50% -10%, hsl(var(--primary) / 0.14), transparent 60%)",
@@ -13,6 +14,13 @@ const GRID_BG = [
 ].join(", ")
 
 const PLAN = "coaching"
+
+/** A card can only collect the second instalment on its own when the first
+ *  one is the larger. On the reverse shape the card option is withheld so a
+ *  balance is never left silently uncollected. */
+function cardCanAutoCharge(split?: { firstAmount: number; secondAmount: number } | null) {
+  return !split || split.firstAmount >= split.secondAmount
+}
 
 export function MentorshipCheckout({
   code,
@@ -82,7 +90,7 @@ export function MentorshipCheckout({
               </span>
               <h1 className="mt-5 text-2xl font-extrabold text-balance md:text-3xl">إتمام التسجيل في مينتورشيب Mentix الفردي</h1>
               <p className="mt-3 text-sm leading-relaxed text-muted-foreground">
-                6 جلسات أسبوعية مباشرة، متابعة شخصية لصفقاتك وتفكيرك، ومجتمع خاص.
+                {MENTORSHIP_SESSIONS} جلسات أسبوعية مباشرة، متابعة شخصية لصفقاتك وتفكيرك، ومجتمع خاص.
               </p>
             </div>
 
@@ -104,16 +112,18 @@ export function MentorshipCheckout({
             )}
 
             <div className="mt-8 space-y-3">
-              <WhopPayButton
-                plan={PLAN}
-                couponCode={code}
-                prefillEmail={email}
-                splitPayment={!!split}
-                amount={split ? split.firstAmount : price ?? undefined}
-                splitFirstAmount={split?.firstAmount}
-                splitSecondAmount={split?.secondAmount}
-                className="w-full justify-center"
-              />
+              {cardCanAutoCharge(split) && (
+                <WhopPayButton
+                  plan={PLAN}
+                  couponCode={code}
+                  prefillEmail={email}
+                  splitPayment={!!split}
+                  amount={split ? split.firstAmount : price ?? undefined}
+                  splitFirstAmount={split?.firstAmount}
+                  splitSecondAmount={split?.secondAmount}
+                  className="w-full justify-center"
+                />
+              )}
               <OKXPayButton plan={PLAN} couponCode={code} prefillEmail={email} splitPayment={!!split} className="w-full justify-center" />
               <InstapayPayButton
                 plan={PLAN}

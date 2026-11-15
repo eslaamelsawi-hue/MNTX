@@ -18,10 +18,13 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const supabase = createAdminClient()
   const { data: application, error: fetchError } = await supabase
     .from("mentorship_applications")
-    .select("id, full_name, email")
+    .select("id, full_name, email, status")
     .eq("id", id)
     .single()
   if (fetchError || !application) return NextResponse.json({ error: "Application not found" }, { status: 404 })
+  if (application.status === "approved") {
+    return NextResponse.json({ error: "Approved applications can't be declined." }, { status: 409 })
+  }
 
   const escapeHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
 

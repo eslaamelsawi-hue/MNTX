@@ -68,6 +68,17 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     if (Math.abs(first + second - finalPrice) > 0.01) {
       return NextResponse.json({ error: `The two payments must add up to $${finalPrice}` }, { status: 400 })
     }
+    // Whop can only take the second payment by itself when the first is the
+    // larger one. Other methods are collected by hand anyway, so the rule
+    // only binds when a card is on offer.
+    if (methods.includes("visa") && first < second) {
+      return NextResponse.json(
+        {
+          error: `For Visa to charge the second payment automatically, the first payment must be the larger one. Try $${second} now and $${first} in 30 days.`,
+        },
+        { status: 400 }
+      )
+    }
     split = { firstAmount: first, secondAmount: second }
   }
 

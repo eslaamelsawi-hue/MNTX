@@ -58,6 +58,9 @@ export function CustomCheckout({
   // down to what the admin agreed.
   const plan = `mentorship-custom-${sessions}`
   const payNow = split ? split.firstAmount : price
+  // A card can only take the second instalment by itself when the first is
+  // the larger one, so it isn't offered on the reverse shape.
+  const cardAutoCharges = !split || split.firstAmount >= split.secondAmount
 
   return shell(
     <div className="w-full rounded-3xl border border-border bg-card p-6 shadow-[0_0_80px_-20px_hsl(var(--primary)/0.2)] md:p-10">
@@ -100,7 +103,7 @@ export function CustomCheckout({
       )}
 
       <div className="mt-8 space-y-3">
-        {methods.includes("visa") && (
+        {methods.includes("visa") && cardAutoCharges && (
           <WhopPayButton
             plan={plan}
             couponCode={code}

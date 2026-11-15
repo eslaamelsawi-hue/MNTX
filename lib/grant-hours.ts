@@ -6,6 +6,7 @@ import { COURSE_GRANT_PLAN } from "@/lib/course"
 import { createInvoiceForPlan } from "@/lib/invoicing"
 import { grantVipRoleForEmail } from "@/lib/discord"
 import { CUSTOM_MENTORSHIP_MAX_SESSIONS } from "@/lib/plan-pricing"
+import { completeEnrollment, findAwaitingEnrollment } from "@/lib/mentorship-enrollments"
 
 /** Mentorship hours granted by the 1-on-1 Coaching Plan (10 sessions = 10 hours). */
 export const COACHING_HOURS = 10
@@ -182,6 +183,12 @@ export async function grantCoaching(
   const supabase = createAdminClient()
   const normalizedEmail = email.toLowerCase().trim()
 
+  // An approved applicant gets the sessions their application promised; any
+  // other coaching purchase keeps the standard package.
+  const enrollment = await findAwaitingEnrollment(normalizedEmail).catch(() => null)
+  const hours = enrollment?.sessions ?? COACHING_HOURS
+  const sessionsLabel = enrollment ? `${hours} sessions` : "10 sessions (4 months)"
+
   const { data: existing } = await supabase
     .from("user_subscriptions")
     .select("id, total_hours, notes")
@@ -193,16 +200,17 @@ export async function grantCoaching(
 
   // Already fulfilled this exact order — don't grant again or waste a TG token.
   if (existing?.notes && existing.notes.includes(orderRef)) {
+    if (enrollment) await completeEnrollment(enrollment, orderRef)
     return { tgInviteLink: null, alreadyFulfilled: true }
   }
 
-  // 1) 10 mentorship hours
+  // 1) Mentorship hours (1 session = 1 hour)
   if (existing) {
     await supabase
       .from("user_subscriptions")
       .update({
-        total_hours: existing.total_hours + COACHING_HOURS,
-        notes: `${existing.notes ? existing.notes + " | " : ""}Coaching ${orderRef} (+${COACHING_HOURS}h)`,
+        total_hours: existing.total_hours + hours,
+        notes: `${existing.notes ? existing.notes + " | " : ""}Coaching ${orderRef} (+${hours}h)`,
         updated_at: new Date().toISOString(),
       })
       .eq("id", existing.id)
@@ -211,10 +219,10 @@ export async function grantCoaching(
       client_email: normalizedEmail,
       client_name: name || normalizedEmail.split("@")[0],
       plan: "coaching",
-      total_hours: COACHING_HOURS,
+      total_hours: hours,
       used_hours: 0,
       status: "active",
-      notes: `Coaching ${orderRef} — 10 sessions (4 months)`,
+      notes: `Coaching ${orderRef} — ${sessionsLabel}`,
     })
   }
 
@@ -240,6 +248,15 @@ export async function grantCoaching(
     await grantVipRoleForEmail(normalizedEmail)
   } catch (e) {
     console.error("[grantCoaching] discord role grant failed:", e)
+  }
+
+  // 5) Close the applicant's order and invite them to the client dashboard
+  if (enrollment) {
+    try {
+      await completeEnrollment(enrollment, orderRef)
+    } catch (e) {
+      console.error("[grantCoaching] enrollment completion failed:", e)
+    }
   }
 
   return { tgInviteLink, alreadyFulfilled: false }

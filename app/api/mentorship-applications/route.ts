@@ -186,11 +186,21 @@ export async function GET() {
     : { data: [] as { code: string; discount_type: string; discount_value: number }[] }
   const byCode = new Map((coupons ?? []).map((c) => [c.code, c]))
 
+  // The order each approval created, newest first, so the admin can see who
+  // has paid. Missing before migration 120 is run, which simply shows none.
+  const { data: enrollments } = await supabase
+    .from("mentorship_enrollments")
+    .select("application_id, status, sessions, total_amount, split_first_amount, split_second_amount, paid_at, register_email_sent_at")
+    .order("created_at", { ascending: false })
+  const enrollmentByApp = new Map<string, Record<string, unknown>>()
+  for (const e of enrollments ?? []) if (e.application_id && !enrollmentByApp.has(e.application_id)) enrollmentByApp.set(e.application_id, e)
+
   const applications = (data ?? []).map((a) => {
     const coupon = a.coupon_code ? byCode.get(a.coupon_code) : undefined
     return {
       ...a,
       granted_discount_percent: coupon?.discount_type === "percent" ? Number(coupon.discount_value) : null,
+      enrollment: enrollmentByApp.get(a.id) ?? null,
     }
   })
 
@@ -202,10 +212,17 @@ export async function PATCH(request: NextRequest) {
   const { id, status, admin_notes } = await request.json()
   if (!id) return NextResponse.json({ error: "id is required" }, { status: 400 })
 
+  const supabase = createAdminClient()
   const update: Record<string, unknown> = {}
   if (status) {
-    if (!["new", "reviewed", "approved", "rejected"].includes(status)) {
+    // Approval goes through the approve route, which creates the order, and
+    // once approved an application stays approved.
+    if (!["new", "reviewed", "rejected"].includes(status)) {
       return NextResponse.json({ error: "Invalid status" }, { status: 400 })
+    }
+    const { data: current } = await supabase.from("mentorship_applications").select("status").eq("id", id).single()
+    if (current?.status === "approved") {
+      return NextResponse.json({ error: "Approved applications can't change status." }, { status: 409 })
     }
     update.status = status
   }
@@ -215,7 +232,6 @@ export async function PATCH(request: NextRequest) {
     return NextResponse.json({ error: "Nothing to update" }, { status: 400 })
   }
 
-  const supabase = createAdminClient()
   const { error } = await supabase.from("mentorship_applications").update(update).eq("id", id)
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })
   return NextResponse.json({ success: true })
