@@ -13,6 +13,27 @@ function isProtected(path: string): boolean {
   )
 }
 
+/**
+ * An admin opening a client's dashboard from the Users page. Allowed through
+ * without a client session, but only with a current admin cookie and an
+ * explicit ?as= target, so a stray visit can't land on someone's dashboard.
+ */
+function isAdminViewingAs(request: NextRequest): boolean {
+  if (!request.nextUrl.searchParams.get('as')) return false;
+  const token = request.cookies.get('admin_session')?.value;
+  if (!token) return false;
+  try {
+    const decoded = atob(token);
+    const parts = decoded.split(':');
+    if (parts[0] !== 'admin' && parts[0] !== 'mentor') return false;
+    const issuedAt = Number(parts[parts.length - 1]);
+    // Matches the cookie's own 24-hour lifetime.
+    return Number.isFinite(issuedAt) && Date.now() - issuedAt < 24 * 60 * 60 * 1000;
+  } catch {
+    return false;
+  }
+}
+
 /** mentorship.mentixtrading.com is a single-page microsite: every request to
  *  it serves the mentorship-features page, except /apply which serves the
  *  application form directly on the subdomain too. */
@@ -47,7 +68,7 @@ export default async function middleware(request: NextRequest) {
   const parts = request.nextUrl.pathname.split('/');
   const locale = parts[1] === 'ar' || parts[1] === 'en' ? parts[1] : routing.defaultLocale;
   const rest = '/' + parts.slice(2).join('/');
-  if (isProtected(rest) && !user) {
+  if (isProtected(rest) && !user && !isAdminViewingAs(request)) {
     const url = request.nextUrl.clone();
     url.pathname = `/${locale}/login`;
     url.search = '';
