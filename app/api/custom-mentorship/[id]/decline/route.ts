@@ -17,7 +17,7 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const supabase = createAdminClient()
   const { data: req, error } = await supabase
     .from("custom_mentorship_requests")
-    .select("id, full_name, email")
+    .select("id, full_name, email, coupon_code, status")
     .eq("id", id)
     .single()
   if (error || !req) return NextResponse.json({ error: "Request not found" }, { status: 404 })
@@ -50,6 +50,16 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .update({ status: "rejected", decline_reason: note || null, reviewed_at: new Date().toISOString() })
     .eq("id", id)
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
+
+  // Withdraw the checkout link so a declined request can't still be paid.
+  if (req.coupon_code) {
+    const { error: couponError } = await supabase
+      .from("coupons")
+      .update({ is_active: false })
+      .eq("code", req.coupon_code)
+      .eq("used_count", 0)
+    if (couponError) console.error("[custom-mentorship/decline] coupon not withdrawn:", couponError)
+  }
 
   return NextResponse.json({ success: true })
 }

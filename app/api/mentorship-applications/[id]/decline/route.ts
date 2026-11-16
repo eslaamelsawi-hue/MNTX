@@ -18,12 +18,29 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
   const supabase = createAdminClient()
   const { data: application, error: fetchError } = await supabase
     .from("mentorship_applications")
-    .select("id, full_name, email, status")
+    .select("id, full_name, email, status, coupon_code")
     .eq("id", id)
     .single()
   if (fetchError || !application) return NextResponse.json({ error: "Application not found" }, { status: 404 })
+
+  // An approved applicant who has already paid can't simply be declined —
+  // that's a refund, not a rejection. One who hasn't paid yet can be, and
+  // their checkout link is withdrawn below.
   if (application.status === "approved") {
-    return NextResponse.json({ error: "Approved applications can't be declined." }, { status: 409 })
+    const email = application.email.toLowerCase().trim()
+    const [enrollment, whop, okx, instapay] = await Promise.all([
+      supabase.from("mentorship_enrollments").select("id").eq("email", email).eq("status", "paid").limit(1),
+      supabase.from("whop_orders").select("order_id").eq("email", email).eq("status", "paid").limit(1),
+      supabase.from("okx_orders").select("order_id").eq("email", email).eq("status", "paid").limit(1),
+      supabase.from("instapay_orders").select("order_id").eq("email", email).eq("status", "paid").limit(1),
+    ])
+    const paid = [enrollment.data, whop.data, okx.data, instapay.data].some((rows) => (rows?.length ?? 0) > 0)
+    if (paid) {
+      return NextResponse.json(
+        { error: "This applicant has already paid — refund and cancel their subscription instead of declining." },
+        { status: 409 }
+      )
+    }
   }
 
   const escapeHtml = (s: string) => s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;")
@@ -63,6 +80,23 @@ export async function POST(request: NextRequest, { params }: { params: Promise<{
     .update({ status: "rejected", decline_reason: reason })
     .eq("id", id)
   if (updateError) return NextResponse.json({ error: updateError.message }, { status: 500 })
+
+  // Withdraw the checkout link. Without this a declined applicant keeps a
+  // working payment page and can pay after being told no.
+  if (application.coupon_code) {
+    const { error: couponError } = await supabase
+      .from("coupons")
+      .update({ is_active: false })
+      .eq("code", application.coupon_code)
+      .eq("used_count", 0)
+    if (couponError) console.error("[mentorship-applications/decline] coupon not withdrawn:", couponError)
+
+    await supabase
+      .from("mentorship_enrollments")
+      .update({ status: "cancelled" })
+      .eq("coupon_code", application.coupon_code)
+      .eq("status", "awaiting_payment")
+  }
 
   return NextResponse.json({ success: true })
 }
