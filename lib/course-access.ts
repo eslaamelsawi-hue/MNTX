@@ -38,9 +38,17 @@ export function verifyAccessToken(token: string | undefined): string | null {
   const a = Buffer.from(sig)
   const b = Buffer.from(expected)
   if (a.length !== b.length || !crypto.timingSafeEqual(a, b)) return null
-  const [email, expStr] = payload.split(".")
-  if (!email || !expStr) return null
-  if (Date.now() > Number(expStr)) return null
+  // The payload is `email.expiry`, and an email address contains dots of its
+  // own — splitting on every dot cut the address short at its domain (so
+  // "a@gmail.com" verified as "a@gmail" and matched no grant) and read the
+  // expiry as "com", which compares false and never expires. Split on the
+  // last dot only, which is the one this format actually uses.
+  const sep = payload.lastIndexOf(".")
+  if (sep <= 0) return null
+  const email = payload.slice(0, sep)
+  const exp = Number(payload.slice(sep + 1))
+  if (!email || !Number.isFinite(exp)) return null
+  if (Date.now() > exp) return null
   return email
 }
 
