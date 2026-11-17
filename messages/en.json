@@ -57,7 +57,15 @@
     "lessonOf": "Lesson {current} of {total}",
     "totalLength": "total",
     "aboutCourse": "About this course",
-    "lessonNotes": "About this lesson"
+    "lessonNotes": "About this lesson",
+    "tapResume": "Tap to resume",
+    "videoUnavailableTitle": "This lesson's video is missing",
+    "videoUnavailableDesc": "The file hasn't been uploaded yet. Please let us know so we can add it.",
+    "videoForbiddenTitle": "You don't have access to this lesson",
+    "videoForbiddenDesc": "Your plan doesn't include this course yet.",
+    "videoErrorTitle": "The video couldn't be played",
+    "videoErrorDesc": "Check your connection and try again.",
+    "retry": "Try again"
   },
   "auth": {
     "login": "Log in",

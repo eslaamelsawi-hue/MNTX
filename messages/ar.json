@@ -57,7 +57,15 @@
     "lessonOf": "الدرس {current} من {total}",
     "totalLength": "الإجمالي",
     "aboutCourse": "عن الدورة",
-    "lessonNotes": "عن هذا الدرس"
+    "lessonNotes": "عن هذا الدرس",
+    "tapResume": "اضغط للمتابعة",
+    "videoUnavailableTitle": "فيديو هذه المحاضرة غير متاح",
+    "videoUnavailableDesc": "لم يتم رفع الملف بعد. أبلغنا ليتم إضافته.",
+    "videoForbiddenTitle": "لا تملك صلاحية لهذه المحاضرة",
+    "videoForbiddenDesc": "اشتراكك الحالي لا يشمل هذه الدورة.",
+    "videoErrorTitle": "تعذر تشغيل الفيديو",
+    "videoErrorDesc": "تحقق من اتصالك وحاول مرة أخرى.",
+    "retry": "إعادة المحاولة"
   },
   "auth": {
     "login": "تسجيل الدخول",

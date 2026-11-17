@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react"
 import { useTranslations } from "next-intl"
-import { EyeOff } from "lucide-react"
+import { AlertTriangle, EyeOff, Lock, RotateCw } from "lucide-react"
 
 /**
  * Protected video player.
@@ -29,6 +29,8 @@ export function CoursePlayer({
   const [pos, setPos] = useState<{ top: string; left: string }>({ top: "10%", left: "10%" })
   const [obscured, setObscured] = useState(false)
   const [stampTime, setStampTime] = useState("")
+  const [failure, setFailure] = useState<"missing" | "forbidden" | "error" | null>(null)
+  const [reloadKey, setReloadKey] = useState(0)
 
   const stamp = email || "preview"
 
@@ -45,20 +47,36 @@ export function CoursePlayer({
 
   // Black out + pause whenever the tab is hidden OR the window loses focus
   // (catches many screen-recorders / screenshot tools that steal focus).
+  //
+  // The focus half is desktop-only. On a phone the native player takes over
+  // for fullscreen, which blurs the page — so on touch devices this used to
+  // kill playback the moment someone tapped fullscreen. Leaving the app still
+  // blacks it out there, through visibilitychange.
   useEffect(() => {
+    const video = videoRef.current
+    const isTouch = window.matchMedia?.("(pointer: coarse)").matches ?? false
+    const isFullscreen = () =>
+      !!document.fullscreenElement ||
+      !!(video as (HTMLVideoElement & { webkitDisplayingFullscreen?: boolean }) | null)
+        ?.webkitDisplayingFullscreen
+
     const hide = () => {
+      if (isFullscreen()) return
       videoRef.current?.pause()
       setObscured(true)
     }
     const show = () => setObscured(false)
     const onVis = () => (document.hidden ? hide() : show())
     document.addEventListener("visibilitychange", onVis)
-    window.addEventListener("blur", hide)
-    window.addEventListener("focus", show)
+    if (!isTouch) {
+      window.addEventListener("blur", hide)
+      window.addEventListener("focus", show)
+    }
     return () => {
       document.removeEventListener("visibilitychange", onVis)
       window.removeEventListener("blur", hide)
       window.removeEventListener("focus", show)
+      document.removeEventListener("visibilitychange", onVis)
     }
   }, [])
 
@@ -86,6 +104,24 @@ export function CoursePlayer({
 
   const noDrag = (e: React.SyntheticEvent) => e.preventDefault()
 
+  /** The <video> element only reports "it failed". Ask the endpoint what went
+   *  wrong so the viewer is told whether it's access or a missing file. */
+  const classifyFailure = async () => {
+    try {
+      const res = await fetch(videoSrc, { method: "GET", headers: { Range: "bytes=0-0" } })
+      if (res.status === 403) return setFailure("forbidden")
+      if (res.status === 404) return setFailure("missing")
+      setFailure("error")
+    } catch {
+      setFailure("error")
+    }
+  }
+
+  const retry = () => {
+    setFailure(null)
+    setReloadKey((n) => n + 1)
+  }
+
   return (
     <div
       className="relative select-none overflow-hidden rounded-xl border border-border bg-black"
@@ -94,9 +130,12 @@ export function CoursePlayer({
       style={{ WebkitUserSelect: "none", userSelect: "none" }}
     >
       <video
+        key={reloadKey}
         ref={videoRef}
         className="pointer-events-auto aspect-video w-full bg-black"
         src={videoSrc}
+        preload="metadata"
+        onError={classifyFailure}
         controls
         controlsList="nodownload noremoteplayback noplaybackrate"
         disablePictureInPicture
@@ -132,10 +171,48 @@ export function CoursePlayer({
 
       {/* Black-out overlay when hidden / focus lost / print-screen */}
       {obscured && (
-        <div className="absolute inset-0 z-20 flex flex-col items-center justify-center gap-2 bg-black text-center">
+        <button
+          type="button"
+          onClick={() => setObscured(false)}
+          className="absolute inset-0 z-20 flex w-full flex-col items-center justify-center gap-2 bg-black px-4 text-center"
+        >
           <EyeOff className="h-8 w-8 text-muted-foreground" />
           <p className="font-semibold text-foreground">{t("pausedTitle")}</p>
           <p className="text-sm text-muted-foreground">{t("pausedResume")}</p>
+          <span className="mt-1 text-xs text-primary">{t("tapResume")}</span>
+        </button>
+      )}
+
+      {failure && (
+        <div className="absolute inset-0 z-30 flex flex-col items-center justify-center gap-2 bg-black px-6 text-center">
+          {failure === "forbidden" ? (
+            <Lock className="h-8 w-8 text-muted-foreground" />
+          ) : (
+            <AlertTriangle className="h-8 w-8 text-amber-400" />
+          )}
+          <p className="font-semibold text-foreground">
+            {failure === "forbidden"
+              ? t("videoForbiddenTitle")
+              : failure === "missing"
+                ? t("videoUnavailableTitle")
+                : t("videoErrorTitle")}
+          </p>
+          <p className="max-w-xs text-sm text-muted-foreground">
+            {failure === "forbidden"
+              ? t("videoForbiddenDesc")
+              : failure === "missing"
+                ? t("videoUnavailableDesc")
+                : t("videoErrorDesc")}
+          </p>
+          {failure !== "forbidden" && (
+            <button
+              type="button"
+              onClick={retry}
+              className="mt-2 inline-flex h-9 items-center gap-1.5 rounded-lg border border-border px-4 text-sm font-medium text-foreground transition-colors hover:border-primary/50"
+            >
+              <RotateCw className="h-3.5 w-3.5" /> {t("retry")}
+            </button>
+          )}
         </div>
       )}
     </div>
