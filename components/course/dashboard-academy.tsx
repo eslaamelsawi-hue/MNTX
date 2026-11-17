@@ -12,6 +12,13 @@ import { coverGradient } from "@/lib/course-types"
 type Lesson = { id: string; titleEn: string; titleAr: string; duration: string; freePreview: boolean; descriptionEn?: string; descriptionAr?: string }
 type Section = { id: string; titleEn: string; titleAr: string; lessons: Lesson[] }
 type Course = { id: string; slug: string; titleEn: string; titleAr: string; subtitleEn: string; subtitleAr: string; sections: Section[] }
+/** "mm:ss" or "h:mm:ss" back to seconds, for reporting. */
+function durationToSeconds(value: string): number {
+  const parts = value.split(":").map(Number)
+  if (parts.some((n) => !Number.isFinite(n))) return 0
+  return parts.reduce((total, part) => total * 60 + part, 0)
+}
+
 type Cat = { id: string; slug: string; titleEn: string; titleAr: string; subtitleEn: string; subtitleAr: string; lessons: number; sections: number; hasAccess: boolean }
 
 /** All of the member's courses. Pick one to open it; go back to switch. */
@@ -34,6 +41,73 @@ export function DashboardAcademy({ email }: { email: string }) {
       .then((d: { courses: Cat[] }) => setCats(d.courses ?? []))
       .catch(() => setCats([]))
   }, [])
+
+  /**
+   * Lesson lengths are typed by hand in the admin form and were left at
+   * 00:00. Once a course is open and playable, read the real length of every
+   * blank lesson straight from its file — `preload="metadata"` fetches only
+   * the header, not the video — report it so it sticks, and show it right
+   * away rather than after a reload.
+   */
+  useEffect(() => {
+    if (!course || !access) return
+    const blanks = course.sections
+      .flatMap((sec) => sec.lessons)
+      .filter((l) => !l.duration || l.duration === "00:00" || l.duration === "0:00")
+    if (blanks.length === 0) return
+
+    let cancelled = false
+
+    const measure = (id: string) =>
+      new Promise<string | null>((resolve) => {
+        const video = document.createElement("video")
+        video.preload = "metadata"
+        const done = (value: string | null) => {
+          video.removeAttribute("src")
+          video.load()
+          resolve(value)
+        }
+        video.onloadedmetadata = () => {
+          const total = video.duration
+          if (!Number.isFinite(total) || total <= 0) return done(null)
+          const hours = Math.floor(total / 3600)
+          const minutes = Math.floor((total % 3600) / 60)
+          const seconds = Math.floor(total % 60)
+          const pad = (n: number) => String(n).padStart(2, "0")
+          done(hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${pad(minutes)}:${pad(seconds)}`)
+        }
+        video.onerror = () => done(null)
+        video.src = `/api/course/video/${id}`
+      })
+
+    // One at a time: five lessons opening at once would mean five signed
+    // redirects and five metadata fetches in parallel on a phone.
+    ;(async () => {
+      for (const lesson of blanks) {
+        if (cancelled) return
+        const duration = await measure(lesson.id)
+        if (!duration || cancelled) continue
+        fetch("/api/course/lesson-duration", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ lessonId: lesson.id, seconds: durationToSeconds(duration) }),
+        }).catch(() => {})
+        setCourse((prev) =>
+          prev
+            ? {
+                ...prev,
+                sections: prev.sections.map((sec) => ({
+                  ...sec,
+                  lessons: sec.lessons.map((l) => (l.id === lesson.id ? { ...l, duration } : l)),
+                })),
+              }
+            : prev
+        )
+      }
+    })()
+
+    return () => { cancelled = true }
+  }, [course, access])
 
   useEffect(() => {
     if (!slug) {
