@@ -80,26 +80,72 @@ export function CoursePlayer({
     }
   }, [])
 
-  // Deter capture/save shortcuts; wipe the clipboard on PrintScreen.
+  // Capture deterrence. A browser cannot stop an OS screenshot or screen
+  // recorder — no API exposes either — so this covers the shortcuts that do
+  // reach the page and blacks the frame out while they're in flight. macOS
+  // area-capture (Cmd+Shift+4/5) needs a drag, so the blackout usually lands
+  // before the shot is taken; a full-screen grab may still beat it. What
+  // actually protects the video is the watermark burned over it.
   useEffect(() => {
-    const wipe = () => {
-      navigator.clipboard?.writeText("").catch(() => {})
+    const blackout = (ms: number) => {
+      videoRef.current?.pause()
       setObscured(true)
-      setTimeout(() => setObscured(false), 1000)
+      window.setTimeout(() => setObscured(false), ms)
     }
+    const wipe = (ms = 3000) => {
+      navigator.clipboard?.writeText("").catch(() => {})
+      blackout(ms)
+    }
+
     const onKey = (e: KeyboardEvent) => {
-      const k = e.key
-      if (k === "PrintScreen") wipe()
+      const k = e.key.toLowerCase()
       const meta = e.ctrlKey || e.metaKey
-      if (meta && ["s", "u", "p"].includes(k.toLowerCase())) e.preventDefault()
-      if (k === "F12") e.preventDefault()
-      if (e.ctrlKey && e.shiftKey && ["i", "j", "c", "s"].includes(k.toLowerCase())) e.preventDefault()
-      // Windows Snipping Tool (Win+Shift+S) can't be blocked, but wipe on Shift+S combos.
-      if (e.shiftKey && e.metaKey && k.toLowerCase() === "s") wipe()
+
+      // Windows / Linux PrintScreen, with or without Alt.
+      if (e.key === "PrintScreen" || e.code === "PrintScreen") return wipe()
+
+      // macOS screen capture: Cmd+Shift+3 (whole screen), 4 (area), 5 (tool).
+      if (e.metaKey && e.shiftKey && ["3", "4", "5"].includes(k)) return wipe(6000)
+
+      // Windows Snipping Tool (Win+Shift+S) and Game Bar capture (Win+Alt+R).
+      if (e.metaKey && e.shiftKey && k === "s") return wipe(6000)
+      if (e.metaKey && e.altKey && k === "r") return wipe(6000)
+
+      // Save / view-source / print, and the devtools shortcuts.
+      if (meta && ["s", "u", "p"].includes(k)) e.preventDefault()
+      if (e.key === "F12") e.preventDefault()
+      if (e.ctrlKey && e.shiftKey && ["i", "j", "c", "s"].includes(k)) e.preventDefault()
     }
+    const onKeyUp = (e: KeyboardEvent) => {
+      if (e.key === "PrintScreen" || e.code === "PrintScreen") wipe()
+    }
+
     window.addEventListener("keydown", onKey)
-    window.addEventListener("keyup", (e) => e.key === "PrintScreen" && wipe())
-    return () => window.removeEventListener("keydown", onKey)
+    window.addEventListener("keyup", onKeyUp)
+    return () => {
+      window.removeEventListener("keydown", onKey)
+      window.removeEventListener("keyup", onKeyUp)
+    }
+  }, [])
+
+  // A recorder or devtools opening usually resizes the viewport sharply.
+  // Black out on any abrupt change and let it come back on its own.
+  useEffect(() => {
+    let last = { w: window.innerWidth, h: window.innerHeight }
+    let timer = 0
+    const onResize = () => {
+      const changed = Math.abs(window.innerWidth - last.w) + Math.abs(window.innerHeight - last.h)
+      last = { w: window.innerWidth, h: window.innerHeight }
+      if (changed < 120) return
+      setObscured(true)
+      window.clearTimeout(timer)
+      timer = window.setTimeout(() => setObscured(false), 1200)
+    }
+    window.addEventListener("resize", onResize)
+    return () => {
+      window.removeEventListener("resize", onResize)
+      window.clearTimeout(timer)
+    }
   }, [])
 
   const noDrag = (e: React.SyntheticEvent) => e.preventDefault()
@@ -157,6 +203,7 @@ export function CoursePlayer({
         onError={classifyFailure}
         controls
         controlsList="nodownload noremoteplayback noplaybackrate"
+        x-webkit-airplay="deny"
         disablePictureInPicture
         playsInline
         draggable={false}
