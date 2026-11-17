@@ -176,7 +176,7 @@ export function DashboardAcademy({ email }: { email: string }) {
             <div className="min-w-0">
               {canPlay && current ? (
                 <>
-                  <CoursePlayer lesson={{ id: current.id }} email={email} />
+                  <CoursePlayer lesson={{ id: current.id, duration: current.duration }} email={email} />
                   <h4 className="mt-3 text-base font-semibold text-foreground">{isAr ? current.titleAr : current.titleEn}</h4>
                   {(isAr ? current.descriptionAr : current.descriptionEn) && (
                     <div className="mt-3 rounded-lg border border-border bg-card p-3">

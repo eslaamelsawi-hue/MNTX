@@ -242,6 +242,29 @@ function LessonRow({ courseId, sectionId, lesson, onChanged }: { courseId: strin
       xhr.onerror = () => reject(new Error("Network error during upload — check your connection and try again."))
       xhr.send(file)
     })
+  /** Reads the clip's length in the browser, so the duration beside a lesson
+   *  is the file's own rather than something typed by hand. */
+  const readDuration = (file: File) =>
+    new Promise<string>((resolve) => {
+      const video = document.createElement("video")
+      video.preload = "metadata"
+      const done = (value: string) => {
+        URL.revokeObjectURL(video.src)
+        resolve(value)
+      }
+      video.onloadedmetadata = () => {
+        const total = video.duration
+        if (!Number.isFinite(total) || total <= 0) return done("")
+        const hours = Math.floor(total / 3600)
+        const minutes = Math.floor((total % 3600) / 60)
+        const seconds = Math.floor(total % 60)
+        const pad = (n: number) => String(n).padStart(2, "0")
+        done(hours > 0 ? `${hours}:${pad(minutes)}:${pad(seconds)}` : `${pad(minutes)}:${pad(seconds)}`)
+      }
+      video.onerror = () => done("")
+      video.src = URL.createObjectURL(file)
+    })
+
   const upload = async (file: File) => {
     setUploading(true)
     setProgress(0)
@@ -254,7 +277,11 @@ function LessonRow({ courseId, sectionId, lesson, onChanged }: { courseId: strin
       const ticket = await ticketRes.json().catch(() => ({}))
       if (!ticketRes.ok) { alert(ticket.error || "Could not start the upload"); return }
       await putWithProgress(ticket.signedUrl, file, ticket.contentType || file.type || "video/mp4")
-      await save({ video: ticket.filename })
+      const measured = await readDuration(file).catch(() => "")
+      const keepTyped = l.duration && l.duration !== "00:00"
+      const patch = measured && !keepTyped ? { video: ticket.filename, duration: measured } : { video: ticket.filename }
+      if (patch.duration) setL({ ...l, video: ticket.filename, duration: patch.duration })
+      await save(patch)
     } catch (e) {
       alert(e instanceof Error ? e.message : "Upload failed")
     } finally {

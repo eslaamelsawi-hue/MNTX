@@ -18,7 +18,7 @@ export function CoursePlayer({
   email,
   src,
 }: {
-  lesson: { id: string }
+  lesson: { id: string; duration?: string }
   email: string
   /** Override the stream URL (e.g. private recordings). Defaults to the course video endpoint. */
   src?: string
@@ -122,6 +122,24 @@ export function CoursePlayer({
     setReloadKey((n) => n + 1)
   }
 
+  /** Lesson lengths are typed by hand in the admin form and were left at
+   *  00:00. Once the browser has read the file's metadata it knows the real
+   *  figure, so report it and let the server fill the blank in. */
+  const reportDuration = () => {
+    // Recordings and backtests reuse this player with their own src; only a
+    // course lesson has a duration to fill in.
+    if (src) return
+    const seconds = videoRef.current?.duration
+    if (!seconds || !Number.isFinite(seconds)) return
+    const current = (lesson.duration ?? "").trim()
+    if (current && current !== "00:00" && current !== "0:00") return
+    fetch("/api/course/lesson-duration", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ lessonId: lesson.id, seconds }),
+    }).catch(() => {})
+  }
+
   return (
     <div
       className="relative select-none overflow-hidden rounded-xl border border-border bg-black"
@@ -135,6 +153,7 @@ export function CoursePlayer({
         className="pointer-events-auto aspect-video w-full bg-black"
         src={videoSrc}
         preload="metadata"
+        onLoadedMetadata={reportDuration}
         onError={classifyFailure}
         controls
         controlsList="nodownload noremoteplayback noplaybackrate"
