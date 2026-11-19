@@ -1,15 +1,13 @@
 import { NextRequest, NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { getViewerEmail } from "@/lib/admin-view"
 
 /** Returns notifications for the LOGGED-IN user only — the email comes from
  *  the authenticated session, so a client can never read anyone else's. */
 export async function GET() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user?.email) {
+  const viewerEmail = await getViewerEmail()
+  if (!viewerEmail) {
     return NextResponse.json({ notifications: [] }, { status: 401 })
   }
 
@@ -17,7 +15,7 @@ export async function GET() {
   const { data, error } = await admin
     .from("notifications")
     .select("*")
-    .eq("client_email", user.email.toLowerCase().trim())
+    .eq("client_email", viewerEmail)
     .order("created_at", { ascending: false })
     .limit(50)
 
@@ -34,6 +32,8 @@ export async function PATCH(req: NextRequest) {
 
   const body = await req.json()
   const { id, markAllRead } = body
+  // Deliberately the signed-in account, not an admin's view-as target:
+  // viewing someone's dashboard must never mark their notifications read.
   const email = user.email.toLowerCase().trim()
   const admin = createAdminClient()
 

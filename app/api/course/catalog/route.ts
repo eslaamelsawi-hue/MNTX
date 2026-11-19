@@ -3,15 +3,13 @@ import { createClient } from "@/lib/supabase/server"
 import { listCourses } from "@/lib/course-store"
 import { lessonCount } from "@/lib/course-types"
 import { hasCourseAccess } from "@/lib/course-access"
+import { getViewerEmail } from "@/lib/admin-view"
 
 export const runtime = "nodejs"
 
 export async function GET() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  const email = user?.email ?? null
+  const viewerEmail = await getViewerEmail()
+  const email = viewerEmail
 
   const courses = await listCourses({ publishedOnly: true })
   const result = await Promise.all(

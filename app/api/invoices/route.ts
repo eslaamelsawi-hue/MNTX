@@ -1,15 +1,13 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { getViewerEmail } from "@/lib/admin-view"
 
 /** Returns invoices for the LOGGED-IN user only — the email comes from the
  *  authenticated session, so a client can never see anyone else's. */
 export async function GET() {
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user?.email) {
+  const viewerEmail = await getViewerEmail()
+  if (!viewerEmail) {
     return NextResponse.json({ invoices: [] }, { status: 401 })
   }
 
@@ -17,7 +15,7 @@ export async function GET() {
   const { data, error } = await admin
     .from("invoices")
     .select("*, invoice_installments(*)")
-    .eq("client_email", user.email.toLowerCase().trim())
+    .eq("client_email", viewerEmail)
     .order("created_at", { ascending: false })
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 })

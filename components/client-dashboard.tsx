@@ -448,11 +448,26 @@ export function ClientDashboard() {
     // not saved to localStorage, so the next visit here is their own again.
     const viewAs = new URLSearchParams(window.location.search).get("as")
     if (viewAs) {
-      setImpersonating(viewAs)
-      setEmail(viewAs)
-      runLookup(viewAs)
+      // Tell the server too: the tabs that read invoices, notifications and
+      // recordings resolve the account from the Supabase session, which is
+      // the admin's — without this they'd show the admin's own data inside
+      // someone else's dashboard.
+      fetch("/api/admin/view-as", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email: viewAs }),
+      })
+        .catch(() => {})
+        .finally(() => {
+          setImpersonating(viewAs)
+          setEmail(viewAs)
+          runLookup(viewAs)
+        })
       return
     }
+
+    // Opened normally — end any view left over from the Users page.
+    fetch("/api/admin/view-as", { method: "DELETE" }).catch(() => {})
 
     const supabase = createClient()
     supabase.auth.getUser().then(({ data }) => {
@@ -640,7 +655,7 @@ export function ClientDashboard() {
     >
       {impersonating && (
         <div className="sticky top-0 z-50 bg-amber-500 px-4 py-2 text-center text-sm font-semibold text-black" dir="ltr">
-          Admin view — you are looking at {impersonating}&apos;s dashboard. Actions here act as them.
+          Admin view — {impersonating}&apos;s dashboard, read-only. Changes you make here still apply to your own account.
         </div>
       )}
       <div className="flex flex-col lg:flex-row">
