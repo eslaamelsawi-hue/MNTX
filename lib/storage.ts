@@ -15,6 +15,10 @@ import { createAdminClient } from "@/lib/supabase/admin"
  */
 export const PRIVATE_BUCKET = process.env.R2_BUCKET_NAME || "private-media"
 
+/** Where media lived before R2. The bucket kept its original name there, so
+ *  it is NOT the same string as the R2 bucket above. */
+export const LEGACY_SUPABASE_BUCKET = process.env.SUPABASE_MEDIA_BUCKET || "private-media"
+
 function client() {
   const accountId = process.env.R2_ACCOUNT_ID
   const accessKeyId = process.env.R2_ACCESS_KEY_ID
@@ -101,7 +105,7 @@ export async function getPlayableUrl(key: string, expiresInSeconds = 60 * 60): P
 
   try {
     const supabase = createAdminClient()
-    const { data } = await supabase.storage.from(PRIVATE_BUCKET).createSignedUrl(key, expiresInSeconds)
+    const { data } = await supabase.storage.from(LEGACY_SUPABASE_BUCKET).createSignedUrl(key, expiresInSeconds)
     if (data?.signedUrl) return data.signedUrl
   } catch (e) {
     console.error("[storage] legacy bucket lookup failed:", e)
