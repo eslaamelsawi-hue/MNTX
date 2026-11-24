@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server"
-import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
+import { getViewerEmail } from "@/lib/admin-view"
 import { getPlayableUrl } from "@/lib/storage"
 
 export const runtime = "nodejs"
@@ -18,18 +18,17 @@ export const dynamic = "force-dynamic"
 export async function GET(request: Request, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params
 
-  const supabase = await createClient()
-  const {
-    data: { user },
-  } = await supabase.auth.getUser()
-  if (!user?.email) return new Response("Unauthorized", { status: 401 })
+  // The signed-in client, or the account an admin is viewing from the Users
+  // page — the same resolution the dashboard's other reads use.
+  const viewerEmail = await getViewerEmail()
+  if (!viewerEmail) return new Response("Unauthorized", { status: 401 })
 
   const admin = createAdminClient()
 
   const { data: sub } = await admin
     .from("user_subscriptions")
     .select("id")
-    .eq("client_email", user.email.toLowerCase().trim())
+    .eq("client_email", viewerEmail)
     .limit(1)
     .maybeSingle()
   if (!sub) return new Response("Forbidden", { status: 403 })
