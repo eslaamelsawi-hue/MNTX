@@ -1,5 +1,5 @@
 import "server-only"
-import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3"
+import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3"
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
 import { createAdminClient } from "@/lib/supabase/admin"
 
@@ -93,14 +93,20 @@ export async function deletePrivateFile(key: string): Promise<void> {
  * Returns null only when the file is in neither.
  */
 export async function getPlayableUrl(key: string, expiresInSeconds = 60 * 60): Promise<string | null> {
-  const r2 = await getPrivateFileSignedUrl(key, expiresInSeconds)
-  if (r2) {
-    try {
-      const head = await fetch(r2, { method: "HEAD" })
-      if (head.ok) return r2
-    } catch {
-      // R2 unreachable — try the older bucket rather than failing outright.
-    }
+  // Ask R2 directly whether it holds the object. A signed URL can't answer
+  // this: it is signed for GET, so probing it with HEAD fails signature
+  // validation and would make every file in R2 look missing.
+  let inR2 = false
+  try {
+    await client().send(new HeadObjectCommand({ Bucket: PRIVATE_BUCKET, Key: key }))
+    inR2 = true
+  } catch {
+    inR2 = false
+  }
+
+  if (inR2) {
+    const r2 = await getPrivateFileSignedUrl(key, expiresInSeconds)
+    if (r2) return r2
   }
 
   try {
