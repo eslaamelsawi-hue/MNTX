@@ -3,7 +3,7 @@ import fs from "node:fs"
 import path from "node:path"
 import crypto from "node:crypto"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { getPrivateFileSignedUrl, deletePrivateFile } from "@/lib/storage"
+import { getPlayableUrl, deletePrivateFile } from "@/lib/storage"
 
 /**
  * Session recordings, each tied to a client's email. Video bytes are PUT
@@ -51,7 +51,7 @@ export function newRecordingId(): string {
 
 /** Short-lived signed URL for streaming; null if missing or storage is unreachable. */
 export async function getRecordingUrl(video: string): Promise<string | null> {
-  return getPrivateFileSignedUrl(storageKey(video))
+  return getPlayableUrl(storageKey(video))
 }
 
 function readFile(): Recording[] {

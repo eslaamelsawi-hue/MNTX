@@ -3,7 +3,7 @@ import { cookies } from "next/headers"
 import path from "node:path"
 import { findLesson } from "@/lib/course-store"
 import { verifyAccessToken, hasCourseAccess, COURSE_COOKIE } from "@/lib/course-access"
-import { getPrivateFileSignedUrl } from "@/lib/storage"
+import { getPlayableUrl } from "@/lib/storage"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -32,7 +32,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
   }
 
   if (!lesson.video) return new Response("Not found", { status: 404 })
-  const url = await getPrivateFileSignedUrl(`course/${path.basename(lesson.video)}`)
+  const url = await getPlayableUrl(`course/${path.basename(lesson.video)}`)
   if (!url) return new Response("Not found", { status: 404 })
 
   return NextResponse.redirect(url, { status: 302 })

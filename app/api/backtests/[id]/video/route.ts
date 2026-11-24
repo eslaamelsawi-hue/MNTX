@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server"
 import { createClient } from "@/lib/supabase/server"
 import { createAdminClient } from "@/lib/supabase/admin"
-import { getPrivateFileSignedUrl } from "@/lib/storage"
+import { getPlayableUrl } from "@/lib/storage"
 
 export const runtime = "nodejs"
 export const dynamic = "force-dynamic"
@@ -43,7 +43,7 @@ export async function GET(request: Request, { params }: { params: Promise<{ id: 
     return new Response("Not found", { status: 404 })
   }
 
-  const url = await getPrivateFileSignedUrl(`backtests/${backtest.video}`)
+  const url = await getPlayableUrl(`backtests/${backtest.video}`)
   if (!url) return new Response("Not found", { status: 404 })
 
   return NextResponse.redirect(url, { status: 302 })

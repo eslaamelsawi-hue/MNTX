@@ -1,6 +1,7 @@
 import "server-only"
 import { S3Client, PutObjectCommand, GetObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3"
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner"
+import { createAdminClient } from "@/lib/supabase/admin"
 
 /**
  * Private video storage (session recordings, course lesson videos, backtest
@@ -74,4 +75,37 @@ export async function getPrivateFileSignedUrl(key: string, expiresInSeconds = 60
 export async function deletePrivateFile(key: string): Promise<void> {
   const s3 = client()
   await s3.send(new DeleteObjectCommand({ Bucket: PRIVATE_BUCKET, Key: key }))
+}
+
+/**
+ * A URL the browser can play, wherever the file actually lives.
+ *
+ * Media moved from Supabase Storage to R2, but the files uploaded before that
+ * move were never copied across — so anything recorded earlier signs a
+ * perfectly valid R2 URL that then 404s, and the viewer is told their
+ * recording is missing. This checks R2 first and falls back to the old
+ * bucket, so both generations play.
+ *
+ * Returns null only when the file is in neither.
+ */
+export async function getPlayableUrl(key: string, expiresInSeconds = 60 * 60): Promise<string | null> {
+  const r2 = await getPrivateFileSignedUrl(key, expiresInSeconds)
+  if (r2) {
+    try {
+      const head = await fetch(r2, { method: "HEAD" })
+      if (head.ok) return r2
+    } catch {
+      // R2 unreachable — try the older bucket rather than failing outright.
+    }
+  }
+
+  try {
+    const supabase = createAdminClient()
+    const { data } = await supabase.storage.from(PRIVATE_BUCKET).createSignedUrl(key, expiresInSeconds)
+    if (data?.signedUrl) return data.signedUrl
+  } catch (e) {
+    console.error("[storage] legacy bucket lookup failed:", e)
+  }
+
+  return null
 }
